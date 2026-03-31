@@ -66,25 +66,13 @@
     }
 
     @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-
-      to {
-        opacity: 1;
-      }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     @keyframes slideUp {
-      from {
-        transform: translateY(20px);
-        opacity: 0;
-      }
-
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
   </style>
 </head>
@@ -98,12 +86,9 @@
     // --- Recharts 컴포넌트 ---
     const { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } = window.Recharts || {};
 
-    // --- 데이터 연동 관련 ---
-    // (이전 하드코딩된 mockData는 삭제되었습니다. Supabase 비동기 통신으로 데이터가 들어옵니다.)
     const BRANDS = ['(주)한국물류', '글로벌테크', '퍼시스', '일룸', '스마트패키징', '에이스코리아'];
 
     // --- 범용 컴포넌트 ---
-    // 로딩 처리용 스켈레톤 애니메이션 컴포넌트
     const TableSkeleton = ({ colCount = 7 }) => (
       <tbody className="bg-white">
         <tr>
@@ -120,13 +105,11 @@
       </tbody>
     );
 
-    // --- 유틸/아이콘 ---
     const CloseIcon = () => (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
     );
 
     const CATEGORY_COLORS = { 
-      // 신규 카테고리 (카카오 봇 연동)
       '파손 및 불량': '#ef4444', 
       '제품 파손': '#f87171',
       '박스 훼손': '#fb923c',
@@ -138,7 +121,6 @@
       '계획 과다(실물 부족)': '#c084fc',
       '기타 특이사항': '#9ca3af',
       '기타': '#9ca3af',
-      // 레거시
       '파손': '#ef4444', 
       '수량부족': '#facc15', 
       '오입고': '#22c55e', 
@@ -146,7 +128,6 @@
     };
     const BRAND_COLORS = ['#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#f97316', '#ef4444'];
 
-    // StatusBadge, CategoryBadge
     const StatusBadge = ({ status, category }) => {
       let bg = '', text = '', icon = null;
       if (status === '조치대기') { bg = 'bg-red-50 border-red-200'; text = 'text-red-500'; }
@@ -183,7 +164,6 @@
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
     };
 
-    // 🔥 다중 이미지를 위한 갤러리/슬라이더 컴포넌트
     const ImageSlider = ({ imageUrlString }) => {
       const urls = imageUrlString ? imageUrlString.split(',').map(s => s.trim()).filter(Boolean) : [];
       const [currentIndex, setCurrentIndex] = React.useState(0);
@@ -212,7 +192,6 @@
             )}
           </div>
 
-          {/* 인디케이터가 이미지 밖, 아래로 분리됨 */}
           {urls.length > 1 && (
             <div className="flex bg-gray-100 px-3 py-1.5 rounded-full gap-2 border border-gray-200 shadow-inner">
               {urls.map((_, idx) => (
@@ -244,7 +223,6 @@
               request_content: text,
               action_content: actionText,
               status: newStatus,
-              // 🔥 로그인한 사용자의 이름(name)을 동적으로 꽂아줍니다!
               final_handler: userProfile?.name || '관리자',
               resolved_at: nowIso
             })
@@ -287,7 +265,6 @@
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder="특이사항 조치 관련 요청 상세 내용이나 확인된 메모를 자유롭게 입력해 주세요."
-                    /* 🔥 포인트 1: '조치대기'가 아니면 전부 비활성화! */
                     disabled={userProfile?.role === '사용자' || row.status !== '조치대기'}
                     className={`flex-1 w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-letusBlue focus:border-letusBlue outline-none resize-none transition-shadow ${userProfile?.role === '사용자' || row.status !== '조치대기' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                   ></textarea>
@@ -299,7 +276,6 @@
                     value={actionText}
                     onChange={(e) => setActionText(e.target.value)}
                     placeholder="현장 작업자의 텔레그램으로 전송될 상세 조치 결과를 입력해 주세요."
-                    /* 🔥 포인트 1 동일 적용 */
                     disabled={userProfile?.role === '사용자' || row.status !== '조치대기'}
                     className={`flex-1 w-full border border-blue-300 rounded-lg p-3 text-sm text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none transition-shadow ${userProfile?.role === '사용자' || row.status !== '조치대기' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-blue-50'}`}
                   ></textarea>
@@ -308,23 +284,19 @@
               </div>
             </div>
 
-            {/* 🔥 포인트 2: 하단 버튼 영역 스마트 컨트롤 */}
             <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center gap-2">
 
-              {/* 왼쪽: 상태변경 완료 안내 문구 (조치대기가 아닐 때만 뜸) */}
               <div>
                 {row.status !== '조치대기' && (
                   <span className="text-gray-500 font-bold text-sm">✅ 처리가 이관/완료되어 내용을 수정할 수 없습니다.</span>
                 )}
               </div>
 
-              {/* 오른쪽: 버튼들 */}
               <div className="flex gap-2">
                 <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 text-sm font-bold rounded hover:bg-gray-100 transition-colors shadow-sm bg-white">
                   {row.status !== '조치대기' ? '닫기' : '취소'}
                 </button>
 
-                {/* 조치대기 일 때만 이관, 조치완료 버튼 노출! */}
                 {row.status === '조치대기' && (
                   <>
                     <button
@@ -362,7 +334,6 @@
         try {
           const nowIso = new Date().toISOString();
 
-          // 💡 1. 처리자 이름 기본값을 '관리자'로 세팅합니다.
           const { error } = await supabase
             .from('logistics_issues')
             .update({
@@ -450,10 +421,6 @@
       );
     };
 
-
-    // --- 담당 업체 검색 모달 (VendorSearchModal) ---
-    // ✅ Supabase `vendors` 테이블과 실시간 연동 (브랜드/업체 분리 완벽 적용)
-
     const VendorSearchModal = ({ initialVendors, onApplyVendors, initialBrands, onApplyBrands, onClose }) => {
       const [query, setQuery] = React.useState('');
       const [vendorList, setVendorList] = React.useState([]);
@@ -510,7 +477,6 @@
       return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[200] backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col slide-up h-[600px]" style={{ maxHeight: '80vh' }}>
-            {/* 헤더 */}
             <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
               <h4 className="text-sm font-bold text-gray-800 flex items-center">
                 <span className="w-1.5 h-3.5 bg-letusBlue rounded-full mr-2"></span>
@@ -521,7 +487,6 @@
               </button>
             </div>
 
-            {/* 검색창 */}
             <div className="px-4 py-3 border-b border-gray-100 bg-slate-50">
               <div className="relative">
                 <svg className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -541,7 +506,6 @@
               )}
             </div>
 
-            {/* 브랜드 및 업체 리스트 */}
             <div className="overflow-y-auto flex-1">
               {isLoading ? (
                 <div className="py-10 text-center text-xs text-gray-400 flex flex-col items-center gap-2">
@@ -579,7 +543,6 @@
               )}
             </div>
 
-            {/* 하단 버튼 */}
             <div className="px-4 py-3 border-t border-gray-100 bg-white flex justify-end gap-2 shrink-0">
               <button onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-500 text-[11px] font-bold rounded-[3px] hover:bg-gray-50">취소</button>
               <button
@@ -594,7 +557,6 @@
       );
     };
 
-    // --- 사용자 등록 모달 (UserAddModal) ---
     const UserAddModal = ({ onClose, onReload }) => {
       const [name, setName] = useState('');
       const [loginId, setLoginId] = useState('');
@@ -613,7 +575,6 @@
         e.preventDefault();
         setErrorMsg('');
 
-        // 1. 유효성 검사
         if (!name || !loginId || !password) {
           setErrorMsg('이름, 아이디, 비밀번호를 모두 입력해 주세요.');
           return;
@@ -627,7 +588,6 @@
         try {
           const targetEmail = loginId.includes('@') ? loginId : `${loginId}@letus.com`;
 
-          // 2. Auth 생성 (adminSupabase 사용으로 세션 탈취 우회)
           const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
             email: targetEmail,
             password: password,
@@ -638,7 +598,6 @@
 
           const newUserId = authData.user.id;
 
-          // 3. Profiles 테이블에 폼 데이터 동기화 (Two-Step Insert)
           const { error: profileError } = await adminSupabase.from('profiles').insert([
             {
               id: newUserId,
@@ -646,10 +605,9 @@
               login_id: loginId,
               role: group,
               status: status,
-              brands: brand, // text 컬럼이므로 순수 문자열 그대로 전송
+              brands: brand, 
               team: team,
               managed_vendors: managedVendors,
-              managed_brands: managedBrands,
               managed_brands: managedBrands,
               created_at: new Date().toISOString()
             }
@@ -657,9 +615,8 @@
 
           if (profileError) throw profileError;
 
-          // 4. 모달 종료 및 성공 렌더링
           alert('신규 사용자가 성공적으로 등록되었습니다.');
-          onReload(); // 리스트 즉시 리페치
+          onReload(); 
           onClose();
         } catch (error) {
           console.error("User Creation Error:", error);
@@ -709,7 +666,6 @@
                     <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="border border-gray-300 rounded-[4px] px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue transition-all bg-white" placeholder="최소 6자리 이상" />
                   </div>
 
-                  {/* 2단 그리드 (1) - 부서 및 브랜드 */}
                   <div className="grid grid-cols-2 gap-4 pt-1">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[11px] font-bold text-gray-700">소속 팀 <span className="text-red-500">*</span></label>
@@ -730,12 +686,9 @@
                     </div>
                   </div>
 
-
-                  {/* 담당 업체 선택 */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold text-gray-700">담당 브랜드 및 업체 관리</label>
                     <div className="min-h-[60px] border border-gray-300 rounded-[4px] bg-white px-2.5 py-2 flex flex-col gap-2">
-                      {/* 브랜드 표시 */}
                       <div className="flex flex-wrap gap-1.5 items-center">
                         <span className="text-[9px] font-black text-orange-400 bg-orange-50 px-1 rounded">BRAND</span>
                         {managedBrands ? managedBrands.split(',').filter(Boolean).map((b, i) => (
@@ -744,7 +697,6 @@
                           </span>
                         )) : <span className="text-gray-300 text-[10px]">미설정</span>}
                       </div>
-                      {/* 업체 표시 */}
                       <div className="flex flex-wrap gap-1.5 items-center">
                         <span className="text-[9px] font-black text-blue-400 bg-blue-50 px-1 rounded">VENDOR</span>
                         {managedVendors ? managedVendors.split(',').filter(Boolean).map((v, i) => (
@@ -764,7 +716,6 @@
                     </button>
                   </div>
 
-                  {/* 2단 그리드 (2) - 계정 권한 및 상태 */}
                   <div className="grid grid-cols-2 gap-4 pb-1">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[11px] font-bold text-gray-700">권한 그룹</label>
@@ -808,8 +759,6 @@
       );
     };
 
-    // --- 사용자 수정 모달 (UserEditModal) ---
-    // 🔥 포인트: isProfileMode 프롭스 추가! (기본값 false)
     const UserEditModal = ({ user, onClose, onReload, isProfileMode = false }) => {
       const [name, setName] = useState(user.name || '');
       const [loginId, setLoginId] = useState(user.login_id || '');
@@ -847,7 +796,6 @@
 
         setIsSaving(true);
         try {
-          // 화면에서 숨겨져 있어도, 기존 값(group, status 등)이 그대로 유지되어 DB에 안전하게 들어갑니다!
           const { error: profileError } = await adminSupabase.from('profiles').update({
             name,
             login_id: loginId,
@@ -937,7 +885,6 @@
                     </div>
                   </div>
 
-                  {/* 🔥 내 정보 수정(isProfileMode)이 아닐 때만 노출되는 특별 권한 구역! */}
                   {!isProfileMode && (
                     <>
                       <div className="flex flex-col gap-1.5">
@@ -999,10 +946,7 @@
       );
     };
 
-
-    // --- 담당 브랜드 및 업체 조회 팝업 (VendorListModal) - 읽기 전용 ─────
     const VendorListModal = ({ user, onClose }) => {
-      // 💡 어떤 형태의 데이터가 들어와도 절대 크래시가 나지 않도록 안전하게 파싱합니다.
       const bRaw = user?.managed_brands || '';
       const vRaw = user?.managed_vendors || '';
       const brandList = typeof bRaw === 'string' ? bRaw.split(',').map(v => v.trim()).filter(Boolean) : [];
@@ -1134,14 +1078,11 @@
         fetchUsers();
       }, []);
 
-      // 뼈대 UI
       return (
         <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in pb-20 w-full min-h-[calc(100vh-64px)]">
-          {/* 상단 검색/필터 박스 */}
           <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex items-center z-30 shrink-0">
             <div className="flex items-center gap-5 w-full flex-wrap">
 
-              {/* 1. 권한 그룹 */}
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">권한 그룹</label>
                 <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-24 cursor-pointer text-gray-700">
@@ -1151,7 +1092,6 @@
                 </select>
               </div>
 
-              {/* 2. 계정 상태 */}
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">계정 상태</label>
                 <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-24 cursor-pointer text-gray-700">
@@ -1161,7 +1101,6 @@
                 </select>
               </div>
 
-              {/* 3. 이름 검색어 */}
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">이름</label>
                 <input
@@ -1174,7 +1113,6 @@
                 />
               </div>
 
-              {/* 4. 담당 업체 검색 */}
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 업체</label>
                 <input
@@ -1187,7 +1125,6 @@
                 />
               </div>
 
-              {/* 조회 버튼 */}
               <div className="ml-auto shrink-0 flex items-center gap-2">
                 <button
                   onClick={() => { setFilterRole(''); setFilterStatus(''); setFilterKeyword(''); setFilterVendor(''); fetchUsers({ role: '', status: '', keyword: '', vendor: '' }); }}
@@ -1202,7 +1139,6 @@
             </div>
           </div>
 
-          {/* 중간: 데이터 바깥 외부 툴바 영역 (하얀 박스 외부 우측 상단 액션바) */}
           <div className="flex justify-end w-full px-2 z-30 -mt-1 mb-1">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 border-r border-slate-300 pr-3">
@@ -1233,8 +1169,6 @@
             </div>
           </div>
 
-          {/* 하단 데이터 테이블 박스 */}
-          {/* 하단 데이터 테이블 박스 */}
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20">
             <div className="p-0 overflow-auto flex-1 h-[600px] custom-scrollbar">
               <table className="w-full text-left whitespace-nowrap">
@@ -1338,8 +1272,6 @@
       );
     };
 
-    // --- 사이드바 (Sidebar) ---
-    // 🔥 포인트: userProfile 프롭스를 추가로 받아서 권한을 검사합니다.
     const Sidebar = ({ page, setPage, userProfile }) => { 
       return (
         <div className="w-64 bg-letusSidebar text-white flex flex-col h-full flex-shrink-0">
@@ -1363,7 +1295,6 @@
           </div>
 
           <nav className="flex-1 px-2 py-2 space-y-2 mt-4">
-            {/* 🔥 1번 요청 적용: 관리자(또는 시스템관리자)에게만 노출되도록 락(Lock)을 걸었습니다! */}
             {userProfile?.role !== '사용자' && (
               <div>
                 <div className="bg-transparent px-4 py-2 text-sm font-semibold flex items-center text-gray-300 transition-colors">
@@ -1381,7 +1312,6 @@
               </div>
             )}
 
-            {/* 입고 특이사항 (이건 모두에게 보임) */}
             <div className="mt-4">
               <div
                 className="bg-transparent px-4 py-2 cursor-pointer text-sm font-semibold flex items-center text-gray-300 hover:text-white transition-colors"
@@ -1409,8 +1339,6 @@
       );
     };
 
-    // --- 헤더 (Header) ---
-    // 🔥 포인트: onEditProfile 프롭스 추가!
     const Header = ({ page, userProfile, onLogout, notifications = [], isNotiOpen, toggleNoti, onNotiClick, onEditProfile }) => (
       <header className="h-16 min-h-[64px] flex-shrink-0 bg-gradient-to-r from-blue-50/70 to-white border-b border-gray-200 flex justify-between items-center px-6 sticky top-0 z-50">
         <div className="flex items-center text-gray-600">
@@ -1466,7 +1394,6 @@
           </div>
 
           <div className="text-right">
-            {/* 🔥 2번 요청 적용: 이름을 누르면 정보 수정 모달이 뜨게 클릭 이벤트를 추가했습니다! */}
             <p 
               className="text-sm font-bold text-gray-800 cursor-pointer hover:text-letusBlue transition-colors flex items-center justify-end gap-1"
               onClick={onEditProfile}
@@ -1495,9 +1422,7 @@
       </header>
     );
 
-    // --- 대시보드 메인 컴포넌트 ---
     const Dashboard = ({ onNavigateToList, onDrillDown, issues = [], isLoading = false, onReload }) => {
-      // 신규 상태: 선택된 브랜드 다중 관리
       const [selectedBrands, setSelectedBrands] = useState([]);
 
       const toggleBrand = (brand) => {
@@ -1509,7 +1434,6 @@
         }
       };
 
-      // 1. 브랜드별 특이사항 통계 계산
       const displayBrands = ['퍼시스', '일룸', '시디즈', '슬로우베드', '알로소', '데스커'];
       const brandStatsDetails = displayBrands.reduce((acc, brand) => {
         acc[brand] = { pending: 0, processing: 0, completed: 0 };
@@ -1524,7 +1448,6 @@
         }
       });
 
-      // 2. 실제 데이터(issues) 기반 차트 동적 Aggregate
       const chartStats = (() => {
         const base = {};
         const targetIssues = selectedBrands.length > 0
@@ -1540,7 +1463,6 @@
         return base;
       })();
 
-      // 바 차트용 공급사 기준 Aggregate (향후 DB에 vendor 컬럼 추가 시 자동 연동 대기)
       const supplierStats = (() => {
         const base = {};
         const targetIssues = selectedBrands.length > 0
@@ -1548,7 +1470,6 @@
           : issues;
 
         targetIssues.forEach(issue => {
-          // TODO: 현재는 DB에 vendor 컬럼이 없어 일시적으로 brand를 보여주지만, 나중에 컬럼이 추가되면 issue.vendor 값이 즉시 우선 적용됩니다.
           const vendor = issue.vendor || issue.brand || '미상';
           base[vendor] = (base[vendor] || 0) + 1;
         });
@@ -1559,7 +1480,6 @@
 
       const totalIssues = Object.values(chartStats).reduce((a, b) => a + b, 0);
 
-      // Recharts용 파이 데이터 매핑
       const pieData = Object.entries(chartStats)
         .filter(([k, v]) => v > 0)
         .map(([k, v]) => ({ name: k, value: v }));
@@ -1570,7 +1490,6 @@
       return (
         <div className="p-6 space-y-6 slide-up">
 
-          {/* --- 신규: 브랜드별 특이사항 처리 현황 섹션 --- */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow shrink-0">
             <div className="mb-6">
               <h3 className="text-lg font-bold text-gray-900 font-sans">브랜드별 특이사항 처리 현황</h3>
@@ -1590,12 +1509,10 @@
                       : 'bg-gray-50/60 border-gray-100 hover:border-gray-200 hover:bg-gray-100'
                       }`}
                   >
-                    {/* 브랜드명: 31% */}
                     <div style={{ width: '31%' }} className={`font-bold tracking-tight whitespace-nowrap truncate pr-2 ${isSelected ? 'text-orange-700' : 'text-gray-800'}`}>
                       {brand}
                     </div>
 
-                    {/* 나머지 지표들 컨테이너: 69% */}
                     <div className="flex items-center flex-1">
                       <div style={{ width: '33.33%' }} className="flex justify-between items-center pr-3 sm:pr-4 border-r border-gray-200">
                         <span className="text-gray-400 font-medium whitespace-nowrap text-xs sm:text-sm">조치대기</span>
@@ -1618,9 +1535,7 @@
             </div>
           </div>
 
-          {/* 상단 2단 차트 영역 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* 좌측 도넛 차트 */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col hover:shadow-md transition-shadow">
               <div className="mb-6">
                 <h3 className="text-lg font-bold text-gray-900 font-sans">특이사항 유형</h3>
@@ -1658,7 +1573,6 @@
                     </div>
                   )}
 
-                  {/* 중앙 총 발생건 텍스트 오버레이 */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-[28px] font-black text-gray-900 leading-tight">{totalIssues}</span>
                     <span className="text-xs font-semibold text-gray-500">총 발생건</span>
@@ -1677,7 +1591,6 @@
               </div>
             </div>
 
-            {/* 우측 바 차트 */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col hover:shadow-md transition-shadow">
               <div className="mb-6">
                 <h3 className="text-lg font-bold text-gray-900 font-sans">공급업체별 이슈 비율</h3>
@@ -1699,7 +1612,6 @@
             </div>
           </div>
 
-          {/* 하단 최근 특이사항 리스트 */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <div className="flex items-center">
@@ -1759,16 +1671,12 @@
       );
     }
 
-    // --- 전체 이슈 리스트 화면 ---
-    // 🔥 포인트: 부모로부터 savedFilters와 setSavedFilters를 받습니다. (initialFilter 삭제)
     const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, setSavedFilters, userProfile }) => {
-      const today = new Date().toISOString().split("T")[0];
       const [viewComment, setViewComment] = useState(null);
       const [activeModalRow, setActiveModalRow] = useState(null);
       const [activeHandleRow, setActiveHandleRow] = useState(null);
       const [selectedIds, setSelectedIds] = useState([]);
 
-      // 화면 컨트롤용 임시 상태 (부모의 기억장치 값을 초기값으로 씁니다!)
       const [draftBrand, setDraftBrand] = useState(savedFilters.brand);
       const [draftStatus, setDraftStatus] = useState(savedFilters.status);
       const [draftStartDate, setDraftStartDate] = useState(savedFilters.startDate);
@@ -1776,13 +1684,11 @@
       const [draftSearchType, setDraftSearchType] = useState(savedFilters.searchType);
       const [draftSearchValue, setDraftSearchValue] = useState(savedFilters.searchValue);
 
-      // 부모의 기억장치(드릴다운 등)가 밖에서 바뀌면 화면의 콤보박스도 싹 맞춰줍니다.
       useEffect(() => {
         setDraftBrand(savedFilters.brand);
         setDraftStatus(savedFilters.status);
       }, [savedFilters.brand, savedFilters.status]);
 
-      // 2. 조회하기 클릭 핸들러 (조회를 누르면 부모의 기억장치를 업데이트!)
       const handleSearch = () => {
         setSavedFilters({
           brand: draftBrand,
@@ -1794,7 +1700,6 @@
         });
       };
 
-      // 3. 실제 필터링 동작 (부모의 안전한 기억장치인 savedFilters를 기준으로 필터링!)
       const filteredIssues = issues.filter(issue => {
         if (savedFilters.brand !== '전체' && issue.brand !== savedFilters.brand) return false;
         if (savedFilters.status !== '전체' && issue.status !== savedFilters.status) return false;
@@ -1812,20 +1717,16 @@
             const vendor = (issue.vendor || issue.brand || '').toLowerCase();
             if (!vendor.includes(val)) return false;
           } else if (savedFilters.searchType === '처리자') {
-            if (!issue.handlerName?.toLowerCase().includes(val)) return false;
+            if (!issue.final_handler?.toLowerCase().includes(val)) return false;
           }
         }
         return true;
       });
 
-      // ... (이하 const isAllSelected 등 나머지 코드 동일) ...
-      // console.log(`IssueList Render - Total: ${issues.length}, Filtered: ${filteredIssues.length}`);
-
       const isAllSelected = filteredIssues.length > 0 && selectedIds.length === filteredIssues.length;
 
       const handleSelectAll = (e) => {
         if (e.target.checked) {
-          // 🔥 안심 기준키! 데이터 무결성을 위해 reception_no 대신 row.id로 매핑합니다.
           setSelectedIds(filteredIssues.map(issue => issue.id));
         } else {
           setSelectedIds([]);
@@ -1840,7 +1741,6 @@
         }
       };
 
-      // 🔥 다중 선택 상태 초기화 (조치대기 롤백)
       const handleRevertSelectedIssues = async () => {
         if (selectedIds.length === 0) {
           alert('원복할 항목을 1개 이상 선택해 주세요.');
@@ -1863,14 +1763,13 @@
               action_content: '',
               resolved_at: null
             })
-            // 🔥 고유 ID 값으로 매칭!
             .in('id', selectedIds);
 
           if (error) throw error;
 
           alert(`선택한 ${selectedIds.length}건의 항목이 초기화되었습니다.`);
-          setSelectedIds([]); // 체크박스 해제
-          await fetchIssues(); // 데이터 새로고침
+          setSelectedIds([]); 
+          await onReload(); 
         } catch (err) {
           console.error('원복 처리 중 오류:', err);
           alert('원복 처리 중 오류가 발생했습니다.');
@@ -1906,10 +1805,8 @@
       return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] flex flex-col gap-4 slide-up">
 
-          {/* 상단 검색/필터 박스 (절대 높이 고정: h-[54px]) */}
           <div className="w-full h-[54px] bg-white rounded-lg shadow-sm border border-slate-200 px-6 flex items-center z-30 shrink-0">
             <div className="flex items-center gap-6 w-full overflow-hidden">
-              {/* 1. 브랜드 */}
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap flex items-center">브랜드 <span className="text-letusOrange ml-0.5">*</span></label>
                 <select
@@ -1927,7 +1824,6 @@
                 </select>
               </div>
 
-              {/* 2. 등록일자 */}
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap flex items-center">등록일자 <span className="text-letusOrange ml-0.5">*</span></label>
                 <div className="flex items-center h-[30px]">
@@ -1937,7 +1833,6 @@
                 </div>
               </div>
 
-              {/* 3. 처리상태 */}
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">처리상태</label>
                 <select
@@ -1953,7 +1848,6 @@
                 </select>
               </div>
 
-              {/* 4. 검색어 */}
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">검색어</label>
                 <div className="flex gap-1.5 items-center">
@@ -1962,25 +1856,21 @@
                     <option>공급업체</option>
                     <option>처리자</option>
                   </select>
-                  <input type="text" value={draftSearchValue} onChange={(e) => setDraftSearchValue(e.target.value)} placeholder="검색어 입력" className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-36 text-gray-700" />
+                  <input type="text" value={draftSearchValue} onChange={(e) => setDraftSearchValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} placeholder="검색어 입력" className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-36 text-gray-700" />
                 </div>
               </div>
 
-              {/* 조회 버튼 (고정 밀착) */}
               <div className="ml-auto shrink-0 flex items-center pl-4">
                 <button
                   onClick={handleSearch}
-                  disabled={isSearching}
                   className="border border-letusOrange text-letusOrange hover:bg-orange-50 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center gap-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {isSearching ? <svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : null}
-                  {isSearching ? '조회 중...' : '조회하기'}
+                  조회하기
                 </button>
               </div>
             </div>
           </div>
 
-          {/* 중간: 데이터 바깥 외부 툴바 영역 (하얀 박스 외부) */}
           <div className="flex justify-end w-full px-2 z-30">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 border-r border-slate-300 pr-3">
@@ -2007,10 +1897,8 @@
             </div>
           </div>
 
-          {/* 2. 하단 데이터 테이블 박스 (완벽히 독립된 하얀 박스) */}
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20">
 
-            {/* 테이블 영역 */}
             <div className="p-0 overflow-auto flex-1 h-[600px]">
               <table className="w-full text-left whitespace-nowrap">
                 <thead className="bg-gray-50/50 border-b border-gray-200 text-xs text-gray-500 font-bold sticky top-0 z-10">
@@ -2120,19 +2008,6 @@
       );
     }
 
-    // (사용자 요청에 따라 RegistrationList 및 메뉴 분리 롤백됨)
-
-    // --- 최상위 앱 구조 및 Supabase 초기화 ---
-    const supabaseUrl = 'https://kbbkodmighrrgwtwrgdp.supabase.co';
-    const supabaseAnonKey = 'sb_publishable_2yOkLjobrM_oMlncJFqL3A_gbuU9eAr';
-    const SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiYmtvZG1pZ2hycmd3dHdyZ2RwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDA2Nzk1OSwiZXhwIjoyMDg5NjQzOTU5fQ.p32oIw0vCr9DfwZ2ifnAjZDM0tiU23UbMgRtXFQ4aeU";
-
-    // 일반 접속용 클라이언트
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
-    // 권한 시스템 제어용 어드민 클라이언트 (회원 추가 시 세션 탈취 방지)
-    const adminSupabase = window.supabase.createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY);
-
-    // --- 심플 로그인 뷰 ---
     const LoginView = () => {
       const [loginId, setLoginId] = useState('');
       const [password, setPassword] = useState('');
@@ -2148,17 +2023,14 @@
         }
 
         setLoading(true);
-        // 트릭: 아이디 평문 입력 텍스트에 도메인을 강제 합성 (내부 SaaS 패턴)
         const targetEmail = loginId.includes('@') ? loginId : `${loginId}@letus.com`;
 
-        console.log("Supabase로 전송하는 최종 이메일:", targetEmail);
         const { error } = await supabase.auth.signInWithPassword({
           email: targetEmail,
           password: password,
         });
 
         if (error) {
-          console.error("Supabase Login Error:", error.message);
           setErrorMsg(`[Dev] 로그인 실패: ${error.message}`);
         }
         setLoading(false);
@@ -2167,11 +2039,9 @@
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 slide-up">
           <div className="max-w-[400px] w-full bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 sm:p-10 relative overflow-hidden">
-            {/* 🔥 상단 그라데이션 라인 악센트 (주황색으로 변경) */}
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-400 to-orange-600"></div>
 
             <div className="text-center mb-10 pt-2">
-              {/* 🔥 메인 로고 텍스트 (주황색으로 변경) */}
               <h1 className="text-3xl font-black text-letusOrange tracking-tighter mb-2">LETUS LOGIS</h1>
               <p className="text-sm text-slate-500 font-medium tracking-tight">통합 물류 관리 시스템</p>
             </div>
@@ -2179,7 +2049,6 @@
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 ml-1">아이디 (ID)</label>
-                {/* 🔥 인풋창 클릭 시 테두리 색상 (주황색으로 변경) */}
                 <input
                   type="text"
                   value={loginId}
@@ -2191,7 +2060,6 @@
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 ml-1">비밀번호</label>
-                {/* 🔥 인풋창 클릭 시 테두리 색상 (주황색으로 변경) */}
                 <input
                   type="password"
                   value={password}
@@ -2208,7 +2076,6 @@
                 </div>
               )}
 
-              {/* 🔥 로그인 버튼 배경 및 hover 색상 (주황색으로 변경) */}
               <button
                 type="submit"
                 disabled={loading}
@@ -2235,12 +2102,8 @@
       const [currentPage, setCurrentPage] = useState('dashboard');
       const [issues, setIssues] = useState([]);
       const [isLoading, setIsLoading] = useState(true);
-      const [listFilter, setListFilter] = useState(null);
       const [userProfile, setUserProfile] = useState(null);
-
-      // 🔥 내 정보 수정 모달 상태 컨트롤
       const [selfEditTarget, setSelfEditTarget] = useState(null);
-
       const [notifications, setNotifications] = useState([]);
       const [isNotiOpen, setIsNotiOpen] = useState(false);
 
@@ -2305,16 +2168,12 @@
         }
       };
 
-      // 🔥 로그인 유저의 최신 프로필 정보만 따로 다시 불러오는 함수 (수정 완료 후 사용)
       const fetchProfile = async () => {
         if (!session) return;
         try {
-          // 수정 모달창에서 필요한 전체 컬럼(*)을 모두 불러옵니다.
           const { data, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
           if (data) {
             setUserProfile(data);
-            
-            // 만약 '사용자'인데 억지로 URL이나 상태를 조작해 사용자 관리 페이지에 있으면 메인으로 쫓아냄
             if (data.role === '사용자' && currentPage === 'user_management') {
               setCurrentPage('dashboard');
             }
@@ -2341,7 +2200,7 @@
       useEffect(() => {
         if (session) {
           fetchIssues();
-          fetchProfile(); // 🔥 세션 로그인 시 내 프로필도 로드!
+          fetchProfile(); 
         }
       }, [session]);
 
@@ -2424,7 +2283,6 @@
 
       return (
         <div className="flex h-screen overflow-hidden bg-letusBg text-gray-900 font-sans">
-          {/* 🔥 userProfile을 내려줍니다! */}
           <Sidebar page={currentPage} setPage={setCurrentPage} userProfile={userProfile} />
 
           <div className="flex-1 flex flex-col h-full overflow-y-auto w-full relative">
@@ -2436,25 +2294,27 @@
               isNotiOpen={isNotiOpen} 
               toggleNoti={() => setIsNotiOpen(!isNotiOpen)} 
               onNotiClick={handleNotiClick} 
-              onEditProfile={() => setSelfEditTarget(userProfile)} // 🔥 클릭 시 내 정보 세팅!
+              onEditProfile={() => setSelfEditTarget(userProfile)} 
             />
             
             <main className="flex-1 w-full">
-              {currentPage === 'dashboard' && <Dashboard onNavigateToList={() => setCurrentPage('list')} onDrillDown={handleDrillDown} issues={issues} isLoading={isLoading} onReload={fetchIssues} />}
-              
-              {/* 🔥 요기만 바뀌었습니다! (initialFilter 대신 부모의 기억장치 연결) */}
-              {currentPage === 'list' && <IssueList userProfile={userProfile} issues={issues} isLoading={isLoading} onReload={fetchIssues} savedFilters={savedListFilters} setSavedFilters={setSavedListFilters} />}
-              
-              {currentPage === 'user_management' && <UserManagement />}
+              <div className={currentPage === 'dashboard' ? 'block' : 'hidden'}>
+                <Dashboard onNavigateToList={() => setCurrentPage('list')} onDrillDown={handleDrillDown} issues={issues} isLoading={isLoading} onReload={fetchIssues} />
+              </div>
+              <div className={currentPage === 'list' ? 'block' : 'hidden'}>
+                <IssueList userProfile={userProfile} issues={issues} isLoading={isLoading} onReload={fetchIssues} savedFilters={savedListFilters} setSavedFilters={setSavedListFilters} />
+              </div>
+              <div className={currentPage === 'user_management' ? 'block' : 'hidden'}>
+                <UserManagement />
+              </div>
             </main>
 
-            {/* 🔥 내 정보 수정 팝업 (기존 UserEditModal 재활용 - 절대 안 날아갑니다!) */}
             {selfEditTarget && (
               <UserEditModal 
                 user={selfEditTarget} 
                 onClose={() => setSelfEditTarget(null)} 
-                onReload={fetchProfile} // 수정 완료되면 표 전체가 아니라 내 프로필만 가볍게 갱신!
-                isProfileMode={true} /* 🔥 요기 딱 한 줄 추가! */
+                onReload={fetchProfile} 
+                isProfileMode={true} 
               />
             )}
           </div>
