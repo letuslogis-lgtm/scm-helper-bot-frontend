@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SCM 물류 입고 대시보드 - LETUS LOGIS</title>
+  <title>LETUS LOGIS</title>
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -1347,9 +1347,8 @@
     };
 
     // --- 사이드바 (Sidebar) ---
-    const Sidebar = ({ page, setPage }) => {
-      const isSubmenuActive = page === 'list' || page === 'registration';
-
+    // 🔥 포인트: userProfile 프롭스를 추가로 받아서 권한을 검사합니다.
+    const Sidebar = ({ page, setPage, userProfile }) => { 
       return (
         <div className="w-64 bg-letusSidebar text-white flex flex-col h-full flex-shrink-0">
           <div className="p-5 border-b border-gray-700/50">
@@ -1372,24 +1371,25 @@
           </div>
 
           <nav className="flex-1 px-2 py-2 space-y-2 mt-4">
-
-            {/* 마스터 정보관리 */}
-            <div>
-              <div className="bg-transparent px-4 py-2 text-sm font-semibold flex items-center text-gray-300 transition-colors">
-                <svg className="w-4 h-4 mr-3 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                마스터 정보관리
-              </div>
-              <div className="mt-1 space-y-1">
-                <div
-                  className={`pl-11 pr-4 py-2 cursor-pointer text-sm font-medium transition-colors rounded-sm ${page === 'user_management' ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-                  onClick={() => setPage('user_management')}
-                >
-                  사용자 관리
+            {/* 🔥 1번 요청 적용: 관리자(또는 시스템관리자)에게만 노출되도록 락(Lock)을 걸었습니다! */}
+            {userProfile?.role !== '사용자' && (
+              <div>
+                <div className="bg-transparent px-4 py-2 text-sm font-semibold flex items-center text-gray-300 transition-colors">
+                  <svg className="w-4 h-4 mr-3 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  마스터 정보관리
+                </div>
+                <div className="mt-1 space-y-1">
+                  <div
+                    className={`pl-11 pr-4 py-2 cursor-pointer text-sm font-medium transition-colors rounded-sm ${page === 'user_management' ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                    onClick={() => setPage('user_management')}
+                  >
+                    사용자 관리
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* 입고 특이사항 */}
+            {/* 입고 특이사항 (이건 모두에게 보임) */}
             <div className="mt-4">
               <div
                 className="bg-transparent px-4 py-2 cursor-pointer text-sm font-semibold flex items-center text-gray-300 hover:text-white transition-colors"
@@ -1418,7 +1418,8 @@
     };
 
     // --- 헤더 (Header) ---
-    const Header = ({ page, userProfile, onLogout, notifications = [], isNotiOpen, toggleNoti, onNotiClick }) => (
+    // 🔥 포인트: onEditProfile 프롭스 추가!
+    const Header = ({ page, userProfile, onLogout, notifications = [], isNotiOpen, toggleNoti, onNotiClick, onEditProfile }) => (
       <header className="h-16 min-h-[64px] flex-shrink-0 bg-gradient-to-r from-blue-50/70 to-white border-b border-gray-200 flex justify-between items-center px-6 sticky top-0 z-50">
         <div className="flex items-center text-gray-600">
           <svg className="w-5 h-5 text-gray-400 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
@@ -1447,7 +1448,6 @@
               )}
             </button>
 
-            {/* 알림 팝업 드롭다운 */}
             {isNotiOpen && (
               <div className="absolute right-6 top-10 w-[320px] bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden flex flex-col slide-up">
                 <div className="max-h-[350px] overflow-y-auto divide-y divide-gray-100 custom-scrollbar">
@@ -1474,9 +1474,14 @@
           </div>
 
           <div className="text-right">
-            <p className="text-sm font-bold text-gray-800">
+            {/* 🔥 2번 요청 적용: 이름을 누르면 정보 수정 모달이 뜨게 클릭 이벤트를 추가했습니다! */}
+            <p 
+              className="text-sm font-bold text-gray-800 cursor-pointer hover:text-letusBlue transition-colors flex items-center justify-end gap-1"
+              onClick={onEditProfile}
+              title="내 정보 수정"
+            >
               {userProfile ? userProfile.name : '기다리는 중...'}
-
+              <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
             </p>
             <p className="text-xs text-gray-500">
               {userProfile ? (
@@ -2254,11 +2259,12 @@
       const [listFilter, setListFilter] = useState(null);
       const [userProfile, setUserProfile] = useState(null);
 
-      // --- 알림센터 전용 상태 및 로직 ---
+      // 🔥 내 정보 수정 모달 상태 컨트롤
+      const [selfEditTarget, setSelfEditTarget] = useState(null);
+
       const [notifications, setNotifications] = useState([]);
       const [isNotiOpen, setIsNotiOpen] = useState(false);
 
-      // 페이지 로드 시 로컬 스토리지에서 알림 불러오기 (24시간 지난 읽은 알림은 폐기)
       useEffect(() => {
         if (session) {
           const savedKey = 'letus_noti_' + session.user.id;
@@ -2274,14 +2280,12 @@
         }
       }, [session]);
 
-      // 알림 상태가 바뀔 때마다 스토리지에 자동 저장
       useEffect(() => {
         if (session) {
           localStorage.setItem('letus_noti_' + session.user.id, JSON.stringify(notifications));
         }
       }, [notifications, session]);
 
-      // 알림 클릭 시: 읽음 처리 -> 필터 적용해서 리스트로 이동 -> 팝업 닫기
       const handleNotiClick = (notiId, filterObj) => {
         setNotifications(prev => prev.map(n => n.id === notiId ? { ...n, read: true, read_at: new Date().getTime() } : n));
         handleDrillDown(filterObj);
@@ -2300,22 +2304,10 @@
       };
 
       const fetchIssues = async () => {
-        console.log("fetchIssues called.");
         setIsLoading(true);
         try {
-          console.log("Requesting data from Supabase logistics_issues...");
-          const { data, error } = await supabase
-            .from('logistics_issues')
-            .select('*')
-            // .gte('created_at', d7Date.toISOString()) // D-7 필터 대기
-            .order('id', { ascending: false });
-
-          if (error) {
-            console.error("Supabase Error Object:", error);
-            throw error;
-          }
-
-          console.log("fetched data success. count:", data ? data.length : 0);
+          const { data, error } = await supabase.from('logistics_issues').select('*').order('id', { ascending: false });
+          if (error) throw error;
           setIssues(data || []);
         } catch (error) {
           console.error('Supabase fetch exception:', error.message || error);
@@ -2325,7 +2317,25 @@
         }
       };
 
-      // 1) Auth 세션 감지 로직 (최초 실행 및 상태 구독)
+      // 🔥 로그인 유저의 최신 프로필 정보만 따로 다시 불러오는 함수 (수정 완료 후 사용)
+      const fetchProfile = async () => {
+        if (!session) return;
+        try {
+          // 수정 모달창에서 필요한 전체 컬럼(*)을 모두 불러옵니다.
+          const { data, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+          if (data) {
+            setUserProfile(data);
+            
+            // 만약 '사용자'인데 억지로 URL이나 상태를 조작해 사용자 관리 페이지에 있으면 메인으로 쫓아냄
+            if (data.role === '사용자' && currentPage === 'user_management') {
+              setCurrentPage('dashboard');
+            }
+          }
+        } catch (err) {
+          console.error('프로필 갱신 실패:', err);
+        }
+      };
+
       useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
           setSession(session);
@@ -2340,19 +2350,13 @@
         return () => subscription.unsubscribe();
       }, []);
 
-      // 2) 로그인이 확인되었을 때만 표 데이터를 불러오고, profiles에서 로그인 사용자 정보도 가져옴
       useEffect(() => {
         if (session) {
           fetchIssues();
-          // 로그인한 사용자의 UUID로 profiles 테이블에서 프로필 조회
-          supabase.from('profiles').select('name, brands, role, managed_brands, managed_vendors').eq('id', session.user.id).single()
-            .then(({ data }) => {
-              if (data) setUserProfile(data);
-            });
+          fetchProfile(); // 🔥 세션 로그인 시 내 프로필도 로드!
         }
       }, [session]);
 
-      // [신규] 브라우저 알림 및 실시간 구독 로직
       useEffect(() => {
         if (!session || !userProfile) return;
 
@@ -2375,33 +2379,25 @@
           let message = '';
           const currentStatus = newData.status || '조치대기';
 
-          console.log("🚨 [DB 실시간 신호 도착!] 상태:", currentStatus);
-          console.log("👤 [내 권한]:", userProfile?.role, " / 🏢 [내 업체]:", userVendors, " / 수신 업체:", newData.vendor);
-
-          // (1) 신규 인입 (조치대기) -> 관리자에게
           if (currentStatus === '조치대기' && userProfile?.role?.includes('관리자') && (userBrands.includes('전체') || userBrands.includes(newData.brand))) {
             shouldAlert = true;
             message = `[신규] ${newData.brand} 브랜드의 새로운 이슈가 접수되었습니다. (${newData.reception_no})`;
           }
-          // (2) 부서 이관 (처리 중) -> 담당 업체(사용자/관리자 모두)에게
           else if (currentStatus === '처리 중' && userVendors.includes(newData.vendor)) {
             shouldAlert = true;
             message = `[이관] 관리 중인 ${newData.vendor} 업체로 이슈가 이관되었습니다. (${newData.reception_no})`;
           }
-          // (3) 조치 완료 -> 관리자에게
           else if (currentStatus === '조치완료' && userProfile?.role?.includes('관리자') && (userBrands.includes('전체') || userBrands.includes(newData.brand))) {
             shouldAlert = true;
             message = `[조치완료] ${newData.brand} 브랜드의 이슈 조치가 완료되었습니다. (${newData.reception_no})`;
           }
 
           if (shouldAlert) {
-            // 🔥 React StrictMode 이중 구독으로 인한 중복 알림 발생 방지 (2초 내 동일 메세지 무시)
             const nowTime = new Date().getTime();
             if (window.lastAlertMsg === message && nowTime - (window.lastAlertTime || 0) < 2000) return;
             window.lastAlertMsg = message;
             window.lastAlertTime = nowTime;
 
-            // 알림센터용 객체 생성
             const newNoti = {
               id: newData.id + '_' + nowTime,
               title: type,
@@ -2412,51 +2408,62 @@
               filterObj: { brand: newData.brand || '전체', status: newData.status || '전체' }
             };
 
-            // 최신 알림을 맨 위에 추가하고, 최대 10개까지만 유지
             setNotifications(prev => [newNoti, ...prev].slice(0, 10));
 
-            // 브라우저가 백그라운드에 있을 때만 윈도우 푸시 알림 발생
             if (Notification.permission === 'granted') {
               new Notification(`LETUS LOGIS - ${type}`, {
                 body: message,
                 icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
               });
             }
-            fetchIssues(); // 표 갱신
+            fetchIssues();
           }
         };
 
         return () => { supabase.removeChannel(channel); };
       }, [session, userProfile]);
 
-
-      // 방어 로직 (로딩 중이거나 세션이 없으면 뷰 차단)
       if (authLoading) {
         return (
           <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
-            <svg className="animate-spin h-8 w-8 text-letusBlue mb-4" xmlns="http://www.w0.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <svg className="animate-spin h-8 w-8 text-letusBlue mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             <span className="text-sm font-bold text-slate-500 tracking-wide">인증 세션을 확인 중입니다...</span>
           </div>
         );
       }
 
-      if (!session) {
-        return <LoginView />;
-      }
+      if (!session) return <LoginView />;
 
       return (
         <div className="flex h-screen overflow-hidden bg-letusBg text-gray-900 font-sans">
-          {/* 고정 사이드바 */}
-          <Sidebar page={currentPage} setPage={setCurrentPage} />
+          {/* 🔥 userProfile을 내려줍니다! */}
+          <Sidebar page={currentPage} setPage={setCurrentPage} userProfile={userProfile} />
 
-          {/* 우측 메인 영역 (스크롤 처리 통합) */}
           <div className="flex-1 flex flex-col h-full overflow-y-auto w-full relative">
-            <Header page={currentPage} userProfile={userProfile} onLogout={handleLogout} notifications={notifications} isNotiOpen={isNotiOpen} toggleNoti={() => setIsNotiOpen(!isNotiOpen)} onNotiClick={handleNotiClick} />
+            <Header 
+              page={currentPage} 
+              userProfile={userProfile} 
+              onLogout={handleLogout} 
+              notifications={notifications} 
+              isNotiOpen={isNotiOpen} 
+              toggleNoti={() => setIsNotiOpen(!isNotiOpen)} 
+              onNotiClick={handleNotiClick} 
+              onEditProfile={() => setSelfEditTarget(userProfile)} // 🔥 클릭 시 내 정보 세팅!
+            />
             <main>
               {currentPage === 'dashboard' && <Dashboard onNavigateToList={() => setCurrentPage('list')} onDrillDown={handleDrillDown} issues={issues} isLoading={isLoading} onReload={fetchIssues} />}
               {currentPage === 'list' && <IssueList userProfile={userProfile} issues={issues} isLoading={isLoading} onReload={fetchIssues} initialFilter={listFilter} />}
               {currentPage === 'user_management' && <UserManagement />}
             </main>
+
+            {/* 🔥 내 정보 수정 팝업 (기존 UserEditModal 재활용) */}
+            {selfEditTarget && (
+              <UserEditModal 
+                user={selfEditTarget} 
+                onClose={() => setSelfEditTarget(null)} 
+                onReload={fetchProfile} // 수정 완료되면 표 전체가 아니라 내 프로필만 가볍게 갱신!
+              />
+            )}
           </div>
         </div>
       );
