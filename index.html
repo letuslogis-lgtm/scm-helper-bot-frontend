@@ -1687,7 +1687,11 @@
       useEffect(() => {
         setDraftBrand(savedFilters.brand);
         setDraftStatus(savedFilters.status);
-      }, [savedFilters.brand, savedFilters.status]);
+        setDraftStartDate(savedFilters.startDate);
+        setDraftEndDate(savedFilters.endDate);
+        setDraftSearchType(savedFilters.searchType);
+        setDraftSearchValue(savedFilters.searchValue);
+      }, [savedFilters.brand, savedFilters.status, savedFilters.startDate, savedFilters.endDate, savedFilters.searchType, savedFilters.searchValue]);
 
       const handleSearch = () => {
         setSavedFilters({
@@ -1804,7 +1808,6 @@
 
       return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] flex flex-col gap-4 slide-up">
-
           <div className="w-full h-[54px] bg-white rounded-lg shadow-sm border border-slate-200 px-6 flex items-center z-30 shrink-0">
             <div className="flex items-center gap-6 w-full overflow-hidden">
               <div className="flex items-center shrink-0">
@@ -2007,6 +2010,13 @@
         </div>
       );
     }
+
+    const supabaseUrl = 'https://kbbkodmighrrgwtwrgdp.supabase.co';
+    const supabaseAnonKey = 'sb_publishable_2yOkLjobrM_oMlncJFqL3A_gbuU9eAr';
+    const SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiYmtvZG1pZ2hycmd3dHdyZ2RwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDA2Nzk1OSwiZXhwIjoyMDg5NjQzOTU5fQ.p32oIw0vCr9DfwZ2ifnAjZDM0tiU23UbMgRtXFQ4aeU";
+
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    const adminSupabase = window.supabase.createClient(supabaseUrl, SUPABASE_SERVICE_ROLE_KEY);
 
     const LoginView = () => {
       const [loginId, setLoginId] = useState('');
