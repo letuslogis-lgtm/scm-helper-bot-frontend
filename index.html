@@ -1759,79 +1759,66 @@
       );
     }
 
-    // --- 전체 이슈 리스트 화면 (이전 작업 유지용) ---
-    const IssueList = ({ issues = [], isLoading = false, onReload, initialFilter, userProfile }) => {
+    // --- 전체 이슈 리스트 화면 ---
+    // 🔥 포인트: 부모로부터 savedFilters와 setSavedFilters를 받습니다. (initialFilter 삭제)
+    const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, setSavedFilters, userProfile }) => {
       const today = new Date().toISOString().split("T")[0];
       const [viewComment, setViewComment] = useState(null);
       const [activeModalRow, setActiveModalRow] = useState(null);
       const [activeHandleRow, setActiveHandleRow] = useState(null);
       const [selectedIds, setSelectedIds] = useState([]);
 
-      // UI 컨트롤(콤보박스)에 묶여있는 임시 상태 (Draft)
-      const [draftBrand, setDraftBrand] = useState(initialFilter?.brand || '전체');
-      const [draftStatus, setDraftStatus] = useState(initialFilter?.status || '전체');
-      const [draftStartDate, setDraftStartDate] = useState(today);
-      const [draftEndDate, setDraftEndDate] = useState(today);
-      const [draftSearchType, setDraftSearchType] = useState('품목코드');
-      const [draftSearchValue, setDraftSearchValue] = useState('');
+      // 화면 컨트롤용 임시 상태 (부모의 기억장치 값을 초기값으로 씁니다!)
+      const [draftBrand, setDraftBrand] = useState(savedFilters.brand);
+      const [draftStatus, setDraftStatus] = useState(savedFilters.status);
+      const [draftStartDate, setDraftStartDate] = useState(savedFilters.startDate);
+      const [draftEndDate, setDraftEndDate] = useState(savedFilters.endDate);
+      const [draftSearchType, setDraftSearchType] = useState(savedFilters.searchType);
+      const [draftSearchValue, setDraftSearchValue] = useState(savedFilters.searchValue);
 
-      // 조회버튼을 누르거나 드릴다운으로 곧바로 꽂혔을 때 쓰는 실제 검색 상태 (Applied)
-      const [appliedBrand, setAppliedBrand] = useState(initialFilter?.brand || '전체');
-      const [appliedStatus, setAppliedStatus] = useState(initialFilter?.status || '전체');
-      const [isSearching, setIsSearching] = useState(false);
-      const [appliedStartDate, setAppliedStartDate] = useState(today);
-      const [appliedEndDate, setAppliedEndDate] = useState(today);
-      const [appliedSearchType, setAppliedSearchType] = useState('품목코드');
-      const [appliedSearchValue, setAppliedSearchValue] = useState('');
-
-      // 1. 외부(Dashboard 등)에서 initialFilter(드릴다운 파라미터)가 들어왔을 때 변경 즉시 감지 후 렌더링 강제 (useEffect)
+      // 부모의 기억장치(드릴다운 등)가 밖에서 바뀌면 화면의 콤보박스도 싹 맞춰줍니다.
       useEffect(() => {
-        if (initialFilter) {
-          const b = initialFilter.brand || '전체';
-          const s = initialFilter.status || '전체';
-          setDraftBrand(b);
-          setDraftStatus(s);
-          setAppliedBrand(b);
-          setAppliedStatus(s);
-        }
-      }, [initialFilter]);
+        setDraftBrand(savedFilters.brand);
+        setDraftStatus(savedFilters.status);
+      }, [savedFilters.brand, savedFilters.status]);
 
-      // 2. 조회하기 클릭 핸들러
+      // 2. 조회하기 클릭 핸들러 (조회를 누르면 부모의 기억장치를 업데이트!)
       const handleSearch = () => {
-        setAppliedBrand(draftBrand);
-        setAppliedStatus(draftStatus);
-        setAppliedStartDate(draftStartDate);
-        setAppliedEndDate(draftEndDate);
-        setAppliedSearchType(draftSearchType);
-        setAppliedSearchValue(draftSearchValue);
+        setSavedFilters({
+          brand: draftBrand,
+          status: draftStatus,
+          startDate: draftStartDate,
+          endDate: draftEndDate,
+          searchType: draftSearchType,
+          searchValue: draftSearchValue
+        });
       };
 
-      // 3. 실제 필터링 동작 (issues 객체가 파괴되지 않으며, View 모델만 변형)
+      // 3. 실제 필터링 동작 (부모의 안전한 기억장치인 savedFilters를 기준으로 필터링!)
       const filteredIssues = issues.filter(issue => {
-        if (appliedBrand !== '전체' && issue.brand !== appliedBrand) return false;
-        if (appliedStatus !== '전체' && issue.status !== appliedStatus) return false;
+        if (savedFilters.brand !== '전체' && issue.brand !== savedFilters.brand) return false;
+        if (savedFilters.status !== '전체' && issue.status !== savedFilters.status) return false;
 
-        // 날짜 범위 필터
         if (issue.created_at) {
           const issueDate = issue.created_at.split('T')[0];
-          if (issueDate < appliedStartDate || issueDate > appliedEndDate) return false;
+          if (issueDate < savedFilters.startDate || issueDate > savedFilters.endDate) return false;
         }
 
-        // 검색어 필터 (품목코드, 공급업체, 처리자)
-        if (appliedSearchValue) {
-          const val = appliedSearchValue.toLowerCase();
-          if (appliedSearchType === '품목코드') {
+        if (savedFilters.searchValue) {
+          const val = savedFilters.searchValue.toLowerCase();
+          if (savedFilters.searchType === '품목코드') {
             if (!issue.product_code?.toLowerCase().includes(val)) return false;
-          } else if (appliedSearchType === '공급업체') {
+          } else if (savedFilters.searchType === '공급업체') {
             const vendor = (issue.vendor || issue.brand || '').toLowerCase();
             if (!vendor.includes(val)) return false;
-          } else if (appliedSearchType === '처리자') {
+          } else if (savedFilters.searchType === '처리자') {
             if (!issue.handlerName?.toLowerCase().includes(val)) return false;
           }
         }
-
         return true;
       });
+
+      // ... (이하 const isAllSelected 등 나머지 코드 동일) ...
       // console.log(`IssueList Render - Total: ${issues.length}, Filtered: ${filteredIssues.length}`);
 
       const isAllSelected = filteredIssues.length > 0 && selectedIds.length === filteredIssues.length;
@@ -2257,6 +2244,11 @@
       const [notifications, setNotifications] = useState([]);
       const [isNotiOpen, setIsNotiOpen] = useState(false);
 
+      const today = new Date().toISOString().split("T")[0];
+      const [savedListFilters, setSavedListFilters] = useState({
+        brand: '전체', status: '전체', startDate: today, endDate: today, searchType: '품목코드', searchValue: ''
+      });
+
       useEffect(() => {
         if (session) {
           const savedKey = 'letus_noti_' + session.user.id;
@@ -2291,7 +2283,11 @@
       };
 
       const handleDrillDown = (filterObj) => {
-        setListFilter(filterObj);
+        setSavedListFilters(prev => ({
+          ...prev,
+          brand: filterObj.brand || '전체',
+          status: filterObj.status || '전체'
+        }));
         setCurrentPage('list');
       };
 
@@ -2442,13 +2438,17 @@
               onNotiClick={handleNotiClick} 
               onEditProfile={() => setSelfEditTarget(userProfile)} // 🔥 클릭 시 내 정보 세팅!
             />
-            <main>
+            
+            <main className="flex-1 w-full">
               {currentPage === 'dashboard' && <Dashboard onNavigateToList={() => setCurrentPage('list')} onDrillDown={handleDrillDown} issues={issues} isLoading={isLoading} onReload={fetchIssues} />}
-              {currentPage === 'list' && <IssueList userProfile={userProfile} issues={issues} isLoading={isLoading} onReload={fetchIssues} initialFilter={listFilter} />}
+              
+              {/* 🔥 요기만 바뀌었습니다! (initialFilter 대신 부모의 기억장치 연결) */}
+              {currentPage === 'list' && <IssueList userProfile={userProfile} issues={issues} isLoading={isLoading} onReload={fetchIssues} savedFilters={savedListFilters} setSavedFilters={setSavedListFilters} />}
+              
               {currentPage === 'user_management' && <UserManagement />}
             </main>
 
-            {/* 🔥 내 정보 수정 팝업 (기존 UserEditModal 재활용) */}
+            {/* 🔥 내 정보 수정 팝업 (기존 UserEditModal 재활용 - 절대 안 날아갑니다!) */}
             {selfEditTarget && (
               <UserEditModal 
                 user={selfEditTarget} 
