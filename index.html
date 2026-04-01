@@ -1999,9 +1999,13 @@
     // --- 🌟 건의사항 상세/답변 모달 (SuggestionModal) ---
     const SuggestionModal = ({ item, onClose, onReload, userProfile }) => {
       const isAdmin = userProfile?.role === '관리자';
+      // 🔥 본인이 작성한 글인지 확인
+      const isAuthor = userProfile?.name === item.user_name;
+
       const [answer, setAnswer] = useState(item.answer || '');
       const [status, setStatus] = useState(item.status || '대기중');
       const [isSaving, setIsSaving] = useState(false);
+      const [isDeleting, setIsDeleting] = useState(false); // 🔥 삭제 상태 관리
 
       const handleSave = async () => {
         setIsSaving(true);
@@ -2020,6 +2024,29 @@
           alert('저장 실패: ' + error.message);
         } finally {
           setIsSaving(false);
+        }
+      };
+
+      // 🔥 삭제 핸들러 추가
+      const handleDelete = async () => {
+        if (!window.confirm('이 건의사항을 정말 삭제하시겠습니까?\n삭제된 데이터는 영구적으로 복구할 수 없습니다.')) return;
+
+        setIsDeleting(true);
+        try {
+          const { error } = await supabase
+            .from('suggestions')
+            .delete()
+            .eq('id', item.id); // 해당 ID의 글을 DB에서 삭제
+
+          if (error) throw error;
+
+          alert('건의사항이 삭제되었습니다.');
+          onReload(); // 리스트 새로고침하여 화면에서 즉시 사라지게 함
+          onClose();  // 모달 닫기
+        } catch (error) {
+          alert('삭제 실패: ' + error.message);
+        } finally {
+          setIsDeleting(false);
         }
       };
 
@@ -2059,7 +2086,7 @@
                     관리자 피드백
                   </h4>
 
-                  {/* 🔥 관리자면 셀렉트 박스, 일반 유저면 상태 뱃지만 노출 */}
+                  {/* 관리자면 셀렉트 박스, 일반 유저면 상태 뱃지만 노출 */}
                   {isAdmin ? (
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-gray-500">진행 상태:</span>
@@ -2075,7 +2102,7 @@
                   )}
                 </div>
 
-                {/* 🔥 관리자면 입력창(textarea), 일반 유저면 결과 텍스트만 노출 */}
+                {/* 관리자면 입력창(textarea), 일반 유저면 결과 텍스트만 노출 */}
                 {isAdmin ? (
                   <textarea
                     value={answer}
@@ -2092,15 +2119,32 @@
             </div>
 
             {/* 하단 버튼 */}
-            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-2 shrink-0">
-              <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 text-sm font-bold rounded hover:bg-gray-100 transition-colors bg-white shadow-sm">
-                닫기
-              </button>
-              {isAdmin && (
-                <button onClick={handleSave} disabled={isSaving} className={`px-6 py-2 bg-letusBlue text-white text-sm font-bold rounded shadow hover:bg-blue-600 transition-colors flex items-center gap-2 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}>
-                  {isSaving ? '저장 중...' : '답변 저장'}
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center shrink-0">
+              {/* 🔥 왼쪽: 삭제 버튼 (관리자이거나 작성자 본인일 경우에만 노출) */}
+              <div>
+                {(isAdmin || isAuthor) && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={isDeleting || isSaving}
+                    className={`px-4 py-2 border border-red-200 text-red-500 bg-red-50 text-sm font-bold rounded hover:bg-red-100 transition-colors shadow-sm flex items-center gap-1.5 ${isDeleting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    {isDeleting ? '삭제 중...' : '삭제'}
+                  </button>
+                )}
+              </div>
+
+              {/* 오른쪽: 닫기 및 저장 버튼 */}
+              <div className="flex gap-2">
+                <button onClick={onClose} disabled={isDeleting || isSaving} className="px-5 py-2 border border-gray-300 text-gray-600 text-sm font-bold rounded hover:bg-gray-100 transition-colors bg-white shadow-sm">
+                  닫기
                 </button>
-              )}
+                {isAdmin && (
+                  <button onClick={handleSave} disabled={isSaving || isDeleting} className={`px-6 py-2 bg-letusBlue text-white text-sm font-bold rounded shadow hover:bg-blue-600 transition-colors flex items-center gap-2 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                    {isSaving ? '저장 중...' : '답변 저장'}
+                  </button>
+                )}
+              </div>
             </div>
 
           </div>
