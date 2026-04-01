@@ -1284,170 +1284,128 @@
       );
     };
 
+    // --- 사이드바 (Sidebar) ---
     const Sidebar = ({ page, setPage, userProfile }) => {
+      // 🔥 아코디언 상태 관리 (기본으로 'logistics' 메뉴를 열어둡니다)
+      const [openMenu, setOpenMenu] = useState('logistics');
+
+      const toggleMenu = (menuName) => {
+        setOpenMenu(openMenu === menuName ? null : menuName);
+      };
+
       return (
-        <div className="w-64 bg-letusSidebar text-white flex flex-col h-full flex-shrink-0">
+        <div className="w-64 bg-letusSidebar text-white flex flex-col h-full flex-shrink-0 select-none">
           <div className="p-5 border-b border-gray-700/50">
             <h1 className="text-2xl cursor-pointer" onClick={() => setPage('dashboard')}>
-              <span className="font-extrabold tracking-tight">LETUS</span>
-              <span className="font-extrabold text-letusOrange tracking-tight ml-1">LOGIS</span>
+              <span className="font-extrabold tracking-tight">LETUS</span><span className="font-extrabold text-letusOrange tracking-tight ml-1">LOGIS</span>
             </h1>
           </div>
 
-          <div className="flex text-sm font-semibold border-b border-gray-700/50">
-            <div className="flex-1 text-center py-3 border-b-2 border-letusBlue cursor-pointer">전체메뉴</div>
-            <div className="flex-1 text-center py-3 text-gray-400 cursor-pointer hover:text-gray-200">즐겨찾기</div>
-          </div>
+          <nav className="flex-1 px-2 py-2 space-y-2 mt-4 overflow-y-auto custom-scrollbar">
 
-          <div className="p-4">
-            <div className="relative">
-              <svg className="w-4 h-4 absolute left-3 top-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <input type="text" placeholder="검색" className="w-full bg-white text-gray-800 rounded-sm pl-9 pr-3 py-2 text-sm focus:outline-none" />
-            </div>
-          </div>
-
-          <nav className="flex-1 px-2 py-2 space-y-2 mt-4">
+            {/* 1. 마스터 정보관리 (관리자 전용) */}
             {userProfile?.role !== '사용자' && (
               <div>
-                <div className="bg-transparent px-4 py-2 text-sm font-semibold flex items-center text-gray-300 transition-colors">
-                  <svg className="w-4 h-4 mr-3 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                  마스터 정보관리
-                </div>
-                <div className="mt-1 space-y-1">
-                  <div
-                    className={`pl-11 pr-4 py-2 cursor-pointer text-sm font-medium transition-colors rounded-sm ${page === 'user_management' ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-                    onClick={() => setPage('user_management')}
-                  >
-                    사용자 관리
+                <div onClick={() => toggleMenu('master')} className="bg-transparent px-4 py-2 cursor-pointer text-sm font-semibold flex items-center justify-between text-gray-300 hover:text-white transition-colors rounded">
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 mr-3 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    마스터 정보관리
                   </div>
+                  <svg className={`w-3 h-3 transition-transform ${openMenu === 'master' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
                 </div>
+                {openMenu === 'master' && (
+                  <div className="mt-1 space-y-1 slide-up">
+                    <div className={`pl-11 pr-4 py-2 cursor-pointer text-sm font-medium transition-colors rounded-sm ${page === 'user_management' ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} onClick={() => setPage('user_management')}>사용자 관리</div>
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="mt-4">
-              <div
-                className="bg-transparent px-4 py-2 cursor-pointer text-sm font-semibold flex items-center text-gray-300 hover:text-white transition-colors"
-                onClick={() => setPage('dashboard')}
-              >
-                <svg className="w-4 h-4 mr-3 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
-                입고 특이사항
-              </div>
-              <div className="mt-1 space-y-1">
-                <div
-                  className={`pl-11 pr-4 py-2 cursor-pointer text-sm font-medium transition-colors rounded-sm ${page === 'list' ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-                  onClick={() => setPage('list')}
-                >
-                  입고 특이사항 LIST
+            {/* 2. 입고 특이사항 */}
+            <div className="mt-2">
+              <div onClick={() => toggleMenu('logistics')} className="bg-transparent px-4 py-2 cursor-pointer text-sm font-semibold flex items-center justify-between text-gray-300 hover:text-white transition-colors rounded">
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-3 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                  입고 특이사항
                 </div>
+                <svg className={`w-3 h-3 transition-transform ${openMenu === 'logistics' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
               </div>
-            </div>
-            {/* 입고 특이사항 메뉴 코드 아래에 추가! */}
-            <div className="mt-4">
-              <div className="bg-transparent px-4 py-2 text-sm font-semibold flex items-center text-gray-300 transition-colors">
-                <svg className="w-4 h-4 mr-3 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                고객 지원
-              </div>
-              <div className="mt-1 space-y-1">
-                <div
-                  className={`pl-11 pr-4 py-2 cursor-pointer text-sm font-medium transition-colors rounded-sm ${page === 'support' ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-                  onClick={() => setPage('support')}
-                >
-                  지원센터 (FAQ)
+              {openMenu === 'logistics' && (
+                <div className="mt-1 space-y-1 slide-up">
+                  <div className={`pl-11 pr-4 py-2 cursor-pointer text-sm font-medium transition-colors rounded-sm ${page === 'dashboard' ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} onClick={() => setPage('dashboard')}>대시보드</div>
+                  <div className={`pl-11 pr-4 py-2 cursor-pointer text-sm font-medium transition-colors rounded-sm ${page === 'list' ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} onClick={() => setPage('list')}>특이사항 LIST</div>
                 </div>
-              </div>
+              )}
             </div>
-          </nav>
 
+            {/* 3. 고객 지원 */}
+            <div className="mt-2">
+              <div onClick={() => toggleMenu('support')} className="bg-transparent px-4 py-2 cursor-pointer text-sm font-semibold flex items-center justify-between text-gray-300 hover:text-white transition-colors rounded">
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-3 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                  고객 지원
+                </div>
+                <svg className={`w-3 h-3 transition-transform ${openMenu === 'support' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+              </div>
+              {openMenu === 'support' && (
+                <div className="mt-1 space-y-1 slide-up">
+                  <div className={`pl-11 pr-4 py-2 cursor-pointer text-sm font-medium transition-colors rounded-sm ${page === 'support' ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`} onClick={() => setPage('support')}>지원센터</div>
+                </div>
+              )}
+            </div>
+
+          </nav>
           <div className="p-4 text-xs text-gray-500 font-medium">
-            <a href="#" className="hover:text-gray-300 underline mb-2 block object-cover">개인정보처리방침</a>
             <p>© 2026 레터스(LETUS)<br />All rights reserved.</p>
           </div>
         </div>
       );
     };
 
-    const Header = ({ page, userProfile, onLogout, notifications = [], isNotiOpen, toggleNoti, onNotiClick, onEditProfile }) => (
-      <header className="h-16 min-h-[64px] flex-shrink-0 bg-gradient-to-r from-blue-50/70 to-white border-b border-gray-200 flex justify-between items-center px-6 sticky top-0 z-50">
-        <div className="flex items-center text-gray-600">
-          <svg className="w-5 h-5 text-gray-400 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-          <h2 className="text-lg font-bold text-gray-800 tracking-tight">
-            {page === 'dashboard' ? '대시보드' : page === 'user_management' ? '사용자 관리' : '입고 특이사항'}
-            <span className="text-sm font-normal text-gray-400 ml-1">
-              {page === 'dashboard' ? '대시보드' : page === 'user_management' ? '마스터 정보' : '입고 특이사항 LIST'}
-            </span>
-          </h2>
-        </div>
-        <div className="flex items-center">
-          <button className="text-gray-400 hover:text-gray-700 transition-colors mr-3" onClick={(e) => {
-            const svg = e.currentTarget.querySelector('svg');
-            svg.classList.add('animate-spin');
-            setTimeout(() => svg.classList.remove('animate-spin'), 500);
-            window.dispatchEvent(new Event('trigger-refresh'));
-          }}>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-          </button>
+    // --- 헤더 (Header) ---
+    const Header = ({ page, userProfile, onLogout, notifications = [], isNotiOpen, toggleNoti, onNotiClick, onEditProfile }) => {
+      const [notiStatus, setNotiStatus] = useState(Notification.permission);
 
-          <div className="relative">
-            <button onClick={toggleNoti} className={`text-gray-400 hover:text-gray-700 transition-colors mr-6 relative p-1.5 rounded-full ${isNotiOpen ? 'bg-gray-200 text-gray-800' : ''}`}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-              {notifications.filter(n => !n.read).length > 0 && (
-                <span className="absolute top-0.5 right-1 block h-1.5 w-1.5 rounded-full bg-red-500 ring-2 ring-white"></span>
-              )}
+      const handleRequestNotification = () => {
+        if (notiStatus === 'denied') {
+          alert('🔕 알림이 차단되어 있습니다!\n\n브라우저 상단 주소창 왼쪽의 [자물쇠(🔒) 아이콘]을 클릭한 후, [알림] 권한을 "허용"으로 변경하고 새로고침해 주세요.');
+          return;
+        }
+        if (notiStatus === 'default') {
+          Notification.requestPermission().then(permission => {
+            setNotiStatus(permission);
+            if (permission === 'granted') alert('🔔 이제부터 특이사항 발생 시 바탕화면 팝업 알림이 전송됩니다!');
+          });
+        }
+      };
+
+      return (
+        <header className="h-16 min-h-[64px] flex-shrink-0 bg-gradient-to-r from-blue-50/70 to-white border-b border-gray-200 flex justify-between items-center px-6 sticky top-0 z-50">
+          <div className="flex items-center text-gray-600">
+            <svg className="w-5 h-5 text-gray-400 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+            <h2 className="text-lg font-bold text-gray-800 tracking-tight">
+              {/* 🔥 요기가 수정된 부분입니다! (support 조건 추가) */}
+              {page === 'dashboard' ? '대시보드' : page === 'user_management' ? '사용자 관리' : page === 'support' ? '지원센터' : '입고 특이사항'}
+              <span className="text-sm font-normal text-gray-400 ml-1">
+                {page === 'dashboard' ? '대시보드' : page === 'user_management' ? '마스터 정보' : page === 'support' ? 'FAQ 및 건의사항' : '입고 특이사항 LIST'}
+              </span>
+            </h2>
+          </div>
+
+          {/* ... (이하 알림 버튼, 유저 프로필 등 기존 코드와 동일하게 유지해 주세요) ... */}
+          <div className="flex items-center gap-2">
+            <button onClick={handleRequestNotification} className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border transition-colors shadow-sm mr-2 ${notiStatus === 'granted' ? 'bg-green-50 text-green-700 border-green-200' : notiStatus === 'denied' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-orange-50 text-orange-600 border-orange-200 animate-pulse'}`}>
+              {notiStatus === 'granted' ? '알림 ON' : notiStatus === 'denied' ? '알림 차단됨' : '알림 켜기 (권장)'}
             </button>
-
-            {isNotiOpen && (
-              <div className="absolute right-6 top-10 w-[320px] bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden flex flex-col slide-up">
-                <div className="max-h-[350px] overflow-y-auto divide-y divide-gray-100 custom-scrollbar">
-                  {notifications.length === 0 ? (
-                    <div className="py-12 text-center text-xs text-gray-400 font-bold">최근 도착한 알림이 없습니다.</div>
-                  ) : (
-                    notifications.map(noti => (
-                      <div
-                        key={noti.id}
-                        onClick={() => onNotiClick(noti.id, noti.filterObj)}
-                        className={`p-3.5 cursor-pointer transition-all hover:bg-slate-50 ${noti.read ? 'opacity-40 bg-gray-50' : 'bg-white'}`}
-                      >
-                        <div className="flex justify-between items-start mb-1">
-                          <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${noti.title === '신규 입고' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>{noti.title}</span>
-                          <span className="text-[10px] text-gray-400 font-medium">{noti.date}</span>
-                        </div>
-                        <p className={`text-xs mt-1.5 leading-snug ${noti.read ? 'text-gray-500' : 'text-gray-800 font-bold'}`}>{noti.message}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
+            <div className="text-right ml-4 border-l border-gray-200 pl-4">
+              <p className="text-sm font-bold text-gray-800 cursor-pointer hover:text-letusBlue" onClick={onEditProfile}>{userProfile?.name || '대기중'}</p>
+              <p className="text-xs text-gray-500">{userProfile?.brands || 'LETUS'} • {userProfile?.role || '사용자'}</p>
+            </div>
+            <button onClick={onLogout} className="ml-4 text-xs font-bold text-slate-400 hover:text-red-500">로그아웃</button>
           </div>
-
-          <div className="text-right">
-            <p
-              className="text-sm font-bold text-gray-800 cursor-pointer hover:text-letusBlue transition-colors flex items-center justify-end gap-1"
-              onClick={onEditProfile}
-              title="내 정보 수정"
-            >
-              {userProfile ? userProfile.name : '기다리는 중...'}
-              <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-            </p>
-            <p className="text-xs text-gray-500">
-              {userProfile ? (
-                <>
-                  {userProfile.brands || 'LETUS'}
-                  {' • '}
-                  {userProfile.role || '사용자'}
-                </>
-              ) : 'LETUS'}
-            </p>
-          </div>
-          <button
-            onClick={onLogout}
-            className="ml-4 pl-4 border-l border-gray-200 text-xs font-bold text-slate-400 hover:text-red-500 transition-colors"
-          >
-            로그아웃
-          </button>
-        </div>
-      </header>
-    );
+        </header>
+      );
+    };
 
     const Dashboard = ({ onNavigateToList, onDrillDown, issues = [], isLoading = false, onReload }) => {
       const [selectedBrands, setSelectedBrands] = useState([]);
@@ -2038,101 +1996,115 @@
       );
     }
 
-    // --- 지원센터 (FAQ 및 건의사항) 컴포넌트 ---
+    // --- 지원센터 (FAQ, 건의사항, 관리자 전용) 컴포넌트 ---
     const SupportCenter = ({ userProfile }) => {
-      const [activeTab, setActiveTab] = useState('faq'); // 'faq' or 'suggestion'
-      const [openFaqId, setOpenFaqId] = useState(1); // 기본으로 첫 번째 FAQ 열어두기
+      const [activeTab, setActiveTab] = useState('faq');
+      const [openFaqId, setOpenFaqId] = useState(null);
 
-      // FAQ 데이터
-      const faqs = [
-        {
-          id: 1,
-          category: '시스템 설정',
-          q: '특이사항 발생 알림(팝업)이 오지 않습니다.',
-          a: (
-            <div className="space-y-3 text-gray-600 text-sm leading-relaxed">
-              <p>브라우저의 알림 설정이 '차단'되어 있을 수 있습니다. 사용 중인 브라우저에 맞게 아래 방법으로 해제해 주세요.</p>
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 space-y-4">
-                <div>
-                  <strong className="text-gray-800 block mb-1">🟢 Google Chrome (구글 크롬)</strong>
-                  1. 주소창 왼쪽의 <strong>자물쇠(🔒) 또는 단추 모양 아이콘</strong> 클릭<br />
-                  2. 메뉴에서 <strong>[알림]</strong>을 찾아 <strong>'허용'</strong>으로 변경<br />
-                  3. 브라우저 새로고침(F5)
-                </div>
-                <div className="border-t border-gray-200 pt-3">
-                  <strong className="text-gray-800 block mb-1">🔵 Microsoft Edge (마이크로소프트 엣지)</strong>
-                  1. 주소창 왼쪽의 <strong>자물쇠(🔒) 아이콘</strong> 클릭<br />
-                  2. <strong>[이 사이트에 대한 권한]</strong> 클릭 후 <strong>[알림]</strong> 항목을 <strong>'허용'</strong>으로 변경<br />
-                  3. 원래 화면으로 돌아와 새로고침(F5)
-                </div>
-              </div>
-            </div>
-          )
-        },
-        {
-          id: 2,
-          category: '입고 관리',
-          q: '대시보드와 리스트의 재고 수량이 다른 것 같습니다.',
-          a: '대시보드의 데이터는 실시간으로 반영되나, 리스트 화면은 검색(조회) 버튼을 누른 시점의 데이터를 보여줍니다. 최신 데이터를 보시려면 상단의 새로고침 아이콘이나 조회 버튼을 다시 눌러주세요.'
-        },
-        {
-          id: 3,
-          category: '계정/권한',
-          q: '담당 업체(브랜드)를 추가/변경하고 싶습니다.',
-          a: '우측 상단의 본인 이름을 클릭하여 [내 정보 수정] 창을 띄운 뒤 변경할 수 있습니다. 단, 관리자 권한이 필요한 업체 추가는 IT/SCM 담당자에게 별도로 건의사항을 남겨주시기 바랍니다.'
+      const [faqs, setFaqs] = useState([]);
+      const [suggestions, setSuggestions] = useState([]);
+      const [isLoading, setIsLoading] = useState(false);
+
+      // 건의사항 입력 폼 상태
+      const [sugType, setSugType] = useState('기능 개선 (UI/UX)');
+      const [sugTitle, setSugTitle] = useState('');
+      const [sugContent, setSugContent] = useState('');
+      const [isSubmitting, setIsSubmitting] = useState(false);
+
+      // 데이터 불러오기 (FAQ, 건의사항)
+      const fetchData = async () => {
+        setIsLoading(true);
+        try {
+          const { data: faqData } = await supabase.from('faqs').select('*').order('id', { ascending: true });
+          if (faqData) setFaqs(faqData);
+
+          if (userProfile?.role === '관리자') {
+            const { data: sugData } = await supabase.from('suggestions').select('*').order('created_at', { ascending: false });
+            if (sugData) setSuggestions(sugData);
+          }
+        } catch (error) {
+          console.error("Fetch error:", error);
+        } finally {
+          setIsLoading(false);
         }
-      ];
+      };
+
+      useEffect(() => {
+        fetchData();
+      }, [activeTab, userProfile]);
+
+      // 건의사항 제출
+      const handleSubmitSuggestion = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+          const { error } = await supabase.from('suggestions').insert([{
+            user_name: userProfile?.name || '알수없음',
+            request_type: sugType,
+            title: sugTitle,
+            content: sugContent
+          }]);
+          if (error) throw error;
+
+          alert('건의사항이 성공적으로 접수되었습니다. 담당자 검토 후 반영하겠습니다.');
+          setSugTitle(''); setSugContent('');
+          setActiveTab('faq'); // 등록 후 FAQ 화면으로 이동
+        } catch (error) {
+          alert('오류가 발생했습니다: ' + error.message);
+        } finally {
+          setIsSubmitting(false);
+        }
+      };
 
       return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-5xl mx-auto">
 
-            {/* 상단 타이틀 및 탭 영역 */}
+            {/* 상단 탭 영역 */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-              <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50/50 to-white">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <svg className="w-6 h-6 text-letusBlue" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                  지원센터
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">시스템 이용 중 궁금한 점이나 개선 사항을 남겨주세요.</p>
+              <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50/50 to-white flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <svg className="w-6 h-6 text-letusBlue" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    지원센터
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">시스템 이용 중 궁금한 점이나 개선 사항을 남겨주세요.</p>
+                </div>
               </div>
               <div className="flex px-2 pt-2 bg-gray-50/50 border-b border-gray-100">
-                <button
-                  onClick={() => setActiveTab('faq')}
-                  className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'faq' ? 'border-letusBlue text-letusBlue' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                >
+                <button onClick={() => setActiveTab('faq')} className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'faq' ? 'border-letusBlue text-letusBlue' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                   자주 묻는 질문 (FAQ)
                 </button>
-                <button
-                  onClick={() => setActiveTab('suggestion')}
-                  className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'suggestion' ? 'border-letusBlue text-letusBlue' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                >
-                  시스템 건의사항
+                <button onClick={() => setActiveTab('suggestion')} className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'suggestion' ? 'border-letusBlue text-letusBlue' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                  시스템 건의사항 접수
                 </button>
+                {/* 🔥 관리자 전용 탭 */}
+                {userProfile?.role === '관리자' && (
+                  <button onClick={() => setActiveTab('admin')} className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ml-auto flex items-center gap-1 ${activeTab === 'admin' ? 'border-orange-500 text-orange-600' : 'border-transparent text-orange-400 hover:text-orange-600'}`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
+                    관리자 전용
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* 탭 콘텐츠 영역 */}
+            {/* 1. FAQ 탭 */}
             {activeTab === 'faq' && (
-              <div className="space-y-4 animate-fade-in">
-                {faqs.map((faq) => (
-                  <div key={faq.id} className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden transition-all duration-200">
-                    <button
-                      onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)}
-                      className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors focus:outline-none"
-                    >
+              <div className="space-y-3 animate-fade-in">
+                {isLoading ? <p className="text-center text-gray-500 py-10">FAQ 불러오는 중...</p> : faqs.length === 0 ? <p className="text-center text-gray-500 py-10">등록된 FAQ가 없습니다.</p> : faqs.map((faq) => (
+                  <div key={faq.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <button onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)} className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 focus:outline-none">
                       <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-black text-letusOrange bg-orange-50 border border-orange-100 px-2 py-0.5 rounded uppercase tracking-wider">{faq.category}</span>
-                        <span className={`font-bold text-[15px] ${openFaqId === faq.id ? 'text-letusBlue' : 'text-gray-800'}`}>Q. {faq.q}</span>
+                        <span className="text-[10px] font-black text-letusOrange bg-orange-50 border border-orange-100 px-2 py-0.5 rounded">{faq.category}</span>
+                        <span className={`font-bold text-[14px] ${openFaqId === faq.id ? 'text-letusBlue' : 'text-gray-800'}`}>Q. {faq.question}</span>
                       </div>
-                      <svg className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${openFaqId === faq.id ? 'rotate-180 text-letusBlue' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      <svg className={`w-5 h-5 text-gray-400 transition-transform ${openFaqId === faq.id ? 'rotate-180 text-letusBlue' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </button>
-
                     {openFaqId === faq.id && (
-                      <div className="px-5 pb-5 pt-2 border-t border-gray-50 bg-white">
-                        <div className="flex gap-3">
-                          <span className="font-black text-gray-400 text-lg">A.</span>
-                          <div className="flex-1 mt-1">{faq.a}</div>
+                      <div className="px-5 pb-5 pt-2 border-t border-gray-100 bg-gray-50/50">
+                        <div className="flex gap-3 text-gray-600 text-sm leading-relaxed whitespace-pre-wrap mt-2">
+                          <span className="font-black text-gray-300 text-lg">A.</span>
+                          <div className="flex-1 mt-0.5">{faq.answer}</div>
                         </div>
                       </div>
                     )}
@@ -2141,9 +2113,10 @@
               </div>
             )}
 
+            {/* 2. 건의사항 작성 탭 */}
             {activeTab === 'suggestion' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 animate-fade-in">
-                <form onSubmit={(e) => { e.preventDefault(); alert('건의사항이 성공적으로 접수되었습니다. (현재 UI 테스트 중)'); }} className="space-y-5">
+                <form onSubmit={handleSubmitSuggestion} className="space-y-5">
                   <div className="grid grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-gray-700">작성자</label>
@@ -2151,7 +2124,7 @@
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-gray-700">건의 유형 <span className="text-letusOrange">*</span></label>
-                      <select className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-letusBlue bg-white text-gray-800">
+                      <select value={sugType} onChange={e => setSugType(e.target.value)} className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-letusBlue bg-white text-gray-800">
                         <option>기능 개선 (UI/UX)</option>
                         <option>신규 기능 추가 요청</option>
                         <option>오류 및 버그 신고</option>
@@ -2159,24 +2132,56 @@
                       </select>
                     </div>
                   </div>
-
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-bold text-gray-700">제목 <span className="text-letusOrange">*</span></label>
-                    <input type="text" required placeholder="건의사항의 제목을 입력해 주세요." className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-letusBlue bg-white text-gray-800" />
+                    <input type="text" value={sugTitle} onChange={e => setSugTitle(e.target.value)} required placeholder="건의사항의 제목을 입력해 주세요." className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-letusBlue bg-white" />
                   </div>
-
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-bold text-gray-700">상세 내용 <span className="text-letusOrange">*</span></label>
-                    <textarea required rows={6} placeholder="개선이 필요한 부분을 상세히 적어주시면 시스템 고도화에 큰 도움이 됩니다." className="border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-letusBlue bg-white text-gray-800 resize-none"></textarea>
+                    <textarea value={sugContent} onChange={e => setSugContent(e.target.value)} required rows={6} placeholder="개선이 필요한 부분을 상세히 적어주시면 시스템 고도화에 큰 도움이 됩니다." className="border border-gray-300 rounded-lg px-4 py-3 text-sm focus:border-letusBlue bg-white resize-none"></textarea>
                   </div>
-
                   <div className="pt-2 flex justify-end">
-                    <button type="submit" className="px-6 py-2.5 bg-letusBlue text-white text-sm font-bold rounded-lg shadow-md hover:bg-blue-600 transition-colors flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                      건의사항 등록
+                    <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-letusBlue text-white text-sm font-bold rounded-lg shadow-md hover:bg-blue-600 transition-colors flex items-center gap-2">
+                      {isSubmitting ? '전송 중...' : '건의사항 등록'}
                     </button>
                   </div>
                 </form>
+              </div>
+            )}
+
+            {/* 3. 관리자 전용 탭 (건의사항 목록 보기) */}
+            {activeTab === 'admin' && userProfile?.role === '관리자' && (
+              <div className="bg-white rounded-xl shadow-sm border border-orange-200 overflow-hidden animate-fade-in">
+                <div className="bg-orange-50 px-5 py-3 border-b border-orange-100 font-bold text-sm text-orange-700 flex justify-between items-center">
+                  <span>접수된 건의사항 내역</span>
+                  <button onClick={() => alert('FAQ 추가 모달창 띄우기 (추후 개발 가능)')} className="bg-white border border-orange-200 px-3 py-1 text-xs rounded shadow-sm hover:bg-orange-100">FAQ 새 글 쓰기</button>
+                </div>
+                <div className="p-0 overflow-auto max-h-[500px]">
+                  <table className="w-full text-left whitespace-nowrap text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 sticky top-0">
+                      <tr>
+                        <th className="p-3 pl-5">접수일시</th>
+                        <th className="p-3">작성자</th>
+                        <th className="p-3">유형</th>
+                        <th className="p-3">제목 (클릭시 내용 확인)</th>
+                        <th className="p-3 text-center">상태</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {suggestions.length === 0 ? (
+                        <tr><td colSpan="5" className="p-10 text-center text-gray-400">접수된 건의사항이 없습니다.</td></tr>
+                      ) : suggestions.map((sug) => (
+                        <tr key={sug.id} className="hover:bg-orange-50/30 cursor-pointer" onClick={() => alert(`[상세내용]\n\n${sug.content}`)}>
+                          <td className="p-3 pl-5 text-gray-500 text-xs">{new Date(sug.created_at).toLocaleDateString()}</td>
+                          <td className="p-3 font-semibold text-gray-700">{sug.user_name}</td>
+                          <td className="p-3 text-xs"><span className="bg-gray-100 px-2 py-1 rounded text-gray-600">{sug.request_type}</span></td>
+                          <td className="p-3 text-gray-800 font-medium truncate max-w-[200px]">{sug.title}</td>
+                          <td className="p-3 text-center"><span className="text-xs font-bold text-orange-500 border border-orange-200 bg-orange-50 px-2 py-0.5 rounded">{sug.status}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
