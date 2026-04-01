@@ -1570,6 +1570,7 @@
       );
     };
 
+    // --- 대시보드 (Dashboard) ---
     const Dashboard = ({ onNavigateToList, onDrillDown, issues = [], isLoading = false, onReload }) => {
       const [selectedBrands, setSelectedBrands] = useState([]);
 
@@ -1582,13 +1583,31 @@
         }
       };
 
+      // 🔥 1. 일주일(7일) 기간 계산 로직 추가
+      const getWeekRange = () => {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 7);
+        const pad = n => n.toString().padStart(2, '0');
+        const format = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        return { startDate: format(start), endDate: format(end) };
+      };
+      const { startDate, endDate } = getWeekRange();
+
+      // 일주일치 데이터만 대시보드용으로 필터링
+      const dashboardIssues = issues.filter(issue => {
+        if (!issue.created_at) return false;
+        const issueDate = issue.created_at.split('T')[0];
+        return issueDate >= startDate && issueDate <= endDate;
+      });
+
       const displayBrands = ['퍼시스', '일룸', '시디즈', '슬로우베드', '알로소', '데스커'];
       const brandStatsDetails = displayBrands.reduce((acc, brand) => {
         acc[brand] = { pending: 0, processing: 0, completed: 0 };
         return acc;
       }, {});
 
-      issues.forEach(issue => {
+      dashboardIssues.forEach(issue => {
         if (brandStatsDetails[issue.brand]) {
           if (issue.status === '조치대기') brandStatsDetails[issue.brand].pending += 1;
           if (issue.status === '처리 중') brandStatsDetails[issue.brand].processing += 1;
@@ -1596,44 +1615,38 @@
         }
       });
 
-      const chartStats = (() => {
-        const base = {};
-        const targetIssues = selectedBrands.length > 0
-          ? issues.filter(issue => selectedBrands.includes(issue.brand))
-          : issues;
+      // 선택된 브랜드 필터링
+      const targetIssues = selectedBrands.length > 0
+        ? dashboardIssues.filter(issue => selectedBrands.includes(issue.brand))
+        : dashboardIssues;
 
-        targetIssues.forEach(issue => {
-          const type = issue.issue_type || '기타';
-          base[type] = (base[type] || 0) + 1;
-        });
-
-        if (Object.keys(base).length === 0) return { '등록 0건 (데이터 없음)': 1 };
-        return base;
-      })();
-
-      const supplierStats = (() => {
-        const base = {};
-        const targetIssues = selectedBrands.length > 0
-          ? issues.filter(issue => selectedBrands.includes(issue.brand))
-          : issues;
-
-        targetIssues.forEach(issue => {
-          const vendor = issue.vendor || issue.brand || '미상';
-          base[vendor] = (base[vendor] || 0) + 1;
-        });
-
-        if (Object.keys(base).length === 0) return { '등록 0건': 1 };
-        return base;
-      })();
+      // 파이 차트 데이터 (특이사항 유형)
+      const chartStats = {};
+      targetIssues.forEach(issue => {
+        const type = issue.issue_type || '기타';
+        chartStats[type] = (chartStats[type] || 0) + 1;
+      });
 
       const totalIssues = Object.values(chartStats).reduce((a, b) => a + b, 0);
 
-      const pieData = Object.entries(chartStats)
-        .filter(([k, v]) => v > 0)
-        .map(([k, v]) => ({ name: k, value: v }));
+      // 🔥 2. 파이 차트 0건 버그 수정 (데이터 없으면 회색 원으로)
+      const pieData = totalIssues === 0
+        ? [{ name: '데이터 없음', value: 1, isEmpty: true }]
+        : Object.entries(chartStats).map(([k, v]) => ({ name: k, value: v }));
 
-      const maxSupplierTotal = Math.max(...Object.values(supplierStats));
-      const currentTime = "03-21 08:50 기준";
+      // 공급업체 바 차트 데이터
+      const supplierStats = {};
+      targetIssues.forEach(issue => {
+        const vendor = issue.vendor || issue.brand || '미상';
+        supplierStats[vendor] = (supplierStats[vendor] || 0) + 1;
+      });
+
+      const supplierTotal = Object.values(supplierStats).reduce((a, b) => a + b, 0);
+      
+      // 🔥 3. 건수 순으로 내림차순 정렬
+      const sortedSuppliers = Object.entries(supplierStats).sort((a, b) => b[1] - a[1]);
+
+      const currentTime = "일주일 (7일) 기준";
 
       return (
         <div className="p-6 space-y-6 slide-up">
@@ -1641,7 +1654,7 @@
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow shrink-0">
             <div className="mb-6">
               <h3 className="text-lg font-bold text-gray-900 font-sans">브랜드별 특이사항 처리 현황</h3>
-              <p className="text-xs text-gray-400 font-medium mt-1">{currentTime}</p>
+              <p className="text-xs text-gray-400 font-medium mt-1">{currentTime} ({startDate} ~ {endDate})</p>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -1662,19 +1675,20 @@
                     </div>
 
                     <div className="flex items-center flex-1">
+                      {/* 🔥 날짜 데이터까지 같이 넘겨주는 드릴다운 이벤트 */}
                       <div style={{ width: '33.33%' }} className="flex justify-between items-center pr-3 sm:pr-4 border-r border-gray-200">
                         <span className="text-gray-400 font-medium whitespace-nowrap text-xs sm:text-sm">조치대기</span>
-                        <span className="text-red-500 font-bold text-base sm:text-lg cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); onDrillDown({ brand, status: '조치대기' }); }}>{stats.pending}</span>
+                        <span className="text-red-500 font-bold text-base sm:text-lg cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); onDrillDown({ brand, status: '조치대기', startDate, endDate }); }}>{stats.pending}</span>
                       </div>
 
                       <div style={{ width: '33.33%' }} className="flex justify-between items-center px-3 sm:px-4 border-r border-gray-200">
                         <span className="text-gray-400 font-medium whitespace-nowrap text-xs sm:text-sm">처리 중</span>
-                        <span className="text-yellow-500 font-bold text-base sm:text-lg cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); onDrillDown({ brand, status: '처리 중' }); }}>{stats.processing}</span>
+                        <span className="text-yellow-500 font-bold text-base sm:text-lg cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); onDrillDown({ brand, status: '처리 중', startDate, endDate }); }}>{stats.processing}</span>
                       </div>
 
                       <div style={{ width: '33.33%' }} className="flex justify-between items-center pl-3 sm:pl-4">
                         <span className="text-gray-400 font-medium whitespace-nowrap text-xs sm:text-sm">조치완료</span>
-                        <span className="text-green-500 font-bold text-base sm:text-lg cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); onDrillDown({ brand, status: '조치완료' }); }}>{stats.completed}</span>
+                        <span className="text-green-500 font-bold text-base sm:text-lg cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); onDrillDown({ brand, status: '조치완료', startDate, endDate }); }}>{stats.completed}</span>
                       </div>
                     </div>
                   </div>
@@ -1700,19 +1714,21 @@
                           cy="50%"
                           innerRadius={65}
                           outerRadius={95}
-                          paddingAngle={4}
-                          cornerRadius={8}
+                          paddingAngle={totalIssues === 0 ? 0 : 4}
+                          cornerRadius={totalIssues === 0 ? 0 : 8}
                           dataKey="value"
                           stroke="none"
                         >
                           {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#aaaaaa'} />
+                            <Cell key={`cell-${index}`} fill={entry.isEmpty ? '#e5e7eb' : (CATEGORY_COLORS[entry.name] || '#aaaaaa')} />
                           ))}
                         </Pie>
-                        <Tooltip
-                          contentStyle={{ borderRadius: '8px', border: '1px solid #f3f4f6', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '13px' }}
-                          itemStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                        />
+                        {totalIssues > 0 && (
+                          <Tooltip
+                            contentStyle={{ borderRadius: '8px', border: '1px solid #f3f4f6', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '13px' }}
+                            itemStyle={{ color: '#1f2937', fontWeight: 'bold' }}
+                          />
+                        )}
                       </PieChart>
                     </ResponsiveContainer>
                   ) : (
@@ -1722,40 +1738,51 @@
                   )}
 
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-[28px] font-black text-gray-900 leading-tight">{totalIssues}</span>
+                    <span className={`text-[28px] font-black leading-tight ${totalIssues === 0 ? 'text-gray-300' : 'text-gray-900'}`}>{totalIssues}</span>
                     <span className="text-xs font-semibold text-gray-500">총 발생건</span>
                   </div>
                 </div>
+                
                 <div className="space-y-3">
-                  {Object.entries(chartStats).map(([k, v]) => (
-                    <div key={k} className="flex justify-between items-center w-48 text-sm">
-                      <div className="flex items-center text-gray-600 font-medium whitespace-nowrap">
-                        <span className="w-2.5 h-2.5 rounded-full mr-3" style={{ backgroundColor: CATEGORY_COLORS[k] || '#d1d5db' }}></span>{k}
+                  {totalIssues === 0 ? (
+                    <div className="text-sm text-gray-400 font-bold ml-4">등록된 데이터가 없습니다.</div>
+                  ) : (
+                    Object.entries(chartStats).map(([k, v]) => (
+                      <div key={k} className="flex justify-between items-center w-48 text-sm">
+                        <div className="flex items-center text-gray-600 font-medium whitespace-nowrap">
+                          <span className="w-2.5 h-2.5 rounded-full mr-3" style={{ backgroundColor: CATEGORY_COLORS[k] || '#d1d5db' }}></span>{k}
+                        </div>
+                        <div className="font-bold text-gray-900">{v}<span className="text-xs text-gray-400 font-normal ml-0.5">건</span></div>
                       </div>
-                      <div className="font-bold text-gray-900">{v}<span className="text-xs text-gray-400 font-normal ml-0.5">건</span></div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col hover:shadow-md transition-shadow">
               <div className="mb-6">
-                <h3 className="text-lg font-bold text-gray-900 font-sans">공급업체별 이슈 비율</h3>
+                <h3 className="text-lg font-bold text-gray-900 font-sans">공급업체별 이슈 비율 (Top)</h3>
                 <p className="text-xs text-gray-400 font-medium mt-1">{currentTime}</p>
               </div>
               <div className="flex-1 flex flex-col justify-center space-y-6 px-4">
-                {Object.entries(supplierStats).map(([vendor, total], idx) => {
-                  const percentWidth = (total / maxSupplierTotal) * 100;
-                  return (
-                    <div key={vendor} className="flex items-center text-sm">
-                      <span className="w-24 text-gray-600 font-semibold truncate text-right mr-4" title={vendor}>{vendor}</span>
-                      <div className="flex-1 h-5 rounded overflow-hidden">
-                        <div className="h-full rounded-r transition-all duration-1000 ease-out" style={{ width: `${percentWidth}%`, backgroundColor: BRAND_COLORS[idx % BRAND_COLORS.length] }}></div>
+                {/* 🔥 3. 백분율(%) 계산 및 정렬 적용, 호버 시 툴팁 추가 */}
+                {supplierTotal === 0 ? (
+                  <div className="text-center text-sm text-gray-400 font-bold py-10">등록된 이슈가 없습니다.</div>
+                ) : (
+                  sortedSuppliers.slice(0, 5).map(([vendor, count], idx) => {
+                    const percent = ((count / supplierTotal) * 100).toFixed(1);
+                    return (
+                      <div key={vendor} className="flex items-center text-sm group" title={`${vendor}: ${count}건 (${percent}%)`}>
+                        <span className="w-24 text-gray-600 font-semibold truncate text-right mr-4">{vendor}</span>
+                        <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative cursor-pointer">
+                          <div className="h-full rounded-r transition-all duration-1000 ease-out" style={{ width: `${percent}%`, backgroundColor: BRAND_COLORS[idx % BRAND_COLORS.length] }}></div>
+                        </div>
+                        <span className="w-12 text-right text-xs font-bold text-gray-500 ml-3">{percent}%</span>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -2825,11 +2852,14 @@
         setSession(null);
       };
 
+      // (App 컴포넌트 내부) 드릴다운 함수 수정
       const handleDrillDown = (filterObj) => {
         setSavedListFilters(prev => ({
           ...prev,
           brand: filterObj.brand || '전체',
-          status: filterObj.status || '전체'
+          status: filterObj.status || '전체',
+          startDate: filterObj.startDate || prev.startDate, // 🔥 날짜 파라미터 추가!
+          endDate: filterObj.endDate || prev.endDate        // 🔥 날짜 파라미터 추가!
         }));
         setCurrentPage('list');
       };
