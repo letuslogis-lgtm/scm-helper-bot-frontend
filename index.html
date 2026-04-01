@@ -2152,11 +2152,96 @@
       );
     };
 
+    // --- 🌟 FAQ 등록 모달 (FaqAddModal) ---
+    const FaqAddModal = ({ onClose, onReload }) => {
+      const [category, setCategory] = useState('시스템 설정');
+      const [question, setQuestion] = useState('');
+      const [answer, setAnswer] = useState('');
+      const [isSaving, setIsSaving] = useState(false);
+
+      const handleSave = async (e) => {
+        e.preventDefault();
+        if (!question.trim() || !answer.trim()) {
+          alert('질문과 답변을 모두 입력해 주세요.');
+          return;
+        }
+
+        setIsSaving(true);
+        try {
+          const { error } = await supabase
+            .from('faqs')
+            .insert([{ category, question, answer }]);
+
+          if (error) throw error;
+
+          alert('새로운 FAQ가 성공적으로 등록되었습니다.');
+          onReload(); // 지원센터 리스트 싹 새로고침!
+          onClose();  // 모달 닫기
+        } catch (error) {
+          alert('등록 실패: ' + error.message);
+        } finally {
+          setIsSaving(false);
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+          <div className="bg-white rounded-xl shadow-2xl z-10 w-full max-w-lg slide-up border border-gray-100 overflow-hidden flex flex-col">
+
+            <div className="p-5 border-b border-gray-100 bg-white flex justify-between items-center">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-letusOrange rounded-full"></span>
+                새 FAQ (자주 묻는 질문) 등록
+              </h3>
+              <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><CloseIcon /></button>
+            </div>
+
+            <div className="p-6 bg-slate-50">
+              <form id="faqForm" onSubmit={handleSave} className="space-y-5">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-700">카테고리 분류 <span className="text-letusOrange">*</span></label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="border border-gray-300 rounded-[4px] px-3.5 py-2.5 text-sm focus:outline-none focus:border-letusBlue bg-white text-gray-800 cursor-pointer">
+                    <option>시스템 설정</option>
+                    <option>계정/권한</option>
+                    <option>입고 관리</option>
+                    <option>특이사항 처리</option>
+                    <option>기타</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-700">질문 (Question) <span className="text-letusOrange">*</span></label>
+                  <input type="text" value={question} onChange={(e) => setQuestion(e.target.value)} required placeholder="예) 특이사항 알림이 오지 않습니다." className="border border-gray-300 rounded-[4px] px-3.5 py-2.5 text-sm focus:outline-none focus:border-letusBlue bg-white text-gray-800" />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-700">답변 (Answer) <span className="text-letusOrange">*</span></label>
+                  <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} required rows={5} placeholder="사용자에게 보여질 상세한 해결 방법을 적어주세요." className="border border-gray-300 rounded-[4px] px-3.5 py-3 text-sm focus:outline-none focus:border-letusBlue bg-white text-gray-800 resize-none leading-relaxed"></textarea>
+                </div>
+              </form>
+            </div>
+
+            <div className="p-4 border-t border-gray-200 bg-white flex justify-end gap-2 shrink-0">
+              <button type="button" onClick={onClose} disabled={isSaving} className="px-5 py-2 border border-gray-300 text-gray-600 text-sm font-bold rounded-[3px] hover:bg-gray-50 transition-colors shadow-sm">
+                취소
+              </button>
+              <button onClick={handleSave} disabled={isSaving} className={`px-6 py-2 bg-letusOrange text-white text-sm font-bold rounded-[3px] shadow-sm hover:bg-orange-600 transition-colors flex items-center gap-2 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                {isSaving ? '등록 중...' : 'FAQ 등록'}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      );
+    };
+
     // --- 🌟 지원센터 메인 컴포넌트 ---
     const SupportCenter = ({ userProfile }) => {
       const [activeTab, setActiveTab] = useState('faq');
       const [openFaqId, setOpenFaqId] = useState(null);
       const [activeModalItem, setActiveModalItem] = useState(null); // 모달창 띄울 데이터 상태
+      const [isFaqModalOpen, setIsFaqModalOpen] = useState(false);
 
       const [faqs, setFaqs] = useState([]);
       const [suggestions, setSuggestions] = useState([]);
@@ -2353,6 +2438,15 @@
               <div className="bg-white rounded-xl shadow-sm border border-orange-200 overflow-hidden animate-fade-in">
                 <div className="bg-orange-50 px-5 py-4 border-b border-orange-100 font-bold text-sm text-orange-700 flex justify-between items-center">
                   <span>접수된 전체 건의사항 내역</span>
+
+                  <button
+                    onClick={() => setIsFaqModalOpen(true)}
+                    className="bg-white border border-orange-300 text-orange-600 px-3 py-1.5 text-xs font-bold rounded shadow-sm hover:bg-orange-100 transition-colors flex items-center gap-1"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                    FAQ 새 글 쓰기
+                  </button>
+
                 </div>
                 <div className="p-0 overflow-auto max-h-[500px] custom-scrollbar">
                   <table className="w-full text-left whitespace-nowrap text-sm">
@@ -2393,6 +2487,12 @@
               onReload={fetchData}
               userProfile={userProfile}
             />
+          )}
+
+          {isFaqModalOpen && (
+            <FaqAddModal
+              onClose={() => setIsFaqModalOpen(false)}
+              onReload={fetchData} />
           )}
 
         </div>
