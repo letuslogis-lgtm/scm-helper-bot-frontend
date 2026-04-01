@@ -1456,14 +1456,17 @@
       };
 
       const pageTitle = page === 'dashboard' ? '대시보드' : page === 'user_management' ? '사용자 관리' : page === 'support' ? '지원센터' : '특이사항 LIST';
-      const isFavorite = favorites?.includes(page);
+      const isFavorite = favorites?.includes(page); 
+
+      // 안 읽은 알림 개수 계산
+      const unreadCount = notifications.filter(n => !n.read).length;
 
       return (
         <header className="h-16 min-h-[64px] flex-shrink-0 bg-gradient-to-r from-blue-50/70 to-white border-b border-gray-200 flex justify-between items-center px-4 sm:px-6 sticky top-0 z-50">
           <div className="flex items-center text-gray-800 gap-3">
-            {/* 🔥 4번 안1 적용: 햄버거 토글 버튼 */}
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            {/* 햄버거 토글 버튼 */}
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
               className="p-1.5 mr-1 text-gray-400 hover:text-letusBlue hover:bg-blue-50 rounded transition-colors focus:outline-none"
               title="사이드바 열기/접기"
             >
@@ -1472,9 +1475,9 @@
               </svg>
             </button>
 
-            {/* 🔥 2번 적용: 즐겨찾기 별 + 메뉴명 하나로 통일 */}
+            {/* 즐겨찾기 별 + 메뉴명 */}
             <h2 className="text-[19px] font-extrabold tracking-tight flex items-center gap-1.5">
-              <button
+              <button 
                 onClick={() => toggleFavorite(page)}
                 className="focus:outline-none transition-transform hover:scale-110 active:scale-90 flex items-center"
                 title="즐겨찾기 추가/해제"
@@ -1488,16 +1491,74 @@
               {pageTitle}
             </h2>
           </div>
-
-          <div className="flex items-center gap-2">
-            <button onClick={handleRequestNotification} className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border transition-colors shadow-sm mr-2 ${notiStatus === 'granted' ? 'bg-green-50 text-green-700 border-green-200' : notiStatus === 'denied' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-orange-50 text-orange-600 border-orange-200 animate-pulse'}`}>
-              {notiStatus === 'granted' ? '알림 ON' : notiStatus === 'denied' ? '알림 차단됨' : '알림 켜기 (권장)'}
+          
+          {/* 🔥 날아갔던 우측 메뉴들 완벽 복구 */}
+          <div className="flex items-center gap-3 sm:gap-4">
+            
+            {/* 새로고침 버튼 */}
+            <button onClick={() => window.location.reload()} className="text-gray-400 hover:text-letusBlue transition-colors focus:outline-none" title="새로고침">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
             </button>
-            <div className="text-right ml-4 border-l border-gray-200 pl-4 hidden sm:block">
-              <p className="text-sm font-bold text-gray-800 cursor-pointer hover:text-letusBlue" onClick={onEditProfile}>{userProfile?.name || '대기중'}</p>
-              <p className="text-xs text-gray-500">{userProfile?.brands || 'LETUS'} • {userProfile?.role || '사용자'}</p>
+
+            {/* 알림종 버튼 + 드롭다운 */}
+            <div className="relative">
+              <button onClick={toggleNoti} className="text-gray-400 hover:text-letusOrange transition-colors focus:outline-none relative" title="알림 확인">
+                <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center border-2 border-white shadow-sm">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* 알림 드롭다운 내용 */}
+              {isNotiOpen && (
+                <div className="absolute right-0 mt-3 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[100] slide-up">
+                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                    <h4 className="text-xs font-bold text-gray-700">최근 알림</h4>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                    {notifications && notifications.length > 0 ? (
+                      notifications.map(noti => (
+                        <div key={noti.id} onClick={() => onNotiClick(noti.id, noti.filterObj)} className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${noti.read ? 'opacity-50' : 'bg-blue-50/20'}`}>
+                          <p className="text-xs font-bold text-letusBlue mb-1 flex items-center gap-1">
+                            {!noti.read && <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>}
+                            {noti.title}
+                          </p>
+                          <p className="text-[11px] text-gray-600 line-clamp-2 leading-relaxed">{noti.message}</p>
+                          <p className="text-[9px] text-gray-400 mt-1.5 font-mono">{noti.date}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-8 text-center text-xs text-gray-400 flex flex-col items-center gap-2">
+                        <svg className="w-6 h-6 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                        새로운 알림이 없습니다.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            <button onClick={onLogout} className="ml-4 text-xs font-bold text-slate-400 hover:text-red-500">로그아웃</button>
+
+            <button onClick={handleRequestNotification} className={`hidden md:flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded border transition-colors shadow-sm ml-1 ${notiStatus === 'granted' ? 'bg-green-50 text-green-700 border-green-200' : notiStatus === 'denied' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-orange-50 text-orange-600 border-orange-200 animate-pulse'}`}>
+              {notiStatus === 'granted' ? 'PC 알림 ON' : notiStatus === 'denied' ? '알림 차단됨' : '알림 켜기 (권장)'}
+            </button>
+
+            <div className="text-right ml-2 border-l border-gray-200 pl-4 hidden sm:block">
+              <p className="text-sm font-bold text-gray-800 cursor-pointer hover:text-letusBlue transition-colors" onClick={onEditProfile}>{userProfile?.name || '대기중'}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">{userProfile?.brands || 'LETUS'} • {userProfile?.role || '사용자'}</p>
+            </div>
+            
+            <button onClick={onLogout} className="ml-2 p-1.5 text-gray-400 hover:text-red-500 transition-colors bg-gray-50 hover:bg-red-50 rounded" title="로그아웃">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+
           </div>
         </header>
       );
