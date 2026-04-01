@@ -1492,7 +1492,6 @@
             </h2>
           </div>
           
-          {/* 🔥 우측 메뉴들 - 여백 및 정렬 완벽 수정 */}
           <div className="flex items-center gap-4 sm:gap-5">
             
             {/* 새로고침 버튼 */}
@@ -1515,12 +1514,18 @@
                 )}
               </button>
 
-              {/* 🔥 알림 드롭다운 내용 (위치 고정 top-full) */}
+              {/* 알림 드롭다운 창 */}
               {isNotiOpen && (
                 <div className="absolute right-0 top-full mt-4 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[100] slide-up">
-                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                  
+                  {/* 🔥 상단 헤더에 PC 알림 버튼 통합 */}
+                  <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-100 flex justify-between items-center">
                     <h4 className="text-xs font-bold text-gray-700">최근 알림</h4>
+                    <button onClick={handleRequestNotification} className={`flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded border transition-colors shadow-sm ${notiStatus === 'granted' ? 'bg-green-50 text-green-700 border-green-200' : notiStatus === 'denied' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-orange-50 text-orange-600 border-orange-200 animate-pulse'}`}>
+                        {notiStatus === 'granted' ? 'PC 알림 ON' : notiStatus === 'denied' ? '알림 차단됨' : '알림 켜기'}
+                    </button>
                   </div>
+                  
                   <div className="max-h-64 overflow-y-auto custom-scrollbar">
                     {notifications && notifications.length > 0 ? (
                       notifications.map(noti => (
@@ -1540,20 +1545,14 @@
                       </div>
                     )}
                   </div>
-                  {/* 드롭다운 내부 알림 권한 버튼 */}
-                  <div className="border-t border-gray-100 p-2.5 bg-gray-50/50 flex justify-center">
-                    <button onClick={handleRequestNotification} className={`flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded border transition-colors shadow-sm ${notiStatus === 'granted' ? 'bg-green-50 text-green-700 border-green-200' : notiStatus === 'denied' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-orange-50 text-orange-600 border-orange-200 animate-pulse'}`}>
-                        {notiStatus === 'granted' ? 'PC 알림 ON' : notiStatus === 'denied' ? '알림 차단됨' : '알림 켜기 (권장)'}
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
 
-            {/* 🔥 독립적인 세로 구분선 */}
+            {/* 독립적인 세로 구분선 */}
             <div className="h-7 w-px bg-gray-200 mx-1 hidden sm:block"></div>
 
-            {/* 🔥 사용자 정보 (이름 크기 키움) */}
+            {/* 사용자 정보 */}
             <div className="text-right flex flex-col justify-center hidden sm:flex">
               <p className="text-[15px] font-bold text-gray-800 cursor-pointer hover:text-letusBlue transition-colors leading-tight" onClick={onEditProfile}>{userProfile?.name || '대기중'}</p>
               <p className="text-[11px] text-gray-500 mt-0.5">{userProfile?.brands || 'LETUS'} • {userProfile?.role || '사용자'}</p>
@@ -1729,7 +1728,8 @@
                 </div>
                 <div className="space-y-3">
                   {Object.entries(chartStats).map(([k, v]) => (
-                    <div key={k} className="flex justify-between items-center w-32 text-sm">
+                    {/* 🔥 이 부분의 w-32를 w-48로 수정하여 너비 확보! */}
+                    <div key={k} className="flex justify-between items-center w-48 text-sm">
                       <div className="flex items-center text-gray-600 font-medium whitespace-nowrap">
                         <span className="w-2.5 h-2.5 rounded-full mr-3" style={{ backgroundColor: CATEGORY_COLORS[k] || '#d1d5db' }}></span>{k}
                       </div>
