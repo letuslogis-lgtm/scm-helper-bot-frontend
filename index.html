@@ -2921,11 +2921,17 @@
               onLogout={handleLogout}
               notifications={notifications}
               isNotiOpen={isNotiOpen}
-              toggleNoti={toggleNoti}
+
+              // 🔥 1. 알림창 열고 닫는 함수로 정상 교체!
+              toggleNoti={() => setIsNotiOpen(!isNotiOpen)}
+
               onNotiClick={handleNotiClick}
-              onEditProfile={() => setIsProfileModalOpen(true)}
+
+              // 🔥 2. 내 정보 수정창 띄우는 함수로 정상 교체!
+              onEditProfile={() => setSelfEditTarget(userProfile)}
+
               favorites={favorites}
-              toggleFavorite={toggleFavorite} // 🔥 이 부분 추가!
+              toggleFavorite={toggleFavorite}
             />
 
             <main className="flex-1 w-full">
