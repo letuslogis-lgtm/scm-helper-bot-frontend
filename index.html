@@ -2008,6 +2008,51 @@
         }
       };
 
+      // 📊 엑셀(CSV) 다운로드 함수
+      const handleExportExcel = () => {
+        if (sortedIssues.length === 0) {
+          alert('출력할 데이터가 없습니다.');
+          return;
+        }
+
+        // 1. 엑셀 헤더 설정
+        const headers = ['접수번호', '소속 브랜드', '품목코드', '유형', '접수자', '공급업체', '처리상태', '요청내용', '처리내용', '최종 처리자', '최종 처리일시'];
+        
+        // 2. 데이터 행 생성
+        const csvRows = sortedIssues.map(row => {
+          return [
+            row.reception_no || '',
+            row.brand || '',
+            row.product_code || '',
+            row.issue_type || '',
+            row.reporter || '',
+            row.vendor || '',
+            row.status || '',
+            (row.request_content || '').replace(/\n/g, ' '), // 줄바꿈이 엑셀 셀을 망치지 않게 띄어쓰기로 치환
+            (row.action_content || '').replace(/\n/g, ' '),
+            row.final_handler || '',
+            formatDateTime(row.resolved_at) || ''
+          ].map(value => `"${value}"`).join(','); // 데이터 안에 쉼표가 있을 수 있으므로 큰따옴표로 안전하게 감쌈
+        });
+
+        // 3. 헤더와 데이터 합치기
+        const csvString = [headers.join(','), ...csvRows].join('\n');
+        
+        // 4. 한글 깨짐 방지용 BOM(\uFEFF) 추가하여 파일(Blob) 생성
+        const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        // 5. 가짜 a 태그 만들어서 다운로드 트리거
+        const link = document.createElement('a');
+        link.href = url;
+        const today = new Date().toISOString().split('T')[0];
+        link.download = `특이사항_LIST_${today}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      };
+
       const handleRevertSelectedIssues = async () => {
         if (selectedIds.length === 0) { alert('원복할 항목을 1개 이상 선택해 주세요.'); return; }
         if (userProfile?.role === '사용자') { alert('이 작업은 관리자만 수행할 수 있습니다.'); return; }
@@ -2090,8 +2135,8 @@
               <div className="absolute right-0 top-[110%] w-[130px] hidden group-hover:block z-50">
                 <div className="bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5">
                   
-                  {/* 🔥 엑셀 추출 버튼을 드롭다운 내부로 이사! */}
-                  <button className="w-full text-left px-2.5 py-2 text-green-700 hover:text-green-800 hover:bg-green-50 font-bold rounded text-[11px] flex items-center justify-between transition-colors">
+                  {/* 🔥 onClick 이벤트를 방금 만든 함수로 연결! */}
+                  <button onClick={handleExportExcel} className="w-full text-left px-2.5 py-2 text-green-700 hover:text-green-800 hover:bg-green-50 font-bold rounded text-[11px] flex items-center justify-between transition-colors">
                     엑셀 추출
                     <svg className="w-3.5 h-3.5 opacity-70" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg>
                   </button>
