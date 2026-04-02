@@ -66,25 +66,13 @@
     }
 
     @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-
-      to {
-        opacity: 1;
-      }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     @keyframes slideUp {
-      from {
-        transform: translateY(20px);
-        opacity: 0;
-      }
-
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
   </style>
 </head>
@@ -1647,11 +1635,7 @@
         if (brandStatsDetails[issue.brand]) {
           if (issue.status === '조치대기') brandStatsDetails[issue.brand].pending += 1;
           if (issue.status === '처리 중') brandStatsDetails[issue.brand].processing += 1;
-          
-          // 🔥 이 부분이 핵심! '조치완료'와 '피드백완료'를 completed(조치완료) 항목으로 통합 합산!
-          if (issue.status === '조치완료' || issue.status === '피드백완료') {
-            brandStatsDetails[issue.brand].completed += 1;
-          }
+          if (issue.status === '조치완료') brandStatsDetails[issue.brand].completed += 1;
         }
       });
 
@@ -1920,129 +1904,87 @@
       );
     }
 
+    // --- 특이사항 리스트 (IssueList) 🌟 최종 업데이트판 ---
     const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, setSavedFilters, userProfile }) => {
-      const [viewComment, setViewComment] = useState(null);
       const [activeModalRow, setActiveModalRow] = useState(null);
       const [activeHandleRow, setActiveHandleRow] = useState(null);
       const [selectedIds, setSelectedIds] = useState([]);
-
-      const [draftBrand, setDraftBrand] = useState(savedFilters.brand);
-      const [draftStatus, setDraftStatus] = useState(savedFilters.status);
-      const [draftStartDate, setDraftStartDate] = useState(savedFilters.startDate);
-      const [draftEndDate, setDraftEndDate] = useState(savedFilters.endDate);
-      const [draftSearchType, setDraftSearchType] = useState(savedFilters.searchType);
-      const [draftSearchValue, setDraftSearchValue] = useState(savedFilters.searchValue);
-
-      useEffect(() => {
-        setDraftBrand(savedFilters.brand);
-        setDraftStatus(savedFilters.status);
-        setDraftStartDate(savedFilters.startDate);
-        setDraftEndDate(savedFilters.endDate);
-        setDraftSearchType(savedFilters.searchType);
-        setDraftSearchValue(savedFilters.searchValue);
-      }, [savedFilters.brand, savedFilters.status, savedFilters.startDate, savedFilters.endDate, savedFilters.searchType, savedFilters.searchValue]);
-
-      const handleSearch = () => {
-        setSavedFilters({
-          brand: draftBrand,
-          status: draftStatus,
-          startDate: draftStartDate,
-          endDate: draftEndDate,
-          searchType: draftSearchType,
-          searchValue: draftSearchValue
-        });
-      };
-
-      const filteredIssues = issues.filter(issue => {
-        if (savedFilters.brand !== '전체' && issue.brand !== savedFilters.brand) return false;
-        if (savedFilters.status !== '전체' && issue.status !== savedFilters.status) return false;
-
-        if (issue.created_at) {
-          const issueDate = issue.created_at.split('T')[0];
-          if (issueDate < savedFilters.startDate || issueDate > savedFilters.endDate) return false;
-        }
-
-        if (savedFilters.searchValue) {
-          const val = savedFilters.searchValue.toLowerCase();
-          if (savedFilters.searchType === '품목코드') {
-            if (!issue.product_code?.toLowerCase().includes(val)) return false;
-          } else if (savedFilters.searchType === '공급업체') {
-            const vendor = (issue.vendor || issue.brand || '').toLowerCase();
-            if (!vendor.includes(val)) return false;
-          } else if (savedFilters.searchType === '처리자') {
-            if (!issue.final_handler?.toLowerCase().includes(val)) return false;
-          }
-        }
-        return true;
-      });
-
-      const isAllSelected = filteredIssues.length > 0 && selectedIds.length === filteredIssues.length;
-
-      const handleSelectAll = (e) => {
-        if (e.target.checked) {
-          setSelectedIds(filteredIssues.map(issue => issue.id));
-        } else {
-          setSelectedIds([]);
-        }
-      };
-
-      const handleSelectOne = (e, id) => {
-        if (e.target.checked) {
-          setSelectedIds(prev => [...prev, id]);
-        } else {
-          setSelectedIds(prev => prev.filter(item => item !== id));
-        }
-      };
-
-      // =====================================================================
-      // 🔥 여기에 피드백 전송 관련 상태와 함수를 넣어주세요! (원복 함수 바로 위)
-      // =====================================================================
-      
-      // 🚨 1. 원복 함수 (데이터 초기화)
-      const handleRevertSelectedIssues = async () => {
-        if (selectedIds.length === 0) {
-          alert('원복할 항목을 1개 이상 선택해 주세요.');
-          return;
-        }
-        if (userProfile?.role === '사용자') {
-          alert('이 작업은 관리자만 수행할 수 있습니다.');
-          return;
-        }
-        if (!window.confirm(`선택하신 ${selectedIds.length}건의 이슈를 '조치대기' 상태로 원복하시겠습니까?\n이전의 조치 내용, 최종 처리자 정보, 해결 일시 및 알림톡 발송 이력이 모두 영구적으로 초기화(삭제)됩니다.`)) return;
-
-        try {
-          const { error } = await supabase
-            .from('logistics_issues')
-            .update({
-              status: '조치대기',
-              final_handler: '',
-              action_content: '',
-              resolved_at: null,
-              is_notified: false,
-              feedback_sent_at: null 
-            })
-            .in('id', selectedIds);
-
-          if (error) throw error;
-
-          alert(`선택한 ${selectedIds.length}건의 항목이 초기화되었습니다.`);
-          setSelectedIds([]);
-          await onReload();
-        } catch (err) {
-          console.error('원복 처리 중 오류:', err);
-          alert('원복 처리 중 오류가 발생했습니다.');
-        }
-      };
-
-      // 🚀 2. 피드백 전송 함수 (상태만 업데이트)
       const [isSendingFeedback, setIsSendingFeedback] = useState(false);
 
-      // 🚀 피드백 전송 함수 (알림 전송 여부만 업데이트!)
+      // 🔥 정렬 상태 관리 (key: 칼럼명, direction: 'asc' | 'desc' | 'none')
+      const [sortConfig, setSortConfig] = useState({ key: null, direction: 'none' });
+
+      const [draftFilters, setDraftFilters] = useState({ ...savedFilters });
+
+      useEffect(() => {
+        setDraftFilters({ ...savedFilters });
+      }, [savedFilters]);
+
+      const handleSearch = () => {
+        setSavedFilters({ ...draftFilters });
+      };
+
+      // 1. 기본 필터링 데이터
+      const filteredIssues = useMemo(() => {
+        return issues.filter(issue => {
+          if (savedFilters.brand !== '전체' && issue.brand !== savedFilters.brand) return false;
+          if (savedFilters.status !== '전체' && issue.status !== savedFilters.status) return false;
+
+          if (issue.created_at) {
+            const issueDate = issue.created_at.split('T')[0];
+            if (issueDate < savedFilters.startDate || issueDate > savedFilters.endDate) return false;
+          }
+
+          if (savedFilters.searchValue) {
+            const val = savedFilters.searchValue.toLowerCase();
+            if (savedFilters.searchType === '품목코드' && !issue.product_code?.toLowerCase().includes(val)) return false;
+            if (savedFilters.searchType === '공급업체' && !(issue.vendor || issue.brand || '').toLowerCase().includes(val)) return false;
+            if (savedFilters.searchType === '처리자' && !issue.final_handler?.toLowerCase().includes(val)) return false;
+          }
+          return true;
+        });
+      }, [issues, savedFilters]);
+
+      // 🔥 2. 정렬 로직 (단일 칼럼, 3단계 토글)
+      const sortedIssues = useMemo(() => {
+        let items = [...filteredIssues];
+        if (sortConfig.key && sortConfig.direction !== 'none') {
+          items.sort((a, b) => {
+            const aVal = a[sortConfig.key] || '';
+            const bVal = b[sortConfig.key] || '';
+            if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+          });
+        }
+        return items;
+      }, [filteredIssues, sortConfig]);
+
+      const requestSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key) {
+          if (sortConfig.direction === 'asc') direction = 'desc';
+          else if (sortConfig.direction === 'desc') direction = 'none';
+        }
+        setSortConfig({ key: direction === 'none' ? null : key, direction });
+      };
+
+      // 🔥 3. 피드백 전송 (상태 체크 로직 추가)
       const handleSendFeedback = async () => {
         if (selectedIds.length === 0) {
           alert('피드백을 전송할 항목을 1개 이상 선택해 주세요.');
           return;
         }
+
+        // 선택된 데이터 중 '조치완료'가 아닌 데이터가 있는지 확인
+        const selectedData = issues.filter(i => selectedIds.includes(i.id));
+        const invalidItems = selectedData.filter(i => i.status !== '조치완료');
+
+        if (invalidItems.length > 0) {
+          alert(`⚠️ 전송 실패\n\n'조치완료' 상태인 항목만 피드백 전송이 가능합니다.\n(선택 항목 중 ${invalidItems.length}건이 완료 전 상태입니다.)`);
+          return;
+        }
+
         if (!window.confirm(`선택하신 ${selectedIds.length}건의 피드백(알림톡)을 전송하시겠습니까?`)) return;
 
         setIsSendingFeedback(true);
@@ -2050,288 +1992,187 @@
           const nowIso = new Date().toISOString();
           const { error } = await supabase
             .from('logistics_issues')
-            .update({
-              // 🔥 핵심: status는 건드리지 않고, 전송 여부만 업데이트!
-              is_notified: true,
-              feedback_sent_at: nowIso 
-            })
+            .update({ is_notified: true, feedback_sent_at: nowIso })
             .in('id', selectedIds);
 
           if (error) throw error;
-
           alert(`✅ ${selectedIds.length}건의 피드백 전송이 완료되었습니다.`);
-          setSelectedIds([]); 
-          await onReload(); 
+          setSelectedIds([]);
+          await onReload();
         } catch (err) {
-          console.error('피드백 전송 오류:', err);
           alert('피드백 전송 중 오류가 발생했습니다.');
         } finally {
           setIsSendingFeedback(false);
         }
       };
 
-      const CommentViewerModal = ({ title, content, author, date, onClose }) => {
-        if (!content) return null;
-        return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-            <div className="bg-white rounded-xl shadow-2xl z-10 w-full max-w-sm slide-up border border-gray-100 overflow-hidden">
-              <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                <h3 className="font-bold text-gray-900">{title}</h3>
-                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><CloseIcon /></button>
-              </div>
-              <div className="p-5 bg-white space-y-3">
-                <div className="flex justify-between items-center text-xs text-gray-500 font-medium">
-                  <span>작성자: {author || '-'}</span><span>일시: {date}</span>
-                </div>
-                <div className="bg-gray-50 text-gray-800 p-4 rounded-lg text-sm leading-relaxed border border-gray-100">
-                  {content}
-                </div>
-              </div>
-              <div className="p-3 border-t border-gray-50 bg-gray-50/50 text-right">
-                <button onClick={onClose} className="px-5 py-2 bg-letusSidebar text-white text-sm font-semibold rounded hover:bg-gray-800 transition-colors">닫기</button>
-              </div>
-            </div>
-          </div>
-        )
+      const handleRevertSelectedIssues = async () => {
+        if (selectedIds.length === 0) { alert('원복할 항목을 1개 이상 선택해 주세요.'); return; }
+        if (userProfile?.role === '사용자') { alert('이 작업은 관리자만 수행할 수 있습니다.'); return; }
+        if (!window.confirm(`선택하신 ${selectedIds.length}건의 이슈를 '조치대기' 상태로 원복하시겠습니까?\n이전의 조치 내용, 처리 기록 및 알림톡 이력이 모두 초기화됩니다.`)) return;
+
+        try {
+          const { error } = await supabase
+            .from('logistics_issues')
+            .update({ status: '조치대기', final_handler: '', action_content: '', resolved_at: null, is_notified: false, feedback_sent_at: null })
+            .in('id', selectedIds);
+          if (error) throw error;
+          alert(`선택한 ${selectedIds.length}건의 항목이 초기화되었습니다.`);
+          setSelectedIds([]);
+          await onReload();
+        } catch (err) { alert('원복 처리 중 오류 발생'); }
+      };
+
+      const handleSelectAll = (e) => setSelectedIds(e.target.checked ? sortedIssues.map(i => i.id) : []);
+      const handleSelectOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+      // 정렬 아이콘 렌더러
+      const getSortIcon = (key) => {
+        if (sortConfig.key !== key) return <span className="ml-1 opacity-20">↕</span>;
+        if (sortConfig.direction === 'asc') return <span className="ml-1 text-letusBlue font-black">↑</span>;
+        if (sortConfig.direction === 'desc') return <span className="ml-1 text-letusBlue font-black">↓</span>;
+        return <span className="ml-1 opacity-20">↕</span>;
       };
 
       return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] flex flex-col gap-4 slide-up">
+          {/* 상단 필터 영역 */}
           <div className="w-full h-[54px] bg-white rounded-lg shadow-sm border border-slate-200 px-6 flex items-center z-30 shrink-0">
             <div className="flex items-center gap-6 w-full overflow-hidden">
               <div className="flex items-center shrink-0">
-                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap flex items-center">브랜드 <span className="text-letusOrange ml-0.5">*</span></label>
-                <select
-                  value={draftBrand}
-                  onChange={(e) => setDraftBrand(e.target.value)}
-                  className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-28 cursor-pointer text-gray-700"
-                >
+                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">브랜드</label>
+                <select value={draftFilters.brand} onChange={e => setDraftFilters({...draftFilters, brand: e.target.value})} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] w-28 cursor-pointer text-gray-700">
                   <option value="전체">전체</option>
-                  <option value="퍼시스">퍼시스</option>
-                  <option value="일룸">일룸</option>
-                  <option value="슬로우베드">슬로우베드</option>
-                  <option value="데스커">데스커</option>
-                  <option value="시디즈">시디즈</option>
-                  <option value="알로소">알로소</option>
+                  {['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소'].map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
-
               <div className="flex items-center shrink-0">
-                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap flex items-center">등록일자 <span className="text-letusOrange ml-0.5">*</span></label>
-                <div className="flex items-center h-[30px]">
-                  <input type="date" value={draftStartDate} onChange={(e) => setDraftStartDate(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-[115px] cursor-pointer text-gray-700" />
-                  <span className="mx-1.5 text-gray-400 font-medium text-xs">~</span>
-                  <input type="date" value={draftEndDate} onChange={(e) => setDraftEndDate(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-[115px] cursor-pointer text-gray-700" />
+                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">등록일자</label>
+                <div className="flex items-center">
+                  <input type="date" value={draftFilters.startDate} onChange={e => setDraftFilters({...draftFilters, startDate: e.target.value})} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[115px]" />
+                  <span className="mx-1 text-gray-400 text-xs">~</span>
+                  <input type="date" value={draftFilters.endDate} onChange={e => setDraftFilters({...draftFilters, endDate: e.target.value})} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[115px]" />
                 </div>
               </div>
-
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">처리상태</label>
-                <select
-                  value={draftStatus}
-                  onChange={(e) => setDraftStatus(e.target.value)}
-                  className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-24 cursor-pointer text-gray-700"
-                >
+                <select value={draftFilters.status} onChange={e => setDraftFilters({...draftFilters, status: e.target.value})} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] w-24 text-gray-700">
                   <option value="전체">전체</option>
                   <option value="조치대기">조치대기</option>
                   <option value="처리 중">처리 중</option>
                   <option value="조치완료">조치완료</option>
-                  <option value="피드백완료">피드백완료</option>
                 </select>
               </div>
-
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">검색어</label>
-                <div className="flex gap-1.5 items-center">
-                  <select value={draftSearchType} onChange={(e) => setDraftSearchType(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-24 cursor-pointer text-gray-700">
-                    <option>품목코드</option>
-                    <option>공급업체</option>
-                    <option>처리자</option>
+                <div className="flex gap-1.5 h-[30px]">
+                  <select value={draftFilters.searchType} onChange={e => setDraftFilters({...draftFilters, searchType: e.target.value})} className="border border-gray-200 rounded-[3px] text-xs px-2 text-gray-700">
+                    <option>품목코드</option><option>공급업체</option><option>처리자</option>
                   </select>
-                  <input type="text" value={draftSearchValue} onChange={(e) => setDraftSearchValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} placeholder="검색어 입력" className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-36 text-gray-700" />
+                  <input type="text" value={draftFilters.searchValue} onChange={e => setDraftFilters({...draftFilters, searchValue: e.target.value})} onKeyDown={e => e.key === 'Enter' && handleSearch()} className="border border-gray-200 rounded-[3px] text-xs px-2.5 w-36" placeholder="검색어 입력" />
                 </div>
               </div>
-
-              <div className="ml-auto shrink-0 flex items-center pl-4">
-                <button
-                  onClick={handleSearch}
-                  className="border border-letusOrange text-letusOrange hover:bg-orange-50 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center gap-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  조회하기
-                </button>
-              </div>
+              <button onClick={handleSearch} className="ml-auto border border-letusOrange text-letusOrange hover:bg-orange-50 font-bold px-6 h-[30px] rounded-[3px] text-xs">조회하기</button>
             </div>
           </div>
 
-          <div className="flex justify-end w-full px-2 z-30">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 border-r border-slate-300 pr-3">
-                <button className="p-1.5 text-green-700 hover:bg-white rounded transition-colors shadow-sm bg-slate-50 border border-slate-200 hover:border-green-300" title="엑셀 다운로드">
-                  <svg className="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg>
-                </button>
-                <button className="p-1.5 text-slate-500 hover:bg-white rounded transition-colors shadow-sm bg-slate-50 border border-slate-200 hover:border-slate-300" title="인쇄">
-                  <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                </button>
-              </div>
-
-              <div className="relative group">
-                <button className="flex items-center text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded shadow-sm px-3 py-[7px] hover:bg-slate-50 transition-all cursor-pointer justify-between min-w-[100px]">
-                  <span>선택실행</span>
-                  <svg className="w-3.5 h-3.5 ml-2 text-slate-400 transition-transform group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </button>
-                <div className="absolute right-0 top-[110%] w-[120px] hidden group-hover:block z-50">
-                  <div className="bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5">
-                    
-                    {/* 🚨 원복 버튼 -> handleRevertSelectedIssues 연결 */}
-                    <button 
-                      onClick={handleRevertSelectedIssues} 
-                      className="w-full text-left px-2.5 py-2 text-slate-600 hover:text-orange-600 hover:bg-orange-50 font-bold rounded text-[11px] transition-colors"
-                    >
-                      원복
-                    </button>
-    
-                    {/* 🚀 피드백 전송 버튼 -> handleSendFeedback 연결 */}
-                    <button 
-                      onClick={handleSendFeedback} 
-                      disabled={isSendingFeedback}
-                      className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] transition-colors ${isSendingFeedback ? 'text-gray-400 cursor-not-allowed bg-gray-50' : 'text-slate-600 hover:text-letusBlue hover:bg-blue-50'}`}
-                    >
-                      {isSendingFeedback ? '전송 중...' : '피드백 전송'}
-                    </button>
-
-                  </div>
+          <div className="flex justify-end gap-3 z-30 px-2">
+            <div className="relative group">
+              <button className="flex items-center text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded px-3 py-1.5 hover:bg-slate-50 min-w-[100px] justify-between">
+                <span>선택실행</span>
+                <svg className="w-3.5 h-3.5 ml-2 text-slate-400 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              <div className="absolute right-0 top-[110%] w-[120px] hidden group-hover:block z-50">
+                <div className="bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5">
+                  <button onClick={handleRevertSelectedIssues} className="w-full text-left px-2.5 py-2 text-slate-600 hover:text-orange-600 hover:bg-orange-50 font-bold rounded text-[11px]">원복</button>
+                  <button onClick={handleSendFeedback} disabled={isSendingFeedback} className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] ${isSendingFeedback ? 'text-gray-400' : 'text-slate-600 hover:text-letusBlue hover:bg-blue-50'}`}>{isSendingFeedback ? '전송 중...' : '피드백 전송'}</button>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20">
-
-            <div className="p-0 overflow-auto flex-1 h-[600px] custom-scrollbar">
-              {/* 🔥 1. table-fixed와 min-w-[1300px]를 추가하여 뼈대를 단단하게 고정합니다. */}
-              <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1480px]">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex-1 overflow-hidden z-20 flex flex-col">
+            <div className="overflow-auto flex-1 h-[600px] custom-scrollbar">
+              <table className="w-full table-fixed min-w-[1480px]">
+                {/* 🔥 헤더: 중앙 정렬(text-center) 및 정렬 기능 추가 */}
                 <thead className="bg-gray-50/50 border-b border-gray-200 text-xs text-gray-500 font-bold sticky top-0 z-10">
                   <tr>
-                    {/* 🔥 2. 각 항목별로 절대 변하지 않는 고정 너비(px)를 부여합니다. */}
-                    <th className="p-4 pl-6 w-[60px]">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 rounded border-gray-300 text-letusOrange focus:ring-letusOrange cursor-pointer"
-                        checked={isAllSelected}
-                        onChange={handleSelectAll}
-                      />
+                    <th className="p-4 w-[60px] text-center">
+                      <input type="checkbox" checked={sortedIssues.length > 0 && selectedIds.length === sortedIssues.length} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer" />
                     </th>
-                    <th className="p-4 w-[200px]">접수번호</th>
-                    <th className="p-4 w-[100px]">소속 브랜드</th>
-                    
-                    {/* 🔥 3. 품목코드는 길이가 기니까 남는 여백을 모두 흡수하도록 w-auto를 줍니다. */}
-                    <th className="p-4 w-auto">품목코드</th>
-                    
-                    <th className="p-4 w-[160px]">유형</th>
-                    <th className="p-4 w-[90px]">접수자</th>
-                    <th className="p-4 w-[120px]">공급업체</th>
-                    <th className="p-4 w-[110px] text-center">처리상태</th>
-                    <th className="p-4 w-[70px] text-center">알림톡</th>
-                    <th className="p-4 w-[110px] text-center">요청내용</th>
-                    <th className="p-4 w-[110px] text-center">처리내용</th>
-                    <th className="p-4 w-[90px]">최종 처리자</th>
-                    <th className="p-4 w-[150px]">최종 처리일시</th>
+                    {[
+                      { label: '접수번호', key: 'reception_no', w: '200px' },
+                      { label: '소속 브랜드', key: 'brand', w: '100px' },
+                      { label: '품목코드', key: 'product_code', w: 'auto' },
+                      { label: '유형', key: 'issue_type', w: '160px' },
+                      { label: '접수자', key: 'reporter', w: '90px' },
+                      { label: '공급업체', key: 'vendor', w: '120px' },
+                      { label: '처리상태', key: 'status', w: '100px' },
+                      { label: '알림톡', key: 'is_notified', w: '80px' },
+                      { label: '요청내용', key: null, w: '110px' },
+                      { label: '처리 내용', key: null, w: '110px' },
+                      { label: '최종 처리자', key: 'final_handler', w: '120px' },
+                      { label: '최종 처리일시', key: 'resolved_at', w: '150px' }
+                    ].map((col, idx) => (
+                      <th 
+                        key={idx} 
+                        className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`} 
+                        style={{ width: col.w }}
+                        onClick={() => col.key && requestSort(col.key)}
+                      >
+                        <div className="flex items-center justify-center">
+                          {col.label} {col.key && getSortIcon(col.key)}
+                        </div>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                {isLoading ? (
-                  <TableSkeleton rowCount={10} colCount={12} />
-                ) : (
-                  <tbody className="divide-y divide-gray-100 text-sm cursor-pointer">
-                    {filteredIssues.map((row) => {
-                      const rowId = row.id;
-                      return (
-                        <tr
-                          key={rowId}
-                          className={`hover:bg-blue-50/30 transition-colors ${selectedIds.includes(rowId) ? 'bg-blue-50/50' : ''}`}
-                          onClick={() => handleSelectOne({ target: { checked: !selectedIds.includes(rowId) } }, rowId)}
-                        >
-                          <td className="p-4 pl-6 w-12" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              className="w-4 h-4 rounded border-gray-300 text-letusOrange focus:ring-letusOrange cursor-pointer"
-                              checked={selectedIds.includes(rowId)}
-                              onChange={(e) => handleSelectOne(e, rowId)}
-                            />
-                          </td>
-                          <td className="p-4 font-bold text-gray-800">{row.reception_no}</td>
-                          <td className="p-4 font-semibold text-gray-700">{row.brand}</td>
-                          <td className="p-4 text-gray-600 truncate max-w-[150px]" title={row.product_code}>{row.product_code}</td>
-                          <td className="p-4"><CategoryBadge category={row.issue_type} /></td>
-                          <td className="p-4 text-gray-600">{row.reporter || '물류담당자'}</td>
-                          <td className="p-4 text-gray-700 font-semibold">{row.vendor || '-'}</td>
-                          <td className="p-4 text-center"><StatusBadge status={row.status} category={row.issue_type} /></td>
-                          {/* 🔥 새로 추가되는 알림톡 발송 여부 데이터 칼럼 */}
-                          <td className="p-4 text-center">
-                            {row.is_notified ? (
-                              <span className="text-[10px] font-bold bg-blue-50 text-letusBlue border border-blue-200 px-1.5 py-0.5 rounded shadow-sm" title={formatDateTime(row.feedback_sent_at)}>
-                                전송완료
-                              </span>
-                            ) : (
-                              <span className="text-gray-300 font-bold">-</span>
-                            )}
-                          </td>
-                          <td className="p-4 text-center">
-                            {row.status === '조치대기' ? (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setActiveModalRow(row); }}
-                                disabled={userProfile?.role === '사용자'}
-                                className={`text-xs font-bold border border-dashed px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${userProfile?.role === '사용자'
-                                  ? 'text-gray-400 border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                                  : 'text-gray-500 border-gray-300 bg-gray-50 hover:bg-gray-100/70'
-                                  }`}
-                              >
-                                요청등록
-                              </button>
-                            ) : (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setActiveModalRow(row); }}
-                                disabled={userProfile?.role === '사용자'}
-                                className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${userProfile?.role === '사용자'
-                                  ? 'text-gray-400 border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                                  : 'text-letusBlue border-blue-200 bg-white hover:bg-blue-50'
-                                  }`}
-                              >
-                                요청확인
-                              </button>
-                            )}
-                          </td>
-                          <td className="p-4 text-center text-green-600">
-                            {['처리 중', '조치완료'].includes(row.status) ? (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setActiveHandleRow(row); }}
-                                className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${row.status === '조치완료'
-                                  ? 'text-green-600 border-green-200 bg-white hover:bg-green-50'
-                                  : 'text-yellow-600 border-yellow-300 bg-yellow-50 hover:bg-yellow-100'
-                                  }`}
-                              >
-                                {row.status === '조치완료' ? '조치 확인' : '조치 등록'}
-                              </button>
-                            ) : (
-                              <span className="text-gray-300">-</span>
-                            )}
-                          </td>
-                          <td className="p-4 text-gray-600 font-medium">{row.final_handler || row.handlerName || '-'}</td>
-                          <td className="p-4 text-gray-500 font-mono text-xs">{formatDateTime(row.resolved_at)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                )}
+                <tbody className="divide-y divide-gray-100 text-sm">
+                  {isLoading ? <TableSkeleton colCount={12} /> : sortedIssues.map((row) => (
+                    <tr key={row.id} className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${selectedIds.includes(row.id) ? 'bg-blue-50/50' : ''}`} onClick={() => handleSelectOne(row.id)}>
+                      <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
+                        <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer" />
+                      </td>
+                      {/* 🔥 모든 데이터 셀 중앙 정렬 적용 */}
+                      <td className="p-4 text-center font-bold text-gray-800">{row.reception_no}</td>
+                      <td className="p-4 text-center font-semibold text-gray-700">{row.brand}</td>
+                      <td className="p-4 text-center text-gray-600 truncate max-w-[200px]" title={row.product_code}>{row.product_code}</td>
+                      <td className="p-4 text-center"><div className="flex justify-center"><CategoryBadge category={row.issue_type} /></div></td>
+                      <td className="p-4 text-center text-gray-600">{row.reporter || '물류담당자'}</td>
+                      <td className="p-4 text-center text-gray-700 font-semibold">{row.vendor || '-'}</td>
+                      <td className="p-4 text-center"><StatusBadge status={row.status} category={row.issue_type} /></td>
+                      
+                      {/* 🔥 알림톡 디자인 업데이트 (배경 + 체크 아이콘) */}
+                      <td className="p-4 text-center">
+                        {row.is_notified ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full shadow-sm" title={formatDateTime(row.feedback_sent_at)}>
+                            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                            전송완료
+                          </span>
+                        ) : <span className="text-gray-300 font-bold">-</span>}
+                      </td>
+
+                      <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setActiveModalRow(row)} className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${row.status === '조치대기' ? 'bg-gray-50 text-gray-500' : 'bg-white text-letusBlue border-blue-200 hover:bg-blue-50'}`}>{row.status === '조치대기' ? '요청등록' : '요청확인'}</button>
+                      </td>
+                      <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
+                        {['처리 중', '조치완료'].includes(row.status) ? (
+                          <button onClick={() => setActiveHandleRow(row)} className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${row.status === '조치완료' ? 'bg-white text-green-600 border-green-200 hover:bg-green-50' : 'bg-yellow-50 text-yellow-600 border-yellow-300 hover:bg-yellow-100'}`}>{row.status === '조치완료' ? '조치 확인' : '조치 등록'}</button>
+                        ) : <span className="text-gray-300">-</span>}
+                      </td>
+                      <td className="p-4 text-center text-gray-600 font-medium">{row.final_handler || '-'}</td>
+                      <td className="p-4 text-center text-gray-500 font-mono text-xs">{formatDateTime(row.resolved_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </div>
           </div>
-          {viewComment && <CommentViewerModal {...viewComment} onClose={() => setViewComment(null)} />}
           {activeModalRow && <RequestModal row={activeModalRow} onClose={() => setActiveModalRow(null)} onReload={onReload} userProfile={userProfile} />}
           {activeHandleRow && <HandleModal row={activeHandleRow} onClose={() => setActiveHandleRow(null)} onReload={onReload} userProfile={userProfile} />}
         </div>
       );
-    }
+    };
 
     // --- 🌟 건의사항 상세/답변 모달 (SuggestionModal) ---
     const SuggestionModal = ({ item, onClose, onReload, userProfile }) => {
@@ -2944,15 +2785,13 @@
       const [selfEditTarget, setSelfEditTarget] = useState(null);
       const [notifications, setNotifications] = useState([]);
       const [isNotiOpen, setIsNotiOpen] = useState(false);
-      const [isSidebarOpen, setIsSidebarOpen] = useState(true); // 1. 사이드바 접기/펴기 상태
+      const [isSidebarOpen, setIsSidebarOpen] = useState(true); 
 
-      // 2. 즐겨찾기 상태 (로컬 스토리지 연동하여 새로고침해도 유지되게 함)
       const [favorites, setFavorites] = useState(() => {
         const savedFavs = localStorage.getItem('letus_favorites');
         return savedFavs ? JSON.parse(savedFavs) : [];
       });
 
-      // 즐겨찾기 추가/해제 함수
       const toggleFavorite = (pageId) => {
         setFavorites(prev => {
           const newFavs = prev.includes(pageId) ? prev.filter(id => id !== pageId) : [...prev, pageId];
@@ -2999,14 +2838,13 @@
         setSession(null);
       };
 
-      // (App 컴포넌트 내부) 드릴다운 함수 수정
       const handleDrillDown = (filterObj) => {
         setSavedListFilters(prev => ({
           ...prev,
           brand: filterObj.brand || '전체',
           status: filterObj.status || '전체',
-          startDate: filterObj.startDate || prev.startDate, // 🔥 날짜 파라미터 추가!
-          endDate: filterObj.endDate || prev.endDate        // 🔥 날짜 파라미터 추가!
+          startDate: filterObj.startDate || prev.startDate,
+          endDate: filterObj.endDate || prev.endDate        
         }));
         setCurrentPage('list');
       };
@@ -3140,34 +2978,12 @@
 
       return (
         <div className="flex h-screen overflow-hidden bg-letusBg text-gray-900 font-sans">
-          <Sidebar
-            page={currentPage}
-            setPage={setCurrentPage}
-            userProfile={userProfile}
-            isSidebarOpen={isSidebarOpen}
-            setIsSidebarOpen={setIsSidebarOpen}
-            favorites={favorites}
-          />
+          <Sidebar page={currentPage} setPage={setCurrentPage} userProfile={userProfile} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} favorites={favorites} />
           <div className="flex-1 flex flex-col w-full bg-slate-100 overflow-y-auto overflow-x-hidden min-h-screen relative">
             <Header
-              page={currentPage}
-              userProfile={userProfile}
-              onLogout={handleLogout}
-              notifications={notifications}
-              isNotiOpen={isNotiOpen}
-
-              // 🔥 1. 알림창 열고 닫는 함수로 정상 교체!
-              toggleNoti={() => setIsNotiOpen(!isNotiOpen)}
-
-              onNotiClick={handleNotiClick}
-
-              // 🔥 2. 내 정보 수정창 띄우는 함수로 정상 교체!
-              onEditProfile={() => setSelfEditTarget(userProfile)}
-
-              favorites={favorites}
-              toggleFavorite={toggleFavorite}
-              isSidebarOpen={isSidebarOpen}
-              setIsSidebarOpen={setIsSidebarOpen}
+              page={currentPage} userProfile={userProfile} onLogout={handleLogout} notifications={notifications} isNotiOpen={isNotiOpen}
+              toggleNoti={() => setIsNotiOpen(!isNotiOpen)} onNotiClick={handleNotiClick} onEditProfile={() => setSelfEditTarget(userProfile)}
+              favorites={favorites} toggleFavorite={toggleFavorite} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
             />
 
             <main className="flex-1 w-full">
@@ -3186,12 +3002,7 @@
             </main>
 
             {selfEditTarget && (
-              <UserEditModal
-                user={selfEditTarget}
-                onClose={() => setSelfEditTarget(null)}
-                onReload={fetchProfile}
-                isProfileMode={true}
-              />
+              <UserEditModal user={selfEditTarget} onClose={() => setSelfEditTarget(null)} onReload={fetchProfile} isProfileMode={true} />
             )}
           </div>
         </div>
