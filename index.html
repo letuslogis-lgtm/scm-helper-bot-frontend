@@ -2209,11 +2209,13 @@
 
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20">
 
-            <div className="p-0 overflow-auto flex-1 h-[600px]">
-              <table className="w-full text-left whitespace-nowrap">
+            <div className="p-0 overflow-auto flex-1 h-[600px] custom-scrollbar">
+              {/* 🔥 1. table-fixed와 min-w-[1300px]를 추가하여 뼈대를 단단하게 고정합니다. */}
+              <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1300px]">
                 <thead className="bg-gray-50/50 border-b border-gray-200 text-xs text-gray-500 font-bold sticky top-0 z-10">
                   <tr>
-                    <th className="p-4 pl-6 w-12">
+                    {/* 🔥 2. 각 항목별로 절대 변하지 않는 고정 너비(px)를 부여합니다. */}
+                    <th className="p-4 pl-6 w-[60px]">
                       <input
                         type="checkbox"
                         className="w-4 h-4 rounded border-gray-300 text-letusOrange focus:ring-letusOrange cursor-pointer"
@@ -2221,17 +2223,20 @@
                         onChange={handleSelectAll}
                       />
                     </th>
-                    <th className="p-4">접수번호</th>
-                    <th className="p-4">소속 브랜드</th>
-                    <th className="p-4">품목코드</th>
-                    <th className="p-4">유형</th>
-                    <th className="p-4">접수자</th>
-                    <th className="p-4">공급업체</th>
-                    <th className="p-4 text-center">처리상태</th>
-                    <th className="p-4 text-center">요청내용</th>
-                    <th className="p-4 text-center">처리 내용</th>
-                    <th className="p-4">최종 처리자</th>
-                    <th className="p-4">최종 처리일시</th>
+                    <th className="p-4 w-[210px]">접수번호</th>
+                    <th className="p-4 w-[100px]">소속 브랜드</th>
+                    
+                    {/* 🔥 3. 품목코드는 길이가 기니까 남는 여백을 모두 흡수하도록 w-auto를 줍니다. */}
+                    <th className="p-4 w-auto">품목코드</th>
+                    
+                    <th className="p-4 w-[160px]">유형</th>
+                    <th className="p-4 w-[90px]">접수자</th>
+                    <th className="p-4 w-[120px]">공급업체</th>
+                    <th className="p-4 w-[100px] text-center">처리상태</th>
+                    <th className="p-4 w-[100px] text-center">요청내용</th>
+                    <th className="p-4 w-[100px] text-center">처리 내용</th>
+                    <th className="p-4 w-[100px]">최종 처리자</th>
+                    <th className="p-4 w-[140px]">최종 처리일시</th>
                   </tr>
                 </thead>
                 {isLoading ? (
