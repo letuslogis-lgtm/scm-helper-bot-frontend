@@ -2133,22 +2133,23 @@
                       <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
                         <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer" />
                       </td>
-                      {/* 🔥 모든 데이터 셀 중앙 정렬 적용 */}
-                      <td className="p-4 text-center font-bold text-gray-800">{row.reception_no}</td>
-                      <td className="p-4 text-center font-semibold text-gray-700">{row.brand}</td>
-                      <td className="p-4 text-center text-gray-600 truncate max-w-[200px]" title={row.product_code}>{row.product_code}</td>
-                      <td className="p-4 text-center"><div className="flex justify-center"><CategoryBadge category={row.issue_type} /></div></td>
-                      <td className="p-4 text-center text-gray-600">{row.reporter || '물류담당자'}</td>
-                      <td className="p-4 text-center text-gray-700 font-semibold">{row.vendor || '-'}</td>
+                      {/* 🔥 내용 왼쪽 정렬 원상복구 (상태 뱃지, 버튼 등은 가운데 정렬 유지) */}
+                      <td className="p-4 pl-6 font-bold text-gray-800">{row.reception_no}</td>
+                      <td className="p-4 font-semibold text-gray-700">{row.brand}</td>
+                      <td className="p-4 text-gray-600 truncate max-w-[200px]" title={row.product_code}>{row.product_code}</td>
+                      <td className="p-4"><CategoryBadge category={row.issue_type} /></td>
+                      <td className="p-4 text-gray-600">{row.reporter || '물류담당자'}</td>
+                      <td className="p-4 text-gray-700 font-semibold">{row.vendor || '-'}</td>
                       <td className="p-4 text-center"><StatusBadge status={row.status} category={row.issue_type} /></td>
                       
-                      {/* 🔥 알림톡 디자인 업데이트 (배경 + 체크 아이콘) */}
+                      {/* 🔥 알림톡: 글자 삭제하고 작고 둥근 체크 아이콘으로 변경 */}
                       <td className="p-4 text-center">
                         {row.is_notified ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-black bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full shadow-sm" title={formatDateTime(row.feedback_sent_at)}>
-                            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                            전송완료
-                          </span>
+                          <div className="flex justify-center">
+                            <span className="flex items-center justify-center w-5 h-5 bg-blue-100 text-blue-600 border border-blue-200 rounded-full shadow-sm" title={`전송완료: ${formatDateTime(row.feedback_sent_at)}`}>
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                            </span>
+                          </div>
                         ) : <span className="text-gray-300 font-bold">-</span>}
                       </td>
 
@@ -2160,8 +2161,8 @@
                           <button onClick={() => setActiveHandleRow(row)} className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${row.status === '조치완료' ? 'bg-white text-green-600 border-green-200 hover:bg-green-50' : 'bg-yellow-50 text-yellow-600 border-yellow-300 hover:bg-yellow-100'}`}>{row.status === '조치완료' ? '조치 확인' : '조치 등록'}</button>
                         ) : <span className="text-gray-300">-</span>}
                       </td>
-                      <td className="p-4 text-center text-gray-600 font-medium">{row.final_handler || '-'}</td>
-                      <td className="p-4 text-center text-gray-500 font-mono text-xs">{formatDateTime(row.resolved_at)}</td>
+                      <td className="p-4 text-gray-600 font-medium">{row.final_handler || '-'}</td>
+                      <td className="p-4 text-gray-500 font-mono text-xs">{formatDateTime(row.resolved_at)}</td>
                     </tr>
                   ))}
                 </tbody>
