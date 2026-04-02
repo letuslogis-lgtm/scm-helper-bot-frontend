@@ -1998,51 +1998,6 @@
         }
       };
 
-      // 📊 엑셀(CSV) 다운로드 함수
-      const handleExportExcel = () => {
-        if (sortedIssues.length === 0) {
-          alert('출력할 데이터가 없습니다.');
-          return;
-        }
-
-        // 1. 엑셀 헤더 설정
-        const headers = ['접수번호', '소속 브랜드', '품목코드', '유형', '접수자', '공급업체', '처리상태', '요청내용', '처리내용', '최종 처리자', '최종 처리일시'];
-        
-        // 2. 데이터 행 생성
-        const csvRows = sortedIssues.map(row => {
-          return [
-            row.reception_no || '',
-            row.brand || '',
-            row.product_code || '',
-            row.issue_type || '',
-            row.reporter || '',
-            row.vendor || '',
-            row.status || '',
-            (row.request_content || '').replace(/\n/g, ' '), // 줄바꿈이 엑셀 셀을 망치지 않게 띄어쓰기로 치환
-            (row.action_content || '').replace(/\n/g, ' '),
-            row.final_handler || '',
-            formatDateTime(row.resolved_at) || ''
-          ].map(value => `"${value}"`).join(','); // 데이터 안에 쉼표가 있을 수 있으므로 큰따옴표로 안전하게 감쌈
-        });
-
-        // 3. 헤더와 데이터 합치기
-        const csvString = [headers.join(','), ...csvRows].join('\n');
-        
-        // 4. 한글 깨짐 방지용 BOM(\uFEFF) 추가하여 파일(Blob) 생성
-        const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        
-        // 5. 가짜 a 태그 만들어서 다운로드 트리거
-        const link = document.createElement('a');
-        link.href = url;
-        const today = new Date().toISOString().split('T')[0];
-        link.download = `특이사항_LIST_${today}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      };
-
       const handleRevertSelectedIssues = async () => {
         if (selectedIds.length === 0) { alert('원복할 항목을 1개 이상 선택해 주세요.'); return; }
         if (userProfile?.role === '사용자') { alert('이 작업은 관리자만 수행할 수 있습니다.'); return; }
@@ -2063,12 +2018,47 @@
       const handleSelectAll = (e) => setSelectedIds(e.target.checked ? sortedIssues.map(i => i.id) : []);
       const handleSelectOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
-      // 정렬 아이콘 렌더러 (기본 상태는 숨김, 정렬 시에만 노출)
+      // 정렬 아이콘 렌더러 (선택 시에만 노출)
       const getSortIcon = (key) => {
-        if (sortConfig.key !== key) return null; // 선택 안 된 칼럼은 이모티콘 아예 숨김
+        if (sortConfig.key !== key) return null; 
         if (sortConfig.direction === 'asc') return <span className="ml-1 text-letusBlue font-black">↑</span>;
         if (sortConfig.direction === 'desc') return <span className="ml-1 text-letusBlue font-black">↓</span>;
-        return null; // 3번째 클릭(정렬 해제) 시에도 다시 숨김
+        return null; 
+      };
+
+      // 📊 엑셀(CSV) 다운로드 함수
+      const handleExportExcel = () => {
+        if (sortedIssues.length === 0) {
+          alert('출력할 데이터가 없습니다.');
+          return;
+        }
+        const headers = ['접수번호', '소속 브랜드', '품목코드', '유형', '접수자', '공급업체', '처리상태', '요청내용', '처리내용', '최종 처리자', '최종 처리일시'];
+        const csvRows = sortedIssues.map(row => {
+          return [
+            row.reception_no || '',
+            row.brand || '',
+            row.product_code || '',
+            row.issue_type || '',
+            row.reporter || '',
+            row.vendor || '',
+            row.status || '',
+            (row.request_content || '').replace(/\n/g, ' '),
+            (row.action_content || '').replace(/\n/g, ' '),
+            row.final_handler || '',
+            formatDateTime(row.resolved_at) || ''
+          ].map(value => `"${value}"`).join(','); 
+        });
+        const csvString = [headers.join(','), ...csvRows].join('\n');
+        const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const today = new Date().toISOString().split('T')[0];
+        link.download = `특이사항_LIST_${today}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       };
 
       return (
@@ -2113,27 +2103,19 @@
             </div>
           </div>
 
-          {/* 상단 우측 버튼 영역 (엑셀 & 선택실행 통합) */}
           <div className="flex justify-end gap-3 z-30 px-2">
             <div className="relative group">
               <button className="flex items-center text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded px-3 py-1.5 hover:bg-slate-50 min-w-[100px] justify-between shadow-sm transition-all">
                 <span>선택실행</span>
                 <svg className="w-3.5 h-3.5 ml-2 text-slate-400 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
-              
-              {/* 드롭다운 메뉴 넓이를 130px로 살짝 키움 */}
               <div className="absolute right-0 top-[110%] w-[130px] hidden group-hover:block z-50">
                 <div className="bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5">
-                  
-                  {/* 🔥 onClick 이벤트를 방금 만든 함수로 연결! */}
                   <button onClick={handleExportExcel} className="w-full text-left px-2.5 py-2 text-green-700 hover:text-green-800 hover:bg-green-50 font-bold rounded text-[11px] flex items-center justify-between transition-colors">
                     엑셀 추출
                     <svg className="w-3.5 h-3.5 opacity-70" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg>
                   </button>
-                  
-                  {/* 메뉴 시각적 분리를 위한 얇은 가로선 */}
                   <div className="h-px bg-slate-100 my-0.5"></div>
-                  
                   <button onClick={handleRevertSelectedIssues} className="w-full text-left px-2.5 py-2 text-slate-600 hover:text-orange-600 hover:bg-orange-50 font-bold rounded text-[11px] transition-colors">원복</button>
                   <button onClick={handleSendFeedback} disabled={isSendingFeedback} className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] transition-colors ${isSendingFeedback ? 'text-gray-400 cursor-not-allowed bg-gray-50' : 'text-slate-600 hover:text-letusBlue hover:bg-blue-50'}`}>{isSendingFeedback ? '전송 중...' : '피드백 전송'}</button>
                 </div>
@@ -2144,7 +2126,6 @@
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex-1 overflow-hidden z-20 flex flex-col">
             <div className="overflow-auto flex-1 h-[600px] custom-scrollbar">
               <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1480px]">
-                {/* 🔥 헤더: 중앙 정렬(text-center) 및 정렬 기능 추가 */}
                 <thead className="bg-gray-50/50 border-b border-gray-200 text-xs text-gray-500 font-bold sticky top-0 z-10">
                   <tr>
                     <th className="p-4 w-[60px] text-center">
@@ -2183,7 +2164,6 @@
                       <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
                         <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer" />
                       </td>
-                      {/* 🔥 내용 왼쪽 정렬 원상복구 (상태 뱃지, 버튼 등은 가운데 정렬 유지) */}
                       <td className="p-4 pl-6 font-bold text-gray-800">{row.reception_no}</td>
                       <td className="p-4 font-semibold text-gray-700">{row.brand}</td>
                       <td className="p-4 text-gray-600 truncate max-w-[200px]" title={row.product_code}>{row.product_code}</td>
@@ -2191,8 +2171,6 @@
                       <td className="p-4 text-gray-600">{row.reporter || '물류담당자'}</td>
                       <td className="p-4 text-gray-700 font-semibold">{row.vendor || '-'}</td>
                       <td className="p-4 text-center"><StatusBadge status={row.status} category={row.issue_type} /></td>
-                      
-                      {/* 🔥 알림톡: 글자 삭제하고 작고 둥근 체크 아이콘으로 변경 */}
                       <td className="p-4 text-center">
                         {row.is_notified ? (
                           <div className="flex justify-center">
@@ -2202,7 +2180,6 @@
                           </div>
                         ) : <span className="text-gray-300 font-bold">-</span>}
                       </td>
-
                       <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
                         <button onClick={() => setActiveModalRow(row)} className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${row.status === '조치대기' ? 'bg-gray-50 text-gray-500' : 'bg-white text-letusBlue border-blue-200 hover:bg-blue-50'}`}>{row.status === '조치대기' ? '요청등록' : '요청확인'}</button>
                       </td>
@@ -2228,27 +2205,20 @@
     // --- 🌟 건의사항 상세/답변 모달 (SuggestionModal) ---
     const SuggestionModal = ({ item, onClose, onReload, userProfile }) => {
       const isAdmin = userProfile?.role === '관리자';
-      // 🔥 본인이 작성한 글인지 확인
       const isAuthor = userProfile?.name === item.user_name;
-
       const [answer, setAnswer] = useState(item.answer || '');
       const [status, setStatus] = useState(item.status || '대기중');
       const [isSaving, setIsSaving] = useState(false);
-      const [isDeleting, setIsDeleting] = useState(false); // 🔥 삭제 상태 관리
+      const [isDeleting, setIsDeleting] = useState(false);
 
       const handleSave = async () => {
         setIsSaving(true);
         try {
-          const { error } = await supabase
-            .from('suggestions')
-            .update({ answer: answer, status: status })
-            .eq('id', item.id);
-
+          const { error } = await supabase.from('suggestions').update({ answer: answer, status: status }).eq('id', item.id);
           if (error) throw error;
-
           alert('답변 및 상태가 성공적으로 저장되었습니다.');
-          onReload(); // 리스트 새로고침
-          onClose();  // 모달 닫기
+          onReload();
+          onClose(); 
         } catch (error) {
           alert('저장 실패: ' + error.message);
         } finally {
@@ -2256,22 +2226,15 @@
         }
       };
 
-      // 🔥 삭제 핸들러 추가
       const handleDelete = async () => {
         if (!window.confirm('이 건의사항을 정말 삭제하시겠습니까?\n삭제된 데이터는 영구적으로 복구할 수 없습니다.')) return;
-
         setIsDeleting(true);
         try {
-          const { error } = await supabase
-            .from('suggestions')
-            .delete()
-            .eq('id', item.id); // 해당 ID의 글을 DB에서 삭제
-
+          const { error } = await supabase.from('suggestions').delete().eq('id', item.id);
           if (error) throw error;
-
           alert('건의사항이 삭제되었습니다.');
-          onReload(); // 리스트 새로고침하여 화면에서 즉시 사라지게 함
-          onClose();  // 모달 닫기
+          onReload(); 
+          onClose(); 
         } catch (error) {
           alert('삭제 실패: ' + error.message);
         } finally {
@@ -2283,8 +2246,6 @@
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
           <div className="bg-white rounded-xl shadow-2xl z-10 w-full max-w-2xl slide-up border border-gray-100 overflow-hidden flex flex-col">
-
-            {/* 헤더 */}
             <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
               <h3 className="font-bold text-gray-900 flex items-center gap-2">
                 <span className="text-[10px] font-black bg-gray-200 text-gray-600 px-2 py-0.5 rounded uppercase tracking-wider">{item.request_type}</span>
@@ -2292,11 +2253,7 @@
               </h3>
               <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><CloseIcon /></button>
             </div>
-
-            {/* 본문 영역 */}
             <div className="p-6 bg-white space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
-
-              {/* 1. 작성자 원본 내용 (읽기 전용) */}
               <div>
                 <div className="flex justify-between items-end mb-2">
                   <h4 className="text-lg font-bold text-gray-800">{item.title}</h4>
@@ -2306,16 +2263,12 @@
                   {item.content}
                 </div>
               </div>
-
-              {/* 2. 관리자 답변 및 상태 영역 */}
               <div className="border-t border-gray-100 pt-5">
                 <div className="flex justify-between items-center mb-3">
                   <h4 className="text-sm font-bold text-letusBlue flex items-center gap-1.5">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                     관리자 피드백
                   </h4>
-
-                  {/* 관리자면 셀렉트 박스, 일반 유저면 상태 뱃지만 노출 */}
                   {isAdmin ? (
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-gray-500">진행 상태:</span>
@@ -2330,8 +2283,6 @@
                     <span className={`text-[11px] font-bold px-2.5 py-1 rounded shadow-sm border ${status === '반영완료' ? 'bg-green-50 text-green-600 border-green-200' : status === '검토중' ? 'bg-blue-50 text-blue-600 border-blue-200' : status === '반려' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>{status}</span>
                   )}
                 </div>
-
-                {/* 관리자면 입력창(textarea), 일반 유저면 결과 텍스트만 노출 */}
                 {isAdmin ? (
                   <textarea
                     value={answer}
@@ -2346,24 +2297,15 @@
                 )}
               </div>
             </div>
-
-            {/* 하단 버튼 */}
             <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center shrink-0">
-              {/* 🔥 왼쪽: 삭제 버튼 (관리자이거나 작성자 본인일 경우에만 노출) */}
               <div>
                 {(isAdmin || isAuthor) && (
-                  <button
-                    onClick={handleDelete}
-                    disabled={isDeleting || isSaving}
-                    className={`px-4 py-2 border border-red-200 text-red-500 bg-red-50 text-sm font-bold rounded hover:bg-red-100 transition-colors shadow-sm flex items-center gap-1.5 ${isDeleting ? 'opacity-70 cursor-not-allowed' : ''}`}
-                  >
+                  <button onClick={handleDelete} disabled={isDeleting || isSaving} className={`px-4 py-2 border border-red-200 text-red-500 bg-red-50 text-sm font-bold rounded hover:bg-red-100 transition-colors shadow-sm flex items-center gap-1.5 ${isDeleting ? 'opacity-70 cursor-not-allowed' : ''}`}>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     {isDeleting ? '삭제 중...' : '삭제'}
                   </button>
                 )}
               </div>
-
-              {/* 오른쪽: 닫기 및 저장 버튼 */}
               <div className="flex gap-2">
                 <button onClick={onClose} disabled={isDeleting || isSaving} className="px-5 py-2 border border-gray-300 text-gray-600 text-sm font-bold rounded hover:bg-gray-100 transition-colors bg-white shadow-sm">
                   닫기
@@ -2375,7 +2317,6 @@
                 )}
               </div>
             </div>
-
           </div>
         </div>
       );
@@ -2397,15 +2338,11 @@
 
         setIsSaving(true);
         try {
-          const { error } = await supabase
-            .from('faqs')
-            .insert([{ category, question, answer }]);
-
+          const { error } = await supabase.from('faqs').insert([{ category, question, answer }]);
           if (error) throw error;
-
           alert('새로운 FAQ가 성공적으로 등록되었습니다.');
-          onReload(); // 지원센터 리스트 싹 새로고침!
-          onClose();  // 모달 닫기
+          onReload(); 
+          onClose();  
         } catch (error) {
           alert('등록 실패: ' + error.message);
         } finally {
@@ -2417,7 +2354,6 @@
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
           <div className="bg-white rounded-xl shadow-2xl z-10 w-full max-w-lg slide-up border border-gray-100 overflow-hidden flex flex-col">
-
             <div className="p-5 border-b border-gray-100 bg-white flex justify-between items-center">
               <h3 className="font-bold text-gray-900 flex items-center gap-2">
                 <span className="w-1.5 h-3.5 bg-letusOrange rounded-full"></span>
@@ -2425,7 +2361,6 @@
               </h3>
               <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><CloseIcon /></button>
             </div>
-
             <div className="p-6 bg-slate-50">
               <form id="faqForm" onSubmit={handleSave} className="space-y-5">
                 <div className="flex flex-col gap-1.5">
@@ -2438,19 +2373,16 @@
                     <option>기타</option>
                   </select>
                 </div>
-
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-700">질문 (Question) <span className="text-letusOrange">*</span></label>
                   <input type="text" value={question} onChange={(e) => setQuestion(e.target.value)} required placeholder="예) 특이사항 알림이 오지 않습니다." className="border border-gray-300 rounded-[4px] px-3.5 py-2.5 text-sm focus:outline-none focus:border-letusBlue bg-white text-gray-800" />
                 </div>
-
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-700">답변 (Answer) <span className="text-letusOrange">*</span></label>
                   <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} required rows={5} placeholder="사용자에게 보여질 상세한 해결 방법을 적어주세요." className="border border-gray-300 rounded-[4px] px-3.5 py-3 text-sm focus:outline-none focus:border-letusBlue bg-white text-gray-800 resize-none leading-relaxed"></textarea>
                 </div>
               </form>
             </div>
-
             <div className="p-4 border-t border-gray-200 bg-white flex justify-end gap-2 shrink-0">
               <button type="button" onClick={onClose} disabled={isSaving} className="px-5 py-2 border border-gray-300 text-gray-600 text-sm font-bold rounded-[3px] hover:bg-gray-50 transition-colors shadow-sm">
                 취소
@@ -2459,7 +2391,6 @@
                 {isSaving ? '등록 중...' : 'FAQ 등록'}
               </button>
             </div>
-
           </div>
         </div>
       );
@@ -2469,34 +2400,30 @@
     const SupportCenter = ({ userProfile }) => {
       const [activeTab, setActiveTab] = useState('faq');
       const [openFaqId, setOpenFaqId] = useState(null);
-      const [activeModalItem, setActiveModalItem] = useState(null); // 모달창 띄울 데이터 상태
+      const [activeModalItem, setActiveModalItem] = useState(null); 
       const [isFaqModalOpen, setIsFaqModalOpen] = useState(false);
 
       const [faqs, setFaqs] = useState([]);
       const [suggestions, setSuggestions] = useState([]);
-      const [mySuggestions, setMySuggestions] = useState([]); // 내가 쓴 건의사항 리스트
+      const [mySuggestions, setMySuggestions] = useState([]); 
       const [isLoading, setIsLoading] = useState(false);
 
-      // 입력 폼 상태
       const [sugType, setSugType] = useState('기능 개선 (UI/UX)');
       const [sugTitle, setSugTitle] = useState('');
       const [sugContent, setSugContent] = useState('');
       const [isSubmitting, setIsSubmitting] = useState(false);
 
-      // 데이터 불러오기
       const fetchData = async () => {
         setIsLoading(true);
         try {
           const { data: faqData } = await supabase.from('faqs').select('*').order('id', { ascending: true });
           if (faqData) setFaqs(faqData);
 
-          // 관리자 탭용 전체 건의사항
           if (userProfile?.role === '관리자') {
             const { data: sugData } = await supabase.from('suggestions').select('*').order('created_at', { ascending: false });
             if (sugData) setSuggestions(sugData);
           }
 
-          // 🔥 작성자 본인의 건의 내역만 가져오기
           if (userProfile?.name) {
             const { data: myData } = await supabase.from('suggestions').select('*').eq('user_name', userProfile.name).order('created_at', { ascending: false });
             if (myData) setMySuggestions(myData);
@@ -2512,7 +2439,6 @@
         fetchData();
       }, [activeTab, userProfile]);
 
-      // 건의사항 제출
       const handleSubmitSuggestion = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -2527,7 +2453,7 @@
 
           alert('건의사항이 성공적으로 접수되었습니다.\n하단의 "나의 건의 내역"에서 답변을 확인하실 수 있습니다.');
           setSugTitle(''); setSugContent('');
-          fetchData(); // 폼 제출 직후 내역 리스트 리프레시!
+          fetchData(); 
         } catch (error) {
           alert('오류가 발생했습니다: ' + error.message);
         } finally {
@@ -2538,7 +2464,6 @@
       return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up">
           <div className="max-w-5xl mx-auto">
-
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
               <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50/50 to-white flex justify-between items-center">
                 <div>
@@ -2571,7 +2496,6 @@
                   <div key={faq.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                     <button onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)} className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 focus:outline-none">
                       <div className="flex items-center gap-3 w-full overflow-hidden">
-                        {/* 🔥 1번 적용: 카테고리 뱃지 너비 고정 (w-[96px]), 줄어들지 않음(flex-shrink-0) */}
                         <span className="w-[96px] flex-shrink-0 text-[10px] font-black text-letusOrange bg-orange-50 border border-orange-100 py-1 px-1 rounded text-center tracking-tight truncate">
                           {faq.category}
                         </span>
@@ -2594,7 +2518,6 @@
 
             {activeTab === 'suggestion' && (
               <div className="space-y-6 animate-fade-in">
-                {/* 건의사항 작성 폼 */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                   <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <span className="w-1 h-3.5 bg-letusBlue rounded-full"></span>
@@ -2632,7 +2555,6 @@
                   </form>
                 </div>
 
-                {/* 🔥 나의 건의 내역 리스트 (일반 사용자 확인용) */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                   <div className="p-4 border-b border-gray-100 bg-gray-50 font-bold text-sm text-gray-800">
                     나의 건의 내역 확인
@@ -2665,12 +2587,10 @@
               </div>
             )}
 
-            {/* 관리자 전용 탭 */}
             {activeTab === 'admin' && userProfile?.role === '관리자' && (
               <div className="bg-white rounded-xl shadow-sm border border-orange-200 overflow-hidden animate-fade-in">
                 <div className="bg-orange-50 px-5 py-4 border-b border-orange-100 font-bold text-sm text-orange-700 flex justify-between items-center">
                   <span>접수된 전체 건의사항 내역</span>
-
                   <button
                     onClick={() => setIsFaqModalOpen(true)}
                     className="bg-white border border-orange-300 text-orange-600 px-3 py-1.5 text-xs font-bold rounded shadow-sm hover:bg-orange-100 transition-colors flex items-center gap-1"
@@ -2678,7 +2598,6 @@
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
                     FAQ 새 글 쓰기
                   </button>
-
                 </div>
                 <div className="p-0 overflow-auto max-h-[500px] custom-scrollbar">
                   <table className="w-full text-left whitespace-nowrap text-sm">
@@ -2708,10 +2627,8 @@
                 </div>
               </div>
             )}
-
           </div>
 
-          {/* 🔥 상세/답변 모달창 렌더링 */}
           {activeModalItem && (
             <SuggestionModal
               item={activeModalItem}
@@ -2826,195 +2743,6 @@
       );
     };
 
-    const handleNotiClick = (notiId, filterObj) => {
-        setNotifications(prev => prev.map(n => n.id === notiId ? { ...n, read: true, read_at: new Date().getTime() } : n));
-        handleDrillDown(filterObj);
-        setIsNotiOpen(false);
-      };
-
-      // 🔥 알림 전체 읽음 처리 함수 추가
-      const handleMarkAllAsRead = () => {
-        const now = new Date().getTime();
-        setNotifications(prev => prev.map(n => ({ ...n, read: true, read_at: now })));
-      };
-
-      const handleLogout = async () => {
-        await supabase.auth.signOut();
-        setUserProfile(null);
-        setSession(null);
-      };
-
-      const handleDrillDown = (filterObj) => {
-        setSavedListFilters(prev => ({
-          ...prev,
-          brand: filterObj.brand || '전체',
-          status: filterObj.status || '전체',
-          startDate: filterObj.startDate || prev.startDate,
-          endDate: filterObj.endDate || prev.endDate        
-        }));
-        setCurrentPage('list');
-      };
-
-      const fetchIssues = async () => {
-        setIsLoading(true);
-        try {
-          const { data, error } = await supabase.from('logistics_issues').select('*').order('id', { ascending: false });
-          if (error) throw error;
-          setIssues(data || []);
-        } catch (error) {
-          console.error('Supabase fetch exception:', error.message || error);
-          setIssues([]);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      const fetchProfile = async () => {
-        if (!session) return;
-        try {
-          const { data, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-          if (data) {
-            setUserProfile(data);
-            if (data.role === '사용자' && currentPage === 'user_management') {
-              setCurrentPage('dashboard');
-            }
-          }
-        } catch (err) {
-          console.error('프로필 갱신 실패:', err);
-        }
-      };
-
-      useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          setSession(session);
-          setAuthLoading(false);
-        });
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-          setSession(session);
-          setAuthLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
-      }, []);
-
-      useEffect(() => {
-        if (session) {
-          fetchIssues();
-          fetchProfile();
-        }
-      }, [session]);
-
-      useEffect(() => {
-        if (!session || !userProfile) return;
-
-        if (Notification.permission === 'default' && !sessionStorage.getItem('notiAsked')) {
-          sessionStorage.setItem('notiAsked', 'true');
-          Notification.requestPermission();
-        }
-
-        const channel = supabase
-          .channel('logistics_issue_notifications')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'logistics_issues' }, (payload) => { handleIssueChange(payload.new, '신규 입고'); })
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'logistics_issues' }, (payload) => { handleIssueChange(payload.new, '상태 변경'); })
-          .subscribe();
-
-        const handleIssueChange = (newData, type) => {
-          const userBrands = userProfile?.managed_brands ? userProfile.managed_brands.split(',').map(s => s.trim()) : [];
-          const userVendors = userProfile?.managed_vendors ? userProfile.managed_vendors.split(',').map(s => s.trim()) : [];
-
-          let shouldAlert = false;
-          let message = '';
-          const currentStatus = newData.status || '조치대기';
-
-          if (currentStatus === '조치대기' && userProfile?.role?.includes('관리자') && (userBrands.includes('전체') || userBrands.includes(newData.brand))) {
-            shouldAlert = true;
-            message = `[신규] ${newData.brand} 브랜드의 새로운 이슈가 접수되었습니다. (${newData.reception_no})`;
-          }
-          else if (currentStatus === '처리 중' && userVendors.includes(newData.vendor)) {
-            shouldAlert = true;
-            message = `[이관] 관리 중인 ${newData.vendor} 업체로 이슈가 이관되었습니다. (${newData.reception_no})`;
-          }
-          else if (currentStatus === '조치완료' && userProfile?.role?.includes('관리자') && (userBrands.includes('전체') || userBrands.includes(newData.brand))) {
-            shouldAlert = true;
-            message = `[조치완료] ${newData.brand} 브랜드의 이슈 조치가 완료되었습니다. (${newData.reception_no})`;
-          }
-
-          if (shouldAlert) {
-            const nowTime = new Date().getTime();
-            if (window.lastAlertMsg === message && nowTime - (window.lastAlertTime || 0) < 2000) return;
-            window.lastAlertMsg = message;
-            window.lastAlertTime = nowTime;
-
-            const newNoti = {
-              id: newData.id + '_' + nowTime,
-              title: type,
-              message: message,
-              date: new Date(nowTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              read: false,
-              read_at: null,
-              filterObj: { brand: newData.brand || '전체', status: newData.status || '전체' }
-            };
-
-            setNotifications(prev => [newNoti, ...prev].slice(0, 10));
-
-            if (Notification.permission === 'granted') {
-              new Notification(`LETUS LOGIS - ${type}`, {
-                body: message,
-                icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
-              });
-            }
-            fetchIssues();
-          }
-        };
-
-        return () => { supabase.removeChannel(channel); };
-      }, [session, userProfile]);
-
-      if (authLoading) {
-        return (
-          <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
-            <svg className="animate-spin h-8 w-8 text-letusBlue mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <span className="text-sm font-bold text-slate-500 tracking-wide">인증 세션을 확인 중입니다...</span>
-          </div>
-        );
-      }
-
-      if (!session) return <LoginView />;
-
-      return (
-        <div className="flex h-screen overflow-hidden bg-letusBg text-gray-900 font-sans">
-          <Sidebar page={currentPage} setPage={setCurrentPage} userProfile={userProfile} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} favorites={favorites} />
-          <div className="flex-1 flex flex-col w-full bg-slate-100 overflow-y-auto overflow-x-hidden min-h-screen relative">
-            <Header
-              page={currentPage} userProfile={userProfile} onLogout={handleLogout} notifications={notifications} isNotiOpen={isNotiOpen}
-              toggleNoti={() => setIsNotiOpen(!isNotiOpen)} onNotiClick={handleNotiClick} onEditProfile={() => setSelfEditTarget(userProfile)}
-              favorites={favorites} toggleFavorite={toggleFavorite} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
-              onMarkAllRead={handleMarkAllAsRead}
-            />
-
-            <main className="flex-1 w-full">
-              <div className={currentPage === 'dashboard' ? 'block' : 'hidden'}>
-                <Dashboard onNavigateToList={() => setCurrentPage('list')} onDrillDown={handleDrillDown} issues={issues} isLoading={isLoading} onReload={fetchIssues} />
-              </div>
-              <div className={currentPage === 'list' ? 'block' : 'hidden'}>
-                <IssueList userProfile={userProfile} issues={issues} isLoading={isLoading} onReload={fetchIssues} savedFilters={savedListFilters} setSavedFilters={setSavedListFilters} />
-              </div>
-              <div className={currentPage === 'user_management' ? 'block' : 'hidden'}>
-                <UserManagement />
-              </div>
-              <div className={currentPage === 'support' ? 'block' : 'hidden'}>
-                <SupportCenter userProfile={userProfile} />
-              </div>
-            </main>
-
-            {selfEditTarget && (
-              <UserEditModal user={selfEditTarget} onClose={() => setSelfEditTarget(null)} onReload={fetchProfile} isProfileMode={true} />
-            )}
-          </div>
-        </div>
-      );
-    }
     const App = () => {
       const [session, setSession] = useState(null);
       const [authLoading, setAuthLoading] = useState(true);
@@ -3072,7 +2800,6 @@
         setIsNotiOpen(false);
       };
 
-      // 🔥 전체 읽음 처리 함수!
       const handleMarkAllAsRead = () => {
         const now = new Date().getTime();
         setNotifications(prev => prev.map(n => ({ ...n, read: true, read_at: now })));
@@ -3227,7 +2954,6 @@
           <Sidebar page={currentPage} setPage={setCurrentPage} userProfile={userProfile} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} favorites={favorites} />
           <div className="flex-1 flex flex-col w-full bg-slate-100 overflow-y-auto overflow-x-hidden min-h-screen relative">
             
-            {/* 🔥 여기서 onMarkAllRead가 Header로 예쁘게 넘어갑니다! */}
             <Header
               page={currentPage} userProfile={userProfile} onLogout={handleLogout} notifications={notifications} isNotiOpen={isNotiOpen}
               toggleNoti={() => setIsNotiOpen(!isNotiOpen)} onNotiClick={handleNotiClick} onEditProfile={() => setSelfEditTarget(userProfile)}
