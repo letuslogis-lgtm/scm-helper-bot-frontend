@@ -1520,8 +1520,8 @@
                     )}
                   </div>
 
-                  {/* 🔥 하단 전체 읽음 처리 버튼 추가 */}
-                  {unreadCount > 0 && (
+                  {/* 🔥 안 읽은 개수 상관없이, 알림 내역이 1개라도 있으면 무조건 버튼 노출! */}
+                  {notifications.length > 0 && (
                     <div className="border-t border-gray-100 bg-gray-50 p-2 text-center shrink-0 hover:bg-gray-100 transition-colors cursor-pointer" onClick={onMarkAllRead}>
                       <button className="text-[11px] font-bold text-gray-500 hover:text-letusBlue transition-colors w-full flex items-center justify-center gap-1.5">
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
