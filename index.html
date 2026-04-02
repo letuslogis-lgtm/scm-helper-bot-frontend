@@ -1520,7 +1520,7 @@
                     )}
                   </div>
 
-                  {/* 🔥 모두 읽음 버튼이 드디어 들어갔습니다! */}
+                  {/* 🔥 하단 전체 읽음 처리 버튼 추가 */}
                   {unreadCount > 0 && (
                     <div className="border-t border-gray-100 bg-gray-50 p-2 text-center shrink-0 hover:bg-gray-100 transition-colors cursor-pointer" onClick={onMarkAllRead}>
                       <button className="text-[11px] font-bold text-gray-500 hover:text-letusBlue transition-colors w-full flex items-center justify-center gap-1.5">
@@ -1529,7 +1529,6 @@
                       </button>
                     </div>
                   )}
-
                 </div>
               )}
             </div>
@@ -2833,7 +2832,7 @@
         setIsNotiOpen(false);
       };
 
-      // 🔥 전체 읽음 처리 함수!
+      // 🔥 알림 전체 읽음 처리 함수 추가
       const handleMarkAllAsRead = () => {
         const now = new Date().getTime();
         setNotifications(prev => prev.map(n => ({ ...n, read: true, read_at: now })));
@@ -2991,7 +2990,7 @@
               page={currentPage} userProfile={userProfile} onLogout={handleLogout} notifications={notifications} isNotiOpen={isNotiOpen}
               toggleNoti={() => setIsNotiOpen(!isNotiOpen)} onNotiClick={handleNotiClick} onEditProfile={() => setSelfEditTarget(userProfile)}
               favorites={favorites} toggleFavorite={toggleFavorite} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
-              onMarkAllRead={handleMarkAllAsRead} 
+              onMarkAllRead={handleMarkAllAsRead}
             />
 
             <main className="flex-1 w-full">
