@@ -2026,12 +2026,12 @@
       const handleSelectAll = (e) => setSelectedIds(e.target.checked ? sortedIssues.map(i => i.id) : []);
       const handleSelectOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
-      // 정렬 아이콘 렌더러
+      // 정렬 아이콘 렌더러 (기본 상태는 숨김, 정렬 시에만 노출)
       const getSortIcon = (key) => {
-        if (sortConfig.key !== key) return <span className="ml-1 opacity-20">↕</span>;
+        if (sortConfig.key !== key) return null; // 선택 안 된 칼럼은 이모티콘 아예 숨김
         if (sortConfig.direction === 'asc') return <span className="ml-1 text-letusBlue font-black">↑</span>;
         if (sortConfig.direction === 'desc') return <span className="ml-1 text-letusBlue font-black">↓</span>;
-        return <span className="ml-1 opacity-20">↕</span>;
+        return null; // 3번째 클릭(정렬 해제) 시에도 다시 숨김
       };
 
       return (
