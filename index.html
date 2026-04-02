@@ -1647,7 +1647,11 @@
         if (brandStatsDetails[issue.brand]) {
           if (issue.status === '조치대기') brandStatsDetails[issue.brand].pending += 1;
           if (issue.status === '처리 중') brandStatsDetails[issue.brand].processing += 1;
-          if (issue.status === '조치완료') brandStatsDetails[issue.brand].completed += 1;
+          
+          // 🔥 이 부분이 핵심! '조치완료'와 '피드백완료'를 completed(조치완료) 항목으로 통합 합산!
+          if (issue.status === '조치완료' || issue.status === '피드백완료') {
+            brandStatsDetails[issue.brand].completed += 1;
+          }
         }
       });
 
