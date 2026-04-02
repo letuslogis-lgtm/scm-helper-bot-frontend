@@ -1994,6 +1994,48 @@
         }
       };
 
+      // =====================================================================
+      // 🔥 여기에 피드백 전송 관련 상태와 함수를 넣어주세요! (원복 함수 바로 위)
+      // =====================================================================
+      
+      // 피드백 전송 로딩 상태
+      const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+
+      // 피드백 전송 함수
+      const handleSendFeedback = async () => {
+        if (selectedIds.length === 0) {
+          alert('피드백을 전송할 항목을 1개 이상 선택해 주세요.');
+          return;
+        }
+
+        if (!window.confirm(`선택하신 ${selectedIds.length}건의 피드백(알림톡)을 전송하시겠습니까?`)) return;
+
+        setIsSendingFeedback(true);
+        try {
+          // 💡 [현재 임시 테스트용: 파이썬 없이 수파베이스 DB 바로 업데이트]
+          const nowIso = new Date().toISOString();
+          const { error } = await supabase
+            .from('logistics_issues')
+            .update({
+              status: '피드백완료',
+              is_notified: true,
+              feedback_sent_at: nowIso // 기훈님이 추가하신 컬럼!
+            })
+            .in('id', selectedIds);
+
+          if (error) throw error;
+
+          alert(`✅ ${selectedIds.length}건의 피드백 전송(테스트) 및 상태 변경이 완료되었습니다.`);
+          setSelectedIds([]); // 체크박스 선택 초기화
+          await onReload(); // 리스트 새로고침
+        } catch (err) {
+          console.error('피드백 전송 오류:', err);
+          alert('피드백 전송 중 오류가 발생했습니다.');
+        } finally {
+          setIsSendingFeedback(false);
+        }
+      };
+
       // 🔥 원복 기능 (알림톡 발송 이력 초기화 포함)
       const handleRevertSelectedIssues = async () => {
         if (selectedIds.length === 0) {
