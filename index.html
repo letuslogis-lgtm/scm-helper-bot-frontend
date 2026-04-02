@@ -2037,6 +2037,7 @@
       // 🚀 2. 피드백 전송 함수 (상태만 업데이트)
       const [isSendingFeedback, setIsSendingFeedback] = useState(false);
 
+      // 🚀 피드백 전송 함수 (알림 전송 여부만 업데이트!)
       const handleSendFeedback = async () => {
         if (selectedIds.length === 0) {
           alert('피드백을 전송할 항목을 1개 이상 선택해 주세요.');
@@ -2050,7 +2051,7 @@
           const { error } = await supabase
             .from('logistics_issues')
             .update({
-              status: '피드백완료',
+              // 🔥 핵심: status는 건드리지 않고, 전송 여부만 업데이트!
               is_notified: true,
               feedback_sent_at: nowIso 
             })
@@ -2058,7 +2059,7 @@
 
           if (error) throw error;
 
-          alert(`✅ ${selectedIds.length}건의 피드백 전송(테스트) 및 상태 변경이 완료되었습니다.`);
+          alert(`✅ ${selectedIds.length}건의 피드백 전송이 완료되었습니다.`);
           setSelectedIds([]); 
           await onReload(); 
         } catch (err) {
@@ -2209,7 +2210,7 @@
 
             <div className="p-0 overflow-auto flex-1 h-[600px] custom-scrollbar">
               {/* 🔥 1. table-fixed와 min-w-[1300px]를 추가하여 뼈대를 단단하게 고정합니다. */}
-              <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1300px]">
+              <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1480px]">
                 <thead className="bg-gray-50/50 border-b border-gray-200 text-xs text-gray-500 font-bold sticky top-0 z-10">
                   <tr>
                     {/* 🔥 2. 각 항목별로 절대 변하지 않는 고정 너비(px)를 부여합니다. */}
@@ -2230,11 +2231,12 @@
                     <th className="p-4 w-[160px]">유형</th>
                     <th className="p-4 w-[90px]">접수자</th>
                     <th className="p-4 w-[120px]">공급업체</th>
-                    <th className="p-4 w-[130px] text-center">처리상태</th>
-                    <th className="p-4 w-[130px] text-center">요청내용</th>
-                    <th className="p-4 w-[130px] text-center">처리내용</th>
+                    <th className="p-4 w-[110px] text-center">처리상태</th>
+                    <th className="p-4 w-[70px] text-center">알림톡</th>
+                    <th className="p-4 w-[110px] text-center">요청내용</th>
+                    <th className="p-4 w-[110px] text-center">처리내용</th>
                     <th className="p-4 w-[90px]">최종 처리자</th>
-                    <th className="p-4 w-[160px]">최종 처리일시</th>
+                    <th className="p-4 w-[150px]">최종 처리일시</th>
                   </tr>
                 </thead>
                 {isLoading ? (
@@ -2264,6 +2266,16 @@
                           <td className="p-4 text-gray-600">{row.reporter || '물류담당자'}</td>
                           <td className="p-4 text-gray-700 font-semibold">{row.vendor || '-'}</td>
                           <td className="p-4 text-center"><StatusBadge status={row.status} category={row.issue_type} /></td>
+                          {/* 🔥 새로 추가되는 알림톡 발송 여부 데이터 칼럼 */}
+                          <td className="p-4 text-center">
+                            {row.is_notified ? (
+                              <span className="text-[10px] font-bold bg-blue-50 text-letusBlue border border-blue-200 px-1.5 py-0.5 rounded shadow-sm" title={formatDateTime(row.feedback_sent_at)}>
+                                전송완료
+                              </span>
+                            ) : (
+                              <span className="text-gray-300 font-bold">-</span>
+                            )}
+                          </td>
                           <td className="p-4 text-center">
                             {row.status === '조치대기' ? (
                               <button
