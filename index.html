@@ -1994,6 +1994,7 @@
         }
       };
 
+      // 🔥 원복 기능 (알림톡 발송 이력 초기화 포함)
       const handleRevertSelectedIssues = async () => {
         if (selectedIds.length === 0) {
           alert('원복할 항목을 1개 이상 선택해 주세요.');
@@ -2005,7 +2006,8 @@
           return;
         }
 
-        if (!window.confirm(`선택하신 ${selectedIds.length}건의 이슈를 '조치대기' 상태로 원복하시겠습니까?\n이전의 조치 내용, 최종 처리자 정보, 해결 일시가 모두 영구적으로 초기화(삭제)됩니다.`)) return;
+        // 💡 알림 전송 기록도 지워진다는 안내 문구 추가
+        if (!window.confirm(`선택하신 ${selectedIds.length}건의 이슈를 '조치대기' 상태로 원복하시겠습니까?\n이전의 조치 내용, 최종 처리자 정보, 해결 일시 및 알림톡 발송 이력이 모두 영구적으로 초기화(삭제)됩니다.`)) return;
 
         try {
           const { error } = await supabase
@@ -2014,7 +2016,11 @@
               status: '조치대기',
               final_handler: '',
               action_content: '',
-              resolved_at: null
+              resolved_at: null,
+              
+              // 🔥 기훈님이 짚어주신 핵심 포인트! 알림톡 발송 여부와 시간도 다시 백지화!
+              is_notified: false,
+              feedback_sent_at: null 
             })
             .in('id', selectedIds);
 
@@ -2141,8 +2147,18 @@
                 </button>
                 <div className="absolute right-0 top-[110%] w-[120px] hidden group-hover:block z-50">
                   <div className="bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5">
-                    <button onClick={handleRevertSelectedIssues} className="w-full text-left px-2.5 py-2 text-slate-600 hover:text-orange-600 hover:bg-orange-50 font-bold rounded text-[11px] transition-colors">원복</button>
-                    <button className="w-full text-left px-2.5 py-2 text-slate-600 hover:text-orange-600 hover:bg-orange-50 font-bold rounded text-[11px] transition-colors">피드백 전송</button>
+                    <button onClick={handleRevertSelectedIssues} className="w-full text-left px-2.5 py-2 text-slate-600 hover:text-orange-600 hover:bg-orange-50 font-bold rounded text-[11px] transition-colors">
+                      원복
+                    </button>
+    
+                    {/* 🔥 피드백 전송 버튼: 함수 연결 & 로딩 시 클릭 방지(disabled) 처리 완벽 적용 */}
+                    <button 
+                      onClick={handleSendFeedback} 
+                      disabled={isSendingFeedback}
+                      className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] transition-colors ${isSendingFeedback ? 'text-gray-400 cursor-not-allowed bg-gray-50' : 'text-slate-600 hover:text-orange-600 hover:bg-orange-50'}`}
+                    >
+                      {isSendingFeedback ? '전송 중...' : '피드백 전송'}
+                    </button>
                   </div>
                 </div>
               </div>
