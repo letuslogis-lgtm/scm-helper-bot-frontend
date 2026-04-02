@@ -2129,7 +2129,7 @@
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-sm">
+                <tbody className="divide-y divide-gray-100 text-[13px]">
                   {isLoading ? <TableSkeleton colCount={12} /> : sortedIssues.map((row) => (
                     <tr key={row.id} className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${selectedIds.includes(row.id) ? 'bg-blue-50/50' : ''}`} onClick={() => handleSelectOne(row.id)}>
                       <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
