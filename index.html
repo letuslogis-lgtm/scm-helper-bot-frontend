@@ -1918,27 +1918,19 @@
       );
     }
 
-    // --- 특이사항 리스트 (IssueList) 🌟 다중 선택 필터 업그레이드판 ---
+    // --- 특이사항 리스트 (IssueList) 🌟 가로 배치 완벽 복구판 ---
     const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, setSavedFilters, userProfile }) => {
       const [activeModalRow, setActiveModalRow] = useState(null);
       const [activeHandleRow, setActiveHandleRow] = useState(null);
       const [selectedIds, setSelectedIds] = useState([]);
       const [isSendingFeedback, setIsSendingFeedback] = useState(false);
-
-      // 🔥 정렬 상태 관리 (key: 칼럼명, direction: 'asc' | 'desc' | 'none')
       const [sortConfig, setSortConfig] = useState({ key: null, direction: 'none' });
-
       const [draftFilters, setDraftFilters] = useState({ ...savedFilters });
 
-      useEffect(() => {
-        setDraftFilters({ ...savedFilters });
-      }, [savedFilters]);
+      useEffect(() => { setDraftFilters({ ...savedFilters }); }, [savedFilters]);
+      const handleSearch = () => { setSavedFilters({ ...draftFilters }); };
 
-      const handleSearch = () => {
-        setSavedFilters({ ...draftFilters });
-      };
-
-      // 🔥 다중 선택 전용 소형 컴포넌트 (문자열 호환성 유지)
+      // 🔥 다중 선택 컴포넌트 (가로 배치로 구조 변경!)
       const MultiSelect = ({ label, options, selected, onChange }) => {
         const [isOpen, setIsOpen] = useState(false);
         const toggleOption = (opt) => {
@@ -1954,38 +1946,39 @@
         const currentArr = Array.isArray(selected) ? selected : (selected === '전체' ? [] : [selected]);
 
         return (
-          <div className="relative shrink-0">
-            <label className="text-[11px] font-bold text-gray-600 block mb-1">{label}</label>
-            <div
-              onClick={() => setIsOpen(!isOpen)}
-              className="border border-gray-200 rounded-[3px] bg-white px-2.5 h-[30px] w-32 flex items-center justify-between cursor-pointer hover:border-letusBlue transition-all text-xs"
-            >
-              <span className="truncate text-gray-700 font-medium">
-                {currentArr.length === 0 ? '전체' : `${currentArr[0]}${currentArr.length > 1 ? ` 외 ${currentArr.length - 1}` : ''}`}
-              </span>
-              <svg className={`w-3 h-3 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-            </div>
-            {isOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
-                <div className="absolute top-[105%] left-0 w-48 bg-white border border-gray-200 rounded shadow-xl z-50 py-1.5 max-h-60 overflow-y-auto custom-scrollbar slide-up">
-                  <div onClick={() => { toggleOption('전체'); setIsOpen(false); }} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${currentArr.length === 0 ? 'text-letusBlue font-bold' : 'text-gray-600'}`}>
-                    <input type="checkbox" readOnly checked={currentArr.length === 0} className="w-3.5 h-3.5 accent-letusBlue" /> 전체
-                  </div>
-                  <div className="h-px bg-gray-100 my-1"></div>
-                  {options.map(opt => (
-                    <div key={opt} onClick={() => toggleOption(opt)} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${currentArr.includes(opt) ? 'text-letusBlue font-bold bg-blue-50/30' : 'text-gray-600'}`}>
-                      <input type="checkbox" readOnly checked={currentArr.includes(opt)} className="w-3.5 h-3.5 accent-letusBlue" /> {opt}
+          <div className="flex items-center shrink-0">
+            <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">{label}</label>
+            <div className="relative">
+              <div
+                onClick={() => setIsOpen(!isOpen)}
+                className="border border-gray-200 rounded-[3px] bg-white px-2.5 h-[30px] w-32 flex items-center justify-between cursor-pointer hover:border-letusBlue transition-all text-xs"
+              >
+                <span className="truncate text-gray-700 font-medium">
+                  {currentArr.length === 0 ? '전체' : `${currentArr[0]}${currentArr.length > 1 ? ` 외 ${currentArr.length - 1}` : ''}`}
+                </span>
+                <svg className={`w-3 h-3 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </div>
+              {isOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
+                  <div className="absolute top-[105%] left-0 w-48 bg-white border border-gray-200 rounded shadow-xl z-50 py-1.5 max-h-60 overflow-y-auto custom-scrollbar slide-up">
+                    <div onClick={() => { toggleOption('전체'); setIsOpen(false); }} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${currentArr.length === 0 ? 'text-letusBlue font-bold' : 'text-gray-600'}`}>
+                      <input type="checkbox" readOnly checked={currentArr.length === 0} className="w-3.5 h-3.5 accent-letusBlue" /> 전체
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
+                    <div className="h-px bg-gray-100 my-1"></div>
+                    {options.map(opt => (
+                      <div key={opt} onClick={() => toggleOption(opt)} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${currentArr.includes(opt) ? 'text-letusBlue font-bold bg-blue-50/30' : 'text-gray-600'}`}>
+                        <input type="checkbox" readOnly checked={currentArr.includes(opt)} className="w-3.5 h-3.5 accent-letusBlue" /> {opt}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         );
       };
 
-      // 1. 기본 필터링 데이터 (다중 선택 배열 로직 반영)
       const filteredIssues = useMemo(() => {
         return issues.filter(issue => {
           const filterBrands = Array.isArray(savedFilters.brand) ? savedFilters.brand : (savedFilters.brand === '전체' ? [] : [savedFilters.brand]);
@@ -2009,7 +2002,6 @@
         });
       }, [issues, savedFilters]);
 
-      // 2. 정렬 로직 (단일 칼럼, 3단계 토글)
       const sortedIssues = useMemo(() => {
         let items = [...filteredIssues];
         if (sortConfig.key && sortConfig.direction !== 'none') {
@@ -2033,64 +2025,38 @@
         setSortConfig({ key: direction === 'none' ? null : key, direction });
       };
 
-      // 3. 피드백 전송 (상태 체크 로직 추가)
       const handleSendFeedback = async () => {
-        if (selectedIds.length === 0) {
-          alert('피드백을 전송할 항목을 1개 이상 선택해 주세요.');
-          return;
-        }
-
-        // 선택된 데이터 중 '조치완료'가 아닌 데이터가 있는지 확인
-        const selectedData = issues.filter(i => selectedIds.includes(i.id));
-        const invalidItems = selectedData.filter(i => i.status !== '조치완료');
-
-        if (invalidItems.length > 0) {
-          alert(`⚠️ 전송 실패\n\n'조치완료' 상태인 항목만 피드백 전송이 가능합니다.\n(선택 항목 중 ${invalidItems.length}건이 완료 전 상태입니다.)`);
-          return;
-        }
-
-        if (!window.confirm(`선택하신 ${selectedIds.length}건의 피드백(알림톡)을 전송하시겠습니까?`)) return;
+        if (selectedIds.length === 0) return alert('피드백을 전송할 항목을 1개 이상 선택해 주세요.');
+        const invalidItems = issues.filter(i => selectedIds.includes(i.id) && i.status !== '조치완료');
+        if (invalidItems.length > 0) return alert(`⚠️ 전송 실패\n'조치완료' 상태인 항목만 전송 가능합니다.`);
+        if (!window.confirm(`선택하신 ${selectedIds.length}건의 피드백을 전송하시겠습니까?`)) return;
 
         setIsSendingFeedback(true);
         try {
-          const nowIso = new Date().toISOString();
-          const { error } = await supabase
-            .from('logistics_issues')
-            .update({ is_notified: true, feedback_sent_at: nowIso })
-            .in('id', selectedIds);
-
+          const { error } = await supabase.from('logistics_issues').update({ is_notified: true, feedback_sent_at: new Date().toISOString() }).in('id', selectedIds);
           if (error) throw error;
           alert(`✅ ${selectedIds.length}건의 피드백 전송이 완료되었습니다.`);
           setSelectedIds([]);
           await onReload();
-        } catch (err) {
-          alert('피드백 전송 중 오류가 발생했습니다.');
-        } finally {
-          setIsSendingFeedback(false);
-        }
+        } catch (err) { alert('피드백 전송 중 오류 발생'); }
+        finally { setIsSendingFeedback(false); }
       };
 
       const handleRevertSelectedIssues = async () => {
-        if (selectedIds.length === 0) { alert('원복할 항목을 1개 이상 선택해 주세요.'); return; }
-        if (userProfile?.role === '사용자') { alert('이 작업은 관리자만 수행할 수 있습니다.'); return; }
-        if (!window.confirm(`선택하신 ${selectedIds.length}건의 이슈를 '조치대기' 상태로 원복하시겠습니까?\n이전의 조치 내용, 처리 기록 및 알림톡 이력이 모두 초기화됩니다.`)) return;
-
+        if (selectedIds.length === 0) return alert('원복할 항목을 선택해 주세요.');
+        if (userProfile?.role === '사용자') return alert('이 작업은 관리자만 수행할 수 있습니다.');
+        if (!window.confirm(`선택하신 ${selectedIds.length}건의 이슈를 '조치대기' 상태로 원복하시겠습니까?`)) return;
         try {
-          const { error } = await supabase
-            .from('logistics_issues')
-            .update({ status: '조치대기', final_handler: '', action_content: '', resolved_at: null, is_notified: false, feedback_sent_at: null })
-            .in('id', selectedIds);
+          const { error } = await supabase.from('logistics_issues').update({ status: '조치대기', final_handler: '', action_content: '', resolved_at: null, is_notified: false, feedback_sent_at: null }).in('id', selectedIds);
           if (error) throw error;
-          alert(`선택한 ${selectedIds.length}건의 항목이 초기화되었습니다.`);
+          alert('초기화되었습니다.');
           setSelectedIds([]);
           await onReload();
-        } catch (err) { alert('원복 처리 중 오류 발생'); }
+        } catch (err) { alert('오류 발생'); }
       };
 
       const handleSelectAll = (e) => setSelectedIds(e.target.checked ? sortedIssues.map(i => i.id) : []);
       const handleSelectOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-
-      // 정렬 아이콘 렌더러 (선택 시에만 노출)
       const getSortIcon = (key) => {
         if (sortConfig.key !== key) return null;
         if (sortConfig.direction === 'asc') return <span className="ml-1 text-letusBlue font-black">↑</span>;
@@ -2098,103 +2064,54 @@
         return null;
       };
 
-      // 📊 엑셀(CSV) 다운로드 함수
       const handleExportExcel = () => {
-        if (sortedIssues.length === 0) {
-          alert('출력할 데이터가 없습니다.');
-          return;
-        }
+        if (sortedIssues.length === 0) return alert('데이터가 없습니다.');
         const headers = ['접수번호', '소속 브랜드', '품목코드', '유형', '접수자', '공급업체', '처리상태', '요청내용', '처리내용', '최종 처리자', '최종 처리일시'];
-        const csvRows = sortedIssues.map(row => {
-          return [
-            row.reception_no || '',
-            row.brand || '',
-            row.product_code || '',
-            row.issue_type || '',
-            row.reporter || '',
-            row.vendor || '',
-            row.status || '',
-            (row.request_content || '').replace(/\n/g, ' '),
-            (row.action_content || '').replace(/\n/g, ' '),
-            row.final_handler || '',
-            formatDateTime(row.resolved_at) || ''
-          ].map(value => `"${value}"`).join(',');
-        });
-        const csvString = [headers.join(','), ...csvRows].join('\n');
-        const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
+        const csvRows = sortedIssues.map(row => [
+          row.reception_no || '', row.brand || '', row.product_code || '', row.issue_type || '', row.reporter || '', row.vendor || '', row.status || '', (row.request_content || '').replace(/\n/g, ' '), (row.action_content || '').replace(/\n/g, ' '), row.final_handler || '', formatDateTime(row.resolved_at) || ''
+        ].map(value => `"${value}"`).join(','));
+        const blob = new Blob(['\uFEFF' + [headers.join(','), ...csvRows].join('\n')], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
-        link.href = url;
-        const today = new Date().toISOString().split('T')[0];
-        link.download = `특이사항_LIST_${today}.csv`;
-        document.body.appendChild(link);
+        link.href = URL.createObjectURL(blob);
+        link.download = `특이사항_LIST_${new Date().toISOString().split('T')[0]}.csv`;
         link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
       };
 
       return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] flex flex-col gap-4 slide-up">
-          {/* 🔥 상단 필터 영역 (MultiSelect 적용 및 UI 변경) */}
-          <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 p-5 z-30 shrink-0">
-            <div className="flex flex-wrap items-end gap-5">
+          {/* 🔥 1. 상단 필터 영역 (한 줄 가로 배치로 복구) */}
+          <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 h-[54px] flex items-center z-30 shrink-0">
+            <div className="flex items-center gap-6 w-full">
 
-              <MultiSelect
-                label="브랜드"
-                options={['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소']}
-                selected={draftFilters.brand}
-                onChange={(val) => setDraftFilters({ ...draftFilters, brand: val })}
-              />
+              <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소']} selected={draftFilters.brand} onChange={(val) => setDraftFilters({ ...draftFilters, brand: val })} />
 
-              <div className="shrink-0">
-                <label className="text-[11px] font-bold text-gray-600 block mb-1">등록일자</label>
+              <div className="flex items-center shrink-0">
+                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">등록일자</label>
                 <div className="flex items-center">
-                  <input type="date" value={draftFilters.startDate} onChange={e => setDraftFilters({ ...draftFilters, startDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[115px] focus:outline-none focus:border-letusBlue" />
+                  <input type="date" value={draftFilters.startDate} onChange={e => setDraftFilters({ ...draftFilters, startDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
                   <span className="mx-1 text-gray-400 text-xs">~</span>
-                  <input type="date" value={draftFilters.endDate} onChange={e => setDraftFilters({ ...draftFilters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[115px] focus:outline-none focus:border-letusBlue" />
+                  <input type="date" value={draftFilters.endDate} onChange={e => setDraftFilters({ ...draftFilters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
                 </div>
               </div>
 
-              <MultiSelect
-                label="처리상태"
-                options={['조치대기', '처리 중', '조치완료']}
-                selected={draftFilters.status}
-                onChange={(val) => setDraftFilters({ ...draftFilters, status: val })}
-              />
+              <MultiSelect label="처리상태" options={['조치대기', '처리 중', '조치완료']} selected={draftFilters.status} onChange={(val) => setDraftFilters({ ...draftFilters, status: val })} />
 
-              <div className="shrink-0">
-                <label className="text-[11px] font-bold text-gray-600 block mb-1">검색어</label>
+              <div className="flex items-center shrink-0">
+                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">검색어</label>
                 <div className="flex gap-0.5 h-[30px]">
                   <select value={draftFilters.searchType} onChange={e => setDraftFilters({ ...draftFilters, searchType: e.target.value })} className="border border-gray-200 rounded-l-[3px] text-xs px-2 text-gray-700 bg-gray-50 focus:outline-none">
                     <option>품목코드</option>
                     <option>공급업체</option>
                     <option>처리자</option>
                   </select>
-                  <input
-                    type="text"
-                    value={draftFilters.searchValue}
-                    onChange={e => setDraftFilters({ ...draftFilters, searchValue: e.target.value })}
-                    onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                    className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-40 focus:outline-none focus:border-letusOrange"
-                    placeholder="검색어 입력"
-                  />
+                  <input type="text" value={draftFilters.searchValue} onChange={e => setDraftFilters({ ...draftFilters, searchValue: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleSearch()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-32 focus:outline-none focus:border-letusOrange" placeholder="검색어 입력" />
                 </div>
               </div>
 
               <div className="ml-auto flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    setDraftFilters({ brand: '전체', status: '전체', startDate: todayStr, endDate: todayStr, searchType: '품목코드', searchValue: '' });
-                    setSavedFilters({ brand: '전체', status: '전체', startDate: todayStr, endDate: todayStr, searchType: '품목코드', searchValue: '' });
-                  }}
-                  className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] text-xs transition-colors"
-                >
-                  초기화
-                </button>
+                <button onClick={() => { const todayStr = new Date().toISOString().split('T')[0]; setDraftFilters({ brand: '전체', status: '전체', startDate: todayStr, endDate: todayStr, searchType: '품목코드', searchValue: '' }); setSavedFilters({ brand: '전체', status: '전체', startDate: todayStr, endDate: todayStr, searchType: '품목코드', searchValue: '' }); }} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] text-xs transition-colors">초기화</button>
                 <button onClick={handleSearch} className="bg-letusOrange text-white hover:bg-orange-500 font-bold px-6 h-[30px] rounded-[3px] text-xs shadow-sm transition-all flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                  조회하기
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> 조회하기
                 </button>
               </div>
             </div>
@@ -2209,8 +2126,7 @@
               <div className="absolute right-0 top-[110%] w-[130px] hidden group-hover:block z-50">
                 <div className="bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5">
                   <button onClick={handleExportExcel} className="w-full text-left px-2.5 py-2 text-green-700 hover:text-green-800 hover:bg-green-50 font-bold rounded text-[11px] flex items-center justify-between transition-colors">
-                    엑셀 추출
-                    <svg className="w-3.5 h-3.5 opacity-70" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg>
+                    엑셀 추출 <svg className="w-3.5 h-3.5 opacity-70" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg>
                   </button>
                   <div className="h-px bg-slate-100 my-0.5"></div>
                   <button onClick={handleRevertSelectedIssues} className="w-full text-left px-2.5 py-2 text-slate-600 hover:text-orange-600 hover:bg-orange-50 font-bold rounded text-[11px] transition-colors">원복</button>
@@ -2228,29 +2144,9 @@
                     <th className="p-4 w-[60px] text-center">
                       <input type="checkbox" checked={sortedIssues.length > 0 && selectedIds.length === sortedIssues.length} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer" />
                     </th>
-                    {[
-                      { label: '접수번호', key: 'reception_no', w: '200px' },
-                      { label: '소속 브랜드', key: 'brand', w: '100px' },
-                      { label: '품목코드', key: 'product_code', w: 'auto' },
-                      { label: '유형', key: 'issue_type', w: '160px' },
-                      { label: '접수자', key: 'reporter', w: '90px' },
-                      { label: '공급업체', key: 'vendor', w: '120px' },
-                      { label: '처리상태', key: 'status', w: '100px' },
-                      { label: '알림톡', key: 'is_notified', w: '80px' },
-                      { label: '요청내용', key: null, w: '110px' },
-                      { label: '처리 내용', key: null, w: '110px' },
-                      { label: '최종 처리자', key: 'final_handler', w: '120px' },
-                      { label: '최종 처리일시', key: 'resolved_at', w: '150px' }
-                    ].map((col, idx) => (
-                      <th
-                        key={idx}
-                        className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
-                        style={{ width: col.w }}
-                        onClick={() => col.key && requestSort(col.key)}
-                      >
-                        <div className="flex items-center justify-center">
-                          {col.label} {col.key && getSortIcon(col.key)}
-                        </div>
+                    {[{ label: '접수번호', key: 'reception_no', w: '200px' }, { label: '소속 브랜드', key: 'brand', w: '100px' }, { label: '품목코드', key: 'product_code', w: 'auto' }, { label: '유형', key: 'issue_type', w: '160px' }, { label: '접수자', key: 'reporter', w: '90px' }, { label: '공급업체', key: 'vendor', w: '120px' }, { label: '처리상태', key: 'status', w: '100px' }, { label: '알림톡', key: 'is_notified', w: '80px' }, { label: '요청내용', key: null, w: '110px' }, { label: '처리 내용', key: null, w: '110px' }, { label: '최종 처리자', key: 'final_handler', w: '120px' }, { label: '최종 처리일시', key: 'resolved_at', w: '150px' }].map((col, idx) => (
+                      <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
+                        <div className="flex items-center justify-center">{col.label} {col.key && getSortIcon(col.key)}</div>
                       </th>
                     ))}
                   </tr>
@@ -2260,9 +2156,7 @@
                     <tr><td colSpan="13" className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
                   ) : sortedIssues.map((row) => (
                     <tr key={row.id} className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${selectedIds.includes(row.id) ? 'bg-blue-50/50' : ''}`} onClick={() => handleSelectOne(row.id)}>
-                      <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
-                        <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer" />
-                      </td>
+                      <td className="p-4 text-center" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer" /></td>
                       <td className="p-4 pl-6 font-bold text-gray-800">{row.reception_no}</td>
                       <td className="p-4 font-semibold text-gray-700">{row.brand}</td>
                       <td className="p-4 text-gray-600 truncate max-w-[200px]" title={row.product_code}>{row.product_code}</td>
@@ -2272,21 +2166,11 @@
                       <td className="p-4 text-center"><StatusBadge status={row.status} category={row.issue_type} /></td>
                       <td className="p-4 text-center">
                         {row.is_notified ? (
-                          <div className="flex justify-center">
-                            <span className="flex items-center justify-center w-5 h-5 bg-blue-100 text-blue-600 border border-blue-200 rounded-full shadow-sm" title={`전송완료: ${formatDateTime(row.feedback_sent_at)}`}>
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                            </span>
-                          </div>
+                          <div className="flex justify-center"><span className="flex items-center justify-center w-5 h-5 bg-blue-100 text-blue-600 border border-blue-200 rounded-full shadow-sm" title={`전송완료: ${formatDateTime(row.feedback_sent_at)}`}><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg></span></div>
                         ) : <span className="text-gray-300 font-bold">-</span>}
                       </td>
-                      <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setActiveModalRow(row)} className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${row.status === '조치대기' ? 'bg-gray-50 text-gray-500' : 'bg-white text-letusBlue border-blue-200 hover:bg-blue-50'}`}>{row.status === '조치대기' ? '요청등록' : '요청확인'}</button>
-                      </td>
-                      <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
-                        {['처리 중', '조치완료'].includes(row.status) ? (
-                          <button onClick={() => setActiveHandleRow(row)} className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${row.status === '조치완료' ? 'bg-white text-green-600 border-green-200 hover:bg-green-50' : 'bg-yellow-50 text-yellow-600 border-yellow-300 hover:bg-yellow-100'}`}>{row.status === '조치완료' ? '조치 확인' : '조치 등록'}</button>
-                        ) : <span className="text-gray-300">-</span>}
-                      </td>
+                      <td className="p-4 text-center" onClick={e => e.stopPropagation()}><button onClick={() => setActiveModalRow(row)} className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${row.status === '조치대기' ? 'bg-gray-50 text-gray-500' : 'bg-white text-letusBlue border-blue-200 hover:bg-blue-50'}`}>{row.status === '조치대기' ? '요청등록' : '요청확인'}</button></td>
+                      <td className="p-4 text-center" onClick={e => e.stopPropagation()}>{['처리 중', '조치완료'].includes(row.status) ? (<button onClick={() => setActiveHandleRow(row)} className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${row.status === '조치완료' ? 'bg-white text-green-600 border-green-200 hover:bg-green-50' : 'bg-yellow-50 text-yellow-600 border-yellow-300 hover:bg-yellow-100'}`}>{row.status === '조치완료' ? '조치 확인' : '조치 등록'}</button>) : <span className="text-gray-300">-</span>}</td>
                       <td className="p-4 text-gray-600 font-medium">{row.final_handler || '-'}</td>
                       <td className="p-4 text-gray-500 font-mono text-xs">{formatDateTime(row.resolved_at)}</td>
                     </tr>
@@ -2717,41 +2601,24 @@
       );
     };
 
-    // --- 📋 물류사고분석 LIST 컴포넌트 (업그레이드된 필터 적용) ---
+    // --- 📋 물류사고분석 LIST 컴포넌트 (가로 배치 완벽 복구판) ---
     const AccidentList = ({ userProfile }) => {
       const [items, setItems] = useState([]);
       const [isLoading, setIsLoading] = useState(false);
       const [activeRow, setActiveRow] = useState(null);
       const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-      // 🔥 [필터 상태 선언] 다중 선택을 위해 배열([])로 관리합니다.
       const today = new Date().toISOString().split('T')[0];
-      const [filters, setFilters] = useState({
-        brands: [], // 다중 선택 (비어있으면 전체)
-        centers: [], // 다중 선택
-        depts: [], // 다중 선택
-        startDate: today,
-        endDate: today,
-        searchType: '수주건명',
-        searchValue: ''
-      });
+      const [filters, setFilters] = useState({ brands: [], centers: [], depts: [], startDate: today, endDate: today, searchType: '수주건명', searchValue: '' });
 
       const fetchAccidents = async () => {
         setIsLoading(true);
         try {
-          // 기본 쿼리: 기간 필터는 필수라 DB에서 먼저 걸러옵니다.
-          let query = supabase.from('logistics_accidents')
-            .select('*')
-            .gte('service_date', filters.startDate)
-            .lte('service_date', filters.endDate)
-            .order('created_at', { ascending: false });
-
+          let query = supabase.from('logistics_accidents').select('*').gte('service_date', filters.startDate).lte('service_date', filters.endDate).order('created_at', { ascending: false });
           const { data, error } = await query;
           if (error) throw error;
 
-          // 🔥 클라이언트 사이드 추가 필터링 (다중 선택 및 검색어)
           let filtered = data || [];
-
           if (filters.brands.length > 0) filtered = filtered.filter(i => filters.brands.includes(i.brand));
           if (filters.centers.length > 0) filtered = filtered.filter(i => filters.centers.includes(i.service_center));
           if (filters.depts.length > 0) filtered = filtered.filter(i => filters.depts.includes(i.responsible_dept));
@@ -2761,20 +2628,19 @@
             if (filters.searchType === '수주건명') filtered = filtered.filter(i => (i.order_name || '').toLowerCase().includes(val));
             if (filters.searchType === '품목코드') filtered = filtered.filter(i => (i.item_code || '').toLowerCase().includes(val));
           }
-
           setItems(filtered);
         } catch (err) { console.error(err); }
         finally { setIsLoading(false); }
       };
 
-      useEffect(() => { fetchAccidents(); }, [filters.startDate, filters.endDate]); // 날짜 변경 시 자동 조회
+      useEffect(() => { fetchAccidents(); }, [filters.startDate, filters.endDate]);
 
-      // 다중 선택 전용 컴포넌트
+      // 🔥 다중 선택 컴포넌트 (가로 배치로 구조 변경!)
       const MultiSelect = ({ label, options, selected, onChange }) => {
         const [isOpen, setIsOpen] = useState(false);
         const toggleOption = (opt) => {
           if (opt === '전체') {
-            onChange([]); // 전체 선택 시 초기화
+            onChange([]);
           } else {
             const newSelected = selected.includes(opt) ? selected.filter(s => s !== opt) : [...selected, opt];
             onChange(newSelected);
@@ -2782,114 +2648,165 @@
         };
 
         return (
-          <div className="relative shrink-0">
-            <label className="text-[11px] font-bold text-gray-600 block mb-1">{label}</label>
-            <div
-              onClick={() => setIsOpen(!isOpen)}
-              className="border border-gray-200 rounded-[3px] bg-white px-2.5 h-[30px] w-32 flex items-center justify-between cursor-pointer hover:border-letusBlue transition-all text-xs"
-            >
-              <span className="truncate text-gray-700 font-medium">
-                {selected.length === 0 ? '전체' : `${selected[0]}${selected.length > 1 ? ` 외 ${selected.length - 1}` : ''}`}
-              </span>
-              <svg className={`w-3 h-3 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-            </div>
-            {isOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
-                <div className="absolute top-[105%] left-0 w-48 bg-white border border-gray-200 rounded shadow-xl z-50 py-1.5 max-h-60 overflow-y-auto custom-scrollbar slide-up">
-                  <div onClick={() => { toggleOption('전체'); setIsOpen(false); }} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${selected.length === 0 ? 'text-letusBlue font-bold' : 'text-gray-600'}`}>
-                    <input type="checkbox" readOnly checked={selected.length === 0} className="w-3.5 h-3.5 accent-letusBlue" /> 전체
-                  </div>
-                  <div className="h-px bg-gray-100 my-1"></div>
-                  {options.map(opt => (
-                    <div key={opt} onClick={() => toggleOption(opt)} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${selected.includes(opt) ? 'text-letusBlue font-bold bg-blue-50/30' : 'text-gray-600'}`}>
-                      <input type="checkbox" readOnly checked={selected.includes(opt)} className="w-3.5 h-3.5 accent-letusBlue" /> {opt}
+          <div className="flex items-center shrink-0">
+            <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">{label}</label>
+            <div className="relative">
+              <div
+                onClick={() => setIsOpen(!isOpen)}
+                className="border border-gray-200 rounded-[3px] bg-white px-2.5 h-[30px] w-32 flex items-center justify-between cursor-pointer hover:border-letusBlue transition-all text-xs"
+              >
+                <span className="truncate text-gray-700 font-medium">
+                  {selected.length === 0 ? '전체' : `${selected[0]}${selected.length > 1 ? ` 외 ${selected.length - 1}` : ''}`}
+                </span>
+                <svg className={`w-3 h-3 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </div>
+              {isOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
+                  <div className="absolute top-[105%] left-0 w-48 bg-white border border-gray-200 rounded shadow-xl z-50 py-1.5 max-h-60 overflow-y-auto custom-scrollbar slide-up">
+                    <div onClick={() => { toggleOption('전체'); setIsOpen(false); }} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${selected.length === 0 ? 'text-letusBlue font-bold' : 'text-gray-600'}`}>
+                      <input type="checkbox" readOnly checked={selected.length === 0} className="w-3.5 h-3.5 accent-letusBlue" /> 전체
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
+                    <div className="h-px bg-gray-100 my-1"></div>
+                    {options.map(opt => (
+                      <div key={opt} onClick={() => toggleOption(opt)} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${selected.includes(opt) ? 'text-letusBlue font-bold bg-blue-50/30' : 'text-gray-600'}`}>
+                        <input type="checkbox" readOnly checked={selected.includes(opt)} className="w-3.5 h-3.5 accent-letusBlue" /> {opt}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         );
       };
 
+      const handleFileUpload = async (filesObj) => {
+        setIsLoading(true);
+        setIsUploadModalOpen(false);
+
+        const readExcel = (file) => new Promise(res => {
+          const reader = new FileReader();
+          reader.onload = e => {
+            const wb = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
+            res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { raw: false, dateNF: 'yyyy-mm-dd' }));
+          };
+          reader.readAsBinaryString(file);
+        });
+
+        try {
+          const rawAcc = await readExcel(filesObj.acc);
+          const rawSch = await readExcel(filesObj.sch);
+          const wmsPromises = filesObj.wms.map(f => readExcel(f));
+          const wmsResults = await Promise.all(wmsPromises);
+          const rawWms = wmsResults.flat();
+
+          const cleanId = (v) => { if (!v) return ""; let s = String(v).trim().toUpperCase(); if (s.endsWith('.0')) s = s.slice(0, -2); if (s.length < 5 || !/\d/.test(s)) return ""; return s; };
+          const cleanTxt = (v) => v ? String(v).trim().replace(/\.0$/, '') : "";
+
+          const schMap = {};
+          rawSch.forEach(r => { const id = cleanId(r['수주번호']); if (!id) return; if (!schMap[id]) schMap[id] = new Set(); schMap[id].add(r['시공예정일']); });
+
+          const wmsMap = {};
+          rawWms.forEach(r => { const key = `${cleanId(r['오더번호'])}_${cleanTxt(r['ITEM ID'])}`; if (!wmsMap[key]) wmsMap[key] = r; });
+
+          const targetTypes = ['미출고', '오출고', '물류파손', '정상출고'];
+          const processed = [];
+
+          rawAcc.forEach(row => {
+            if (String(row['이슈내용'] || '').startsWith('[SCM팀')) return;
+            const type = cleanTxt(row['조치결과구분']);
+            if (!targetTypes.includes(type)) return;
+            const orderId = cleanId(row['수주번호']);
+            if (!orderId) return;
+            const accDate = row['서비스예약일'];
+
+            let delayCount = 0;
+            if (schMap[orderId]) { schMap[orderId].forEach(schDate => { if (new Date(schDate) >= new Date(accDate)) delayCount++; }); }
+            const isDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
+            if (type === '정상출고' && isDelayed === '-') return;
+
+            const item = cleanTxt(row['단품코드']);
+            const color = cleanTxt(row['색상']);
+            const wmsKeyShort = `${orderId}_${item}`;
+
+            const wmsRow = wmsMap[wmsKeyShort] || {};
+            const loc = wmsRow['LOCATION'] || '';
+            const zone = loc ? String(loc)[0] : '';
+
+            const timeStr = wmsRow['작업일시'];
+            let shift = '-';
+            if (timeStr) { const h = new Date(timeStr).getHours(); shift = (h >= 9 && h < 18) ? '주간' : '야간'; }
+
+            processed.push({
+              service_date: accDate, brand: row['브랜드'] || '알수없음', service_center: row['서비스센터'] || '', service_type: row['시공/AS'] || '',
+              order_no: orderId, order_name: row['수주건명'] || '', item_code: `${item} ${color}`.trim(), issue_qty: parseInt(row['이슈수량']) || 0,
+              action_result: type, is_delayed: isDelayed, zone: zone, worker_name: wmsRow['작업자'] || '', shift_type: shift, status: '원인 파악 중'
+            });
+          });
+
+          if (processed.length === 0) { alert('분석 결과 저장할 데이터가 없습니다.'); setIsLoading(false); return; }
+
+          const orderNos = [...new Set(processed.map(p => p.order_no))];
+          const { data: existingData, error: fetchError } = await supabase.from('logistics_accidents').select('order_no, item_code').in('order_no', orderNos);
+          if (fetchError) throw fetchError;
+
+          const existingSet = new Set((existingData || []).map(d => `${d.order_no}_${d.item_code}`));
+          const newData = processed.filter(p => !existingSet.has(`${p.order_no}_${p.item_code}`));
+
+          if (newData.length === 0) { alert(`✅ 업로드하신 ${processed.length}건의 데이터는 이미 모두 DB에 등록되어 있습니다.`); setIsLoading(false); return; }
+
+          const { error } = await supabase.from('logistics_accidents').insert(newData);
+          if (error) throw error;
+
+          alert(`🎉 분석 완료!\n총 ${processed.length}건 중, 중복을 제외한 신규 데이터 ${newData.length}건이 DB에 등록되었습니다.`);
+          fetchAccidents();
+        } catch (error) { alert('업로드 중 오류 발생: ' + error.message); setIsLoading(false); }
+      };
+
       return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] flex flex-col gap-4 slide-up">
-          {/* 🔥 업그레이드된 조회 필터 영역 */}
-          <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 p-5 z-30 shrink-0">
-            <div className="flex flex-wrap items-end gap-5">
+          {/* 🔥 2. 상단 필터 영역 (한 줄 가로 배치로 복구) */}
+          <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 h-[54px] flex items-center z-30 shrink-0">
+            <div className="flex items-center gap-5 w-full">
 
-              <MultiSelect
-                label="브랜드"
-                options={['퍼시스', '일룸', '슬로우', '데스커', '시디즈', '알로소']}
-                selected={filters.brands}
-                onChange={(val) => setFilters({ ...filters, brands: val })}
-              />
+              <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우', '데스커', '시디즈', '알로소']} selected={filters.brands} onChange={(val) => setFilters({ ...filters, brands: val })} />
 
-              <div className="shrink-0">
-                <label className="text-[11px] font-bold text-gray-600 block mb-1">서비스예약일</label>
+              <div className="flex items-center shrink-0">
+                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">서비스예약일</label>
                 <div className="flex items-center">
-                  <input type="date" value={filters.startDate} onChange={e => setFilters({ ...filters, startDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[115px] focus:outline-none focus:border-letusBlue" />
+                  <input type="date" value={filters.startDate} onChange={e => setFilters({ ...filters, startDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
                   <span className="mx-1 text-gray-400 text-xs">~</span>
-                  <input type="date" value={filters.endDate} onChange={e => setFilters({ ...filters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[115px] focus:outline-none focus:border-letusBlue" />
+                  <input type="date" value={filters.endDate} onChange={e => setFilters({ ...filters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
                 </div>
               </div>
 
-              <MultiSelect
-                label="서비스센터"
-                options={['양지센터', '대전센터', '대구센터', '광주센터', '전북센터', '전남센터', '부산센터', '울산센터', '창원센터', '제주센터']}
-                selected={filters.centers}
-                onChange={(val) => setFilters({ ...filters, centers: val })}
-              />
+              <MultiSelect label="서비스센터" options={['양지센터', '대전센터', '대구센터', '광주센터', '전북센터', '전남센터', '부산센터', '울산센터', '창원센터', '제주센터']} selected={filters.centers} onChange={(val) => setFilters({ ...filters, centers: val })} />
 
-              <MultiSelect
-                label="귀책부서"
-                options={['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타']}
-                selected={filters.depts}
-                onChange={(val) => setFilters({ ...filters, depts: val })}
-              />
+              <MultiSelect label="귀책부서" options={['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타']} selected={filters.depts} onChange={(val) => setFilters({ ...filters, depts: val })} />
 
-              <div className="shrink-0">
-                <label className="text-[11px] font-bold text-gray-600 block mb-1">검색어</label>
+              <div className="flex items-center shrink-0">
+                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">검색어</label>
                 <div className="flex gap-0.5 h-[30px]">
                   <select value={filters.searchType} onChange={e => setFilters({ ...filters, searchType: e.target.value })} className="border border-gray-200 rounded-l-[3px] text-xs px-2 text-gray-700 bg-gray-50 focus:outline-none">
                     <option>수주건명</option>
                     <option>품목코드</option>
                   </select>
-                  <input
-                    type="text"
-                    value={filters.searchValue}
-                    onChange={e => setFilters({ ...filters, searchValue: e.target.value })}
-                    onKeyDown={e => e.key === 'Enter' && fetchAccidents()}
-                    className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-40 focus:outline-none focus:border-letusBlue"
-                    placeholder="검색어 입력"
-                  />
+                  <input type="text" value={filters.searchValue} onChange={e => setFilters({ ...filters, searchValue: e.target.value })} onKeyDown={e => e.key === 'Enter' && fetchAccidents()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-32 focus:outline-none focus:border-letusBlue" placeholder="검색어 입력" />
                 </div>
               </div>
 
               <div className="ml-auto flex items-center gap-2">
-                <button
-                  onClick={() => setFilters({ brands: [], centers: [], depts: [], startDate: today, endDate: today, searchType: '수주건명', searchValue: '' })}
-                  className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] text-xs transition-colors"
-                >
-                  초기화
-                </button>
-                <button onClick={fetchAccidents} className="bg-letusBlue text-white hover:bg-blue-600 font-bold px-6 h-[30px] rounded-[3px] text-xs shadow-sm transition-all flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                  조회하기
-                </button>
+                <button onClick={() => setFilters({ brands: [], centers: [], depts: [], startDate: today, endDate: today, searchType: '수주건명', searchValue: '' })} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] text-xs transition-colors">초기화</button>
+                <button onClick={fetchAccidents} className="bg-letusBlue text-white hover:bg-blue-600 font-bold px-6 h-[30px] rounded-[3px] text-xs shadow-sm transition-all flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> 조회하기</button>
               </div>
             </div>
           </div>
 
           <div className="flex justify-end gap-3 z-30 px-2 -mb-2">
             {userProfile?.role === '관리자' && (
-              <button
-                onClick={() => setIsUploadModalOpen(true)}
-                className="bg-white border border-green-600 text-green-600 px-4 py-1.5 rounded-[4px] text-xs font-bold flex items-center cursor-pointer hover:bg-green-50 transition-colors shadow-sm"
-              >
-                <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg>
-                데이터 통합 업로드 (Excel)
+              <button onClick={() => setIsUploadModalOpen(true)} className="bg-white border border-green-600 text-green-600 px-4 py-1.5 rounded-[4px] text-xs font-bold flex items-center cursor-pointer hover:bg-green-50 transition-colors shadow-sm">
+                <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg> 데이터 통합 업로드 (Excel)
               </button>
             )}
           </div>
@@ -2899,44 +2816,24 @@
               <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1600px] text-[13px]">
                 <thead className="bg-gray-50/80 border-b text-xs text-gray-500 font-bold sticky top-0 z-10">
                   <tr>
-                    <th className="p-4 w-[110px]">서비스예약일</th>
-                    <th className="p-4 w-[100px]">브랜드</th>
-                    <th className="p-4 w-[150px]">서비스센터</th>
-                    <th className="p-4 w-[90px]">시공/AS</th>
-                    <th className="p-4 w-[150px]">수주건호</th>
-                    <th className="p-4 w-auto">수주건명</th>
-                    <th className="p-4 w-[180px]">품목코드</th>
-                    <th className="p-4 w-[80px] text-center">수량</th>
-                    <th className="p-4 w-[120px] text-center">처리상태</th>
-                    <th className="p-4 w-[120px]">귀책부서</th>
-                    <th className="p-4 w-[180px]">발생원인</th>
-                    <th className="p-4 w-[130px]">조치결과구분</th>
-                    <th className="p-4 w-[110px]">납기지연판별</th>
+                    <th className="p-4 w-[110px]">서비스예약일</th><th className="p-4 w-[100px]">브랜드</th><th className="p-4 w-[150px]">서비스센터</th>
+                    <th className="p-4 w-[90px]">시공/AS</th><th className="p-4 w-[150px]">수주건호</th><th className="p-4 w-auto">수주건명</th>
+                    <th className="p-4 w-[180px]">품목코드</th><th className="p-4 w-[80px] text-center">수량</th><th className="p-4 w-[120px] text-center">처리상태</th>
+                    <th className="p-4 w-[120px]">귀책부서</th><th className="p-4 w-[180px]">발생원인</th><th className="p-4 w-[130px]">조치결과구분</th><th className="p-4 w-[110px]">납기지연판별</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {isLoading ? <TableSkeleton colCount={13} /> : items.length === 0 ? (
                     <tr><td colSpan="13" className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
                   ) : items.map(row => (
-                    <tr key={row.id}
-                      onDoubleClick={() => setActiveRow(row)}
-                      className="hover:bg-blue-50/40 cursor-pointer transition-colors"
-                      title="더블클릭하여 원인을 등록하세요.">
-                      <td className="p-4">{row.service_date}</td>
-                      <td className="p-4 font-semibold">{row.brand}</td>
-                      <td className="p-4 text-gray-600">{row.service_center}</td>
+                    <tr key={row.id} onDoubleClick={() => setActiveRow(row)} className="hover:bg-blue-50/40 cursor-pointer transition-colors" title="더블클릭하여 원인을 등록하세요.">
+                      <td className="p-4">{row.service_date}</td><td className="p-4 font-semibold">{row.brand}</td><td className="p-4 text-gray-600">{row.service_center}</td>
                       <td className="p-4 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${row.service_type === '시공' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>{row.service_type}</span></td>
-                      <td className="p-4 font-mono text-gray-500">{row.order_no}</td>
-                      <td className="p-4 font-bold text-gray-800 truncate">{row.order_name}</td>
-                      <td className="p-4 text-gray-600 truncate">{row.item_code}</td>
-                      <td className="p-4 text-center font-bold">{row.issue_qty}</td>
-                      <td className="p-4 text-center">
-                        <span className={`px-2 py-1 rounded text-[11px] font-bold ${row.status === '등록 완료' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>{row.status}</span>
-                      </td>
-                      <td className="p-4 font-bold text-letusBlue">{row.responsible_dept || '-'}</td>
-                      <td className="p-4 text-gray-500 truncate max-w-[150px]" title={row.cause_detail}>{row.cause_detail || '-'}</td>
-                      <td className="p-4 text-gray-600">{row.action_result}</td>
-                      <td className="p-4 font-black text-gray-400">{row.is_delayed}</td>
+                      <td className="p-4 font-mono text-gray-500">{row.order_no}</td><td className="p-4 font-bold text-gray-800 truncate">{row.order_name}</td>
+                      <td className="p-4 text-gray-600 truncate">{row.item_code}</td><td className="p-4 text-center font-bold">{row.issue_qty}</td>
+                      <td className="p-4 text-center"><span className={`px-2 py-1 rounded text-[11px] font-bold ${row.status === '등록 완료' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>{row.status}</span></td>
+                      <td className="p-4 font-bold text-letusBlue">{row.responsible_dept || '-'}</td><td className="p-4 text-gray-500 truncate max-w-[150px]" title={row.cause_detail}>{row.cause_detail || '-'}</td>
+                      <td className="p-4 text-gray-600">{row.action_result}</td><td className="p-4 font-black text-gray-400">{row.is_delayed}</td>
                     </tr>
                   ))}
                 </tbody>
