@@ -2594,7 +2594,7 @@
       );
     };
 
-    // --- 📋 물류사고분석 LIST 컴포넌트 (정렬 기능 추가 & 칼럼 너비 조정판) ---
+    // --- 📋 물류사고분석 LIST 컴포넌트 (방탄 매칭 엔진 & 전체 칼럼 노출판) ---
     const AccidentList = ({ userProfile }) => {
       const [items, setItems] = useState([]);
       const [isLoading, setIsLoading] = useState(false);
@@ -2603,8 +2603,6 @@
 
       const today = new Date().toISOString().split('T')[0];
       const [filters, setFilters] = useState({ brands: [], centers: [], depts: [], startDate: today, endDate: today, searchType: '수주건명', searchValue: '' });
-
-      // 🔥 정렬 상태 관리
       const [sortConfig, setSortConfig] = useState({ key: null, direction: 'none' });
 
       const fetchAccidents = async () => {
@@ -2631,7 +2629,6 @@
 
       useEffect(() => { fetchAccidents(); }, [filters.startDate, filters.endDate]);
 
-      // 🔥 정렬 로직 적용
       const sortedItems = useMemo(() => {
         let sortableItems = [...items];
         if (sortConfig.key && sortConfig.direction !== 'none') {
@@ -2665,14 +2662,9 @@
       const MultiSelect = ({ label, options, selected, onChange }) => {
         const [isOpen, setIsOpen] = useState(false);
         const toggleOption = (opt) => {
-          if (opt === '전체') {
-            onChange([]);
-          } else {
-            const newSelected = selected.includes(opt) ? selected.filter(s => s !== opt) : [...selected, opt];
-            onChange(newSelected);
-          }
+          if (opt === '전체') { onChange([]); }
+          else { onChange(selected.includes(opt) ? selected.filter(s => s !== opt) : [...selected, opt]); }
         };
-
         return (
           <div className="flex items-center shrink-0">
             <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">{label}</label>
@@ -2685,15 +2677,9 @@
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
                   <div className="absolute top-[105%] left-0 w-48 bg-white border border-gray-200 rounded shadow-xl z-50 py-1.5 max-h-60 overflow-y-auto custom-scrollbar slide-up">
-                    <div onClick={() => { toggleOption('전체'); setIsOpen(false); }} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${selected.length === 0 ? 'text-letusBlue font-bold' : 'text-gray-600'}`}>
-                      <input type="checkbox" readOnly checked={selected.length === 0} className="w-3.5 h-3.5 accent-letusBlue" /> 전체
-                    </div>
+                    <div onClick={() => { toggleOption('전체'); setIsOpen(false); }} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${selected.length === 0 ? 'text-letusBlue font-bold' : 'text-gray-600'}`}><input type="checkbox" readOnly checked={selected.length === 0} className="w-3.5 h-3.5 accent-letusBlue" /> 전체</div>
                     <div className="h-px bg-gray-100 my-1"></div>
-                    {options.map(opt => (
-                      <div key={opt} onClick={() => toggleOption(opt)} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${selected.includes(opt) ? 'text-letusBlue font-bold bg-blue-50/30' : 'text-gray-600'}`}>
-                        <input type="checkbox" readOnly checked={selected.includes(opt)} className="w-3.5 h-3.5 accent-letusBlue" /> {opt}
-                      </div>
-                    ))}
+                    {options.map(opt => (<div key={opt} onClick={() => toggleOption(opt)} className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50 flex items-center gap-2 ${selected.includes(opt) ? 'text-letusBlue font-bold bg-blue-50/30' : 'text-gray-600'}`}><input type="checkbox" readOnly checked={selected.includes(opt)} className="w-3.5 h-3.5 accent-letusBlue" /> {opt}</div>))}
                   </div>
                 </>
               )}
@@ -2702,7 +2688,7 @@
         );
       };
 
-      // 📊 파이썬 판다스 로직 자바스크립트 이식 엔진 (매칭 로직 초강력 업그레이드)
+      // 🔥 업그레이드된 방탄 파일 분석 엔진
       const handleFileUpload = async (filesObj) => {
         setIsLoading(true); setIsUploadModalOpen(false);
         const readExcel = (file) => new Promise(res => {
@@ -2715,29 +2701,38 @@
           const rawAcc = await readExcel(filesObj.acc); const rawSch = await readExcel(filesObj.sch);
           const wmsPromises = filesObj.wms.map(f => readExcel(f)); const wmsResults = await Promise.all(wmsPromises); const rawWms = wmsResults.flat();
 
+          // 전처리 헬퍼 함수
+          const findCol = (row, names) => { for (const n of names) { if (row[n] !== undefined && row[n] !== null) return row[n]; } return ''; };
           const cleanId = (v) => { if (!v) return ""; let s = String(v).trim().toUpperCase(); if (s.endsWith('.0')) s = s.slice(0, -2); if (s.length < 5 || !/\d/.test(s)) return ""; return s; };
           const cleanTxt = (v) => v ? String(v).trim().replace(/\.0$/, '') : "";
+          const normalizeDate = (d) => {
+            if (!d) return 0;
+            if (d instanceof Date) return d.getTime();
+            let s = String(d).replace(/\./g, '-').replace(/\//g, '-').split(' ')[0];
+            return new Date(s).getTime() || 0;
+          };
 
-          // 1. 시공일정 매핑 (수주번호 or 수주건호 모두 호환)
+          // 1. 시공일정 맵 (수주번호, 수주건호 등 모든 변수 대응)
           const schMap = {};
           rawSch.forEach(r => {
-            const id = cleanId(r['수주번호'] || r['수주건호']);
+            const id = cleanId(findCol(r, ['수주번호', '수주건호', '오더번호']));
             if (!id) return;
             if (!schMap[id]) schMap[id] = new Set();
-            schMap[id].add(r['시공예정일'] || r['서비스예약일']);
+            const dVal = findCol(r, ['시공예정일', '서비스예약일', '예약일']);
+            if (dVal) schMap[id].add(dVal);
           });
 
-          // 2. WMS 매핑 (오더번호 기반으로 유연하게 1차 그룹핑)
+          // 2. WMS 맵 (컬럼명 다양성 대응)
           const wmsByOrder = {};
           rawWms.forEach(r => {
-            const oId = cleanId(r['오더번호'] || r['수주번호'] || r['수주건호']);
+            const oId = cleanId(findCol(r, ['오더번호', '수주번호', '수주건호', '출고번호']));
             if (!oId) return;
             if (!wmsByOrder[oId]) wmsByOrder[oId] = [];
             wmsByOrder[oId].push({
-              item: cleanTxt(r['ITEM ID'] || r['단품코드'] || r['품목코드']),
-              loc: r['LOCATION'] || r['로케이션'] || '',
-              worker: r['작업자'] || '',
-              time: r['작업일시'] || ''
+              item: cleanTxt(findCol(r, ['ITEM ID', '단품코드', '품목코드'])),
+              loc: findCol(r, ['LOCATION', '로케이션', '존', 'ZONE']),
+              worker: findCol(r, ['작업자', '작업자명', '피커']),
+              time: findCol(r, ['작업일시', '출고일시', '작업시간'])
             });
           });
 
@@ -2749,49 +2744,46 @@
             const type = cleanTxt(row['조치결과구분']);
             if (!targetTypes.includes(type)) return;
 
-            const orderId = cleanId(row['수주건호'] || row['수주번호']);
+            const orderId = cleanId(findCol(row, ['수주건호', '수주번호']));
             if (!orderId) return;
 
-            const accDate = row['서비스예약일'];
+            const accDate = findCol(row, ['서비스예약일', '예약일']);
 
-            // 🔥 납기지연 판별 완벽 복원
+            // 납기지연 판별
             let delayCount = 0;
-            if (schMap[orderId] && accDate) {
-              const accTime = new Date(accDate).getTime();
-              schMap[orderId].forEach(schDate => {
-                if (new Date(schDate).getTime() >= accTime) delayCount++;
-              });
+            const accTime = normalizeDate(accDate);
+            if (schMap[orderId] && accTime > 0) {
+              schMap[orderId].forEach(schDate => { if (normalizeDate(schDate) >= accTime) delayCount++; });
             }
             const isDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
             if (type === '정상출고' && isDelayed === '-') return;
 
-            const item = cleanTxt(row['단품코드'] || row['품목코드']);
+            const item = cleanTxt(findCol(row, ['단품코드', '품목코드']));
             const color = cleanTxt(row['색상']);
 
-            // 🔥 WMS 매칭 (수주번호로 먼저 찾고, 단품코드로 좁히는 2단계 매칭)
+            // 하이픈 포맷팅 (이미 하이픈이 있으면 생략)
+            let finalItemCode = item;
+            if (color && !item.includes(color) && !item.includes('-')) {
+              finalItemCode = `${item} - ${color}`;
+            }
+
+            // WMS 매칭
             const wmsCandidates = wmsByOrder[orderId] || [];
             let matchedWms = {};
-            if (wmsCandidates.length === 1) {
-              matchedWms = wmsCandidates[0];
-            } else if (wmsCandidates.length > 1) {
-              matchedWms = wmsCandidates.find(w => w.item.includes(item) || item.includes(w.item)) || wmsCandidates[0];
-            }
+            if (wmsCandidates.length === 1) matchedWms = wmsCandidates[0];
+            else if (wmsCandidates.length > 1) matchedWms = wmsCandidates.find(w => w.item.includes(item) || item.includes(w.item)) || wmsCandidates[0];
 
             const loc = matchedWms.loc;
-            const zone = loc ? String(loc)[0] : '';
-            const timeStr = matchedWms.time;
+            const zone = loc ? String(loc)[0].toUpperCase() : '';
 
-            // 🔥 주/야간 판별 완벽 복원
+            // 주/야간 판별
             let shift = '-';
-            if (timeStr) {
-              const h = new Date(timeStr).getHours();
-              if (!isNaN(h)) {
-                shift = (h >= 9 && h < 18) ? '주간' : '야간';
-              }
+            if (matchedWms.time) {
+              let h;
+              if (matchedWms.time instanceof Date) h = matchedWms.time.getHours();
+              else { const d = new Date(matchedWms.time); if (!isNaN(d.getTime())) h = d.getHours(); }
+              if (h !== undefined) shift = (h >= 9 && h < 18) ? '주간' : '야간';
             }
-
-            // 품목코드 - 색상 하이픈 추가
-            const finalItemCode = color ? `${item}-${color}` : item;
 
             processed.push({
               service_date: accDate, brand: row['브랜드'] || '알수없음', service_center: row['서비스센터'] || '', service_type: row['시공/AS'] || '',
@@ -2823,7 +2815,7 @@
 
           <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 h-[54px] flex items-center z-30 shrink-0">
             <div className="flex items-center gap-5 w-full">
-              <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소']} selected={filters.brands} onChange={(val) => setFilters({ ...filters, brands: val })} />
+              <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우', '데스커', '시디즈', '알로소']} selected={filters.brands} onChange={(val) => setFilters({ ...filters, brands: val })} />
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">서비스예약일</label>
                 <div className="flex items-center">
@@ -2858,42 +2850,37 @@
 
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex-1 flex flex-col min-h-0 relative z-20">
             <div className="overflow-auto flex-1 custom-scrollbar">
-              <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1420px] text-[13px]">
-                {/* 🔥 헤더 뒤로 글자 비치는 현상 제거 (bg-gray-50/90 backdrop-blur-sm -> bg-gray-50) */}
+              <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1600px] text-[13px]">
                 <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 font-bold sticky top-0 z-10">
                   <tr>
+                    {/* 🔥 15개 전체 칼럼 추가 완료! */}
                     {[
                       { label: '서비스예약일', key: 'service_date', w: '110px' },
-                      { label: '브랜드', key: 'brand', w: '100px' },
+                      { label: '브랜드', key: 'brand', w: '70px' },
                       { label: '서비스센터', key: 'service_center', w: '90px' },
-                      { label: '시공/AS', key: 'service_type', w: '90px' },
-                      { label: '수주건호', key: 'order_no', w: '150px' },
+                      { label: '시공/AS', key: 'service_type', w: '70px' },
+                      { label: '수주건호', key: 'order_no', w: '140px' },
                       { label: '수주건명', key: 'order_name', w: 'auto' },
-                      { label: '품목코드', key: 'item_code', w: '180px' },
-                      { label: '수량', key: 'issue_qty', w: '80px' },
+                      { label: '품목코드', key: 'item_code', w: '170px' },
+                      { label: '수량', key: 'issue_qty', w: '60px' },
+                      { label: 'ZONE', key: 'zone', w: '60px' },
+                      { label: '작업자', key: 'worker_name', w: '80px' },
+                      { label: '주/야', key: 'shift_type', w: '60px' },
                       { label: '처리상태', key: 'status', w: '120px' },
-                      { label: '귀책부서', key: 'responsible_dept', w: '100px' },
-                      { label: '조치결과구분', key: 'action_result', w: '130px' },
+                      { label: '귀책부서', key: 'responsible_dept', w: '110px' },
+                      { label: '조치결과구분', key: 'action_result', w: '110px' },
                       { label: '납기지연판별', key: 'is_delayed', w: '110px' }
                     ].map((col, idx) => (
-                      <th
-                        key={idx}
-                        className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
-                        style={{ width: col.w }}
-                        onClick={() => col.key && requestSort(col.key)}
-                      >
-                        <div className="flex items-center justify-center">
-                          {col.label} {col.key && getSortIcon(col.key)}
-                        </div>
+                      <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
+                        <div className="flex items-center justify-center">{col.label} {col.key && getSortIcon(col.key)}</div>
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {/* 🔥 로딩 중일 때 colSpan="12"로 전체 너비를 차지하게 만들고 정중앙 정렬! */}
                   {isLoading ? (
                     <tr>
-                      <td colSpan="12" className="py-32 text-center align-middle">
+                      <td colSpan="15" className="py-32 text-center align-middle">
                         <div className="flex flex-col items-center justify-center gap-3">
                           <div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div>
                           <p className="text-gray-500 font-bold text-[13px]">데이터를 불러오는 중입니다...</p>
@@ -2901,9 +2888,7 @@
                       </td>
                     </tr>
                   ) : sortedItems.length === 0 ? (
-                    <tr>
-                      <td colSpan="12" className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td>
-                    </tr>
+                    <tr><td colSpan="15" className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
                   ) : sortedItems.map(row => (
                     <tr key={row.id} onDoubleClick={() => setActiveRow(row)} className="hover:bg-blue-50/40 cursor-pointer transition-colors" title="더블클릭하여 원인을 등록하세요.">
                       <td className="p-4">{row.service_date}</td>
@@ -2914,6 +2899,9 @@
                       <td className="p-4 font-bold text-gray-800 truncate">{row.order_name}</td>
                       <td className="p-4 text-gray-600 truncate">{row.item_code}</td>
                       <td className="p-4 text-center font-bold">{row.issue_qty}</td>
+                      <td className="p-4 text-center font-black text-letusBlue">{row.zone || '-'}</td>
+                      <td className="p-4 text-gray-700">{row.worker_name || '-'}</td>
+                      <td className="p-4 text-center text-gray-500 font-bold">{row.shift_type || '-'}</td>
                       <td className="p-4 text-center"><span className={`px-2 py-1 rounded text-[11px] font-bold ${row.status === '등록 완료' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>{row.status}</span></td>
                       <td className="p-4 font-bold text-letusBlue">{row.responsible_dept || '-'}</td>
                       <td className="p-4 text-gray-600">{row.action_result}</td>
