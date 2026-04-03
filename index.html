@@ -2823,7 +2823,7 @@
 
           <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 h-[54px] flex items-center z-30 shrink-0">
             <div className="flex items-center gap-5 w-full">
-              <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우', '데스커', '시디즈', '알로소']} selected={filters.brands} onChange={(val) => setFilters({ ...filters, brands: val })} />
+              <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소']} selected={filters.brands} onChange={(val) => setFilters({ ...filters, brands: val })} />
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">서비스예약일</label>
                 <div className="flex items-center">
@@ -2864,7 +2864,7 @@
                   <tr>
                     {[
                       { label: '서비스예약일', key: 'service_date', w: '110px' },
-                      { label: '브랜드', key: 'brand', w: '70px' },
+                      { label: '브랜드', key: 'brand', w: '100px' },
                       { label: '서비스센터', key: 'service_center', w: '90px' },
                       { label: '시공/AS', key: 'service_type', w: '90px' },
                       { label: '수주건호', key: 'order_no', w: '150px' },
@@ -2872,7 +2872,7 @@
                       { label: '품목코드', key: 'item_code', w: '180px' },
                       { label: '수량', key: 'issue_qty', w: '80px' },
                       { label: '처리상태', key: 'status', w: '120px' },
-                      { label: '귀책부서', key: 'responsible_dept', w: '120px' },
+                      { label: '귀책부서', key: 'responsible_dept', w: '100px' },
                       { label: '조치결과구분', key: 'action_result', w: '130px' },
                       { label: '납기지연판별', key: 'is_delayed', w: '110px' }
                     ].map((col, idx) => (
