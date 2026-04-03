@@ -2140,7 +2140,17 @@
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-[13px]">
-                  {isLoading ? <TableSkeleton colCount={12} /> : sortedIssues.length === 0 ? (
+                  {/* 🔥 로딩 중일 때 colSpan="13"으로 전체 너비 차지 & 정중앙 정렬! */}
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan="13" className="py-32 text-center align-middle">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div>
+                          <p className="text-gray-500 font-bold text-[13px]">데이터를 불러오는 중입니다...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : sortedIssues.length === 0 ? (
                     <tr><td colSpan="13" className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
                   ) : sortedIssues.map((row) => (
                     <tr key={row.id} className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${selectedIds.includes(row.id) ? 'bg-blue-50/50' : ''}`} onClick={() => handleSelectOne(row.id)}>
