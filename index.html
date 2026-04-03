@@ -2497,14 +2497,12 @@
     // --- 📥 엑셀 업로드 전용 모달 (드래그 앤 드롭 & 다중 WMS 파일 지원) ---
     const AccidentUploadModal = ({ onClose, onFileUpload }) => {
       const [isDragging, setIsDragging] = useState(false);
-      // 🔥 WMS는 여러 개의 파일을 담을 수 있도록 배열([])로 변경!
       const [files, setFiles] = useState({ acc: null, sch: null, wms: [] });
       const fileInputRef = React.useRef(null);
 
       const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
       const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
 
-      // 파일 분류 및 누적 로직
       const processFiles = (droppedFiles) => {
         setFiles(prev => {
           let newAcc = prev.acc;
@@ -2517,7 +2515,6 @@
             if (file.name.includes('상차이슈')) newAcc = file;
             else if (file.name.includes('시공일정')) newSch = file;
             else if (file.name.includes('WMS')) {
-              // 이미 추가된 파일이면 중복 방지
               if (!newWms.find(w => w.name === file.name)) {
                 newWms.push(file);
               }
@@ -2542,7 +2539,6 @@
         onFileUpload(files);
       };
 
-      // 파일 목록 초기화 (실수했을 때)
       const handleResetFiles = () => setFiles({ acc: null, sch: null, wms: [] });
 
       return (
@@ -2578,24 +2574,30 @@
               </div>
 
               {/* 파일 인식 상태 표시 */}
-              <div className="grid grid-cols-3 gap-2 relative">
+              <div className="grid grid-cols-3 gap-2">
                 <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.acc ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>1. 상차이슈 {files.acc && '✅'}</div>
                 <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.sch ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>2. 시공일정 {files.sch && '✅'}</div>
                 <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.wms.length > 0 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>3. WMS <span className="text-blue-500">({files.wms.length}개)</span> {files.wms.length > 0 && '✅'}</div>
-
-                {/* 초기화 버튼 */}
-                {(files.acc || files.sch || files.wms.length > 0) && (
-                  <button onClick={handleResetFiles} className="absolute -top-6 right-0 text-[10px] font-bold text-gray-400 hover:text-red-500 underline">파일 목록 비우기</button>
-                )}
               </div>
             </div>
 
-            <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
-              <button onClick={onClose} className="px-5 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 rounded shadow-sm">닫기</button>
-              <button onClick={handleUploadClick} className="px-5 py-2 text-sm font-bold text-white bg-letusBlue hover:bg-blue-600 rounded shadow-sm flex items-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                분석 및 DB 저장
-              </button>
+            {/* 🔥 하단 버튼 영역 구조 변경 (왼쪽: 비우기, 오른쪽: 닫기/저장) */}
+            <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
+              <div>
+                {(files.acc || files.sch || files.wms.length > 0) && (
+                  <button onClick={handleResetFiles} className="text-xs font-bold text-gray-400 hover:text-red-500 underline flex items-center gap-1 transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    파일 목록 비우기
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={onClose} className="px-5 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 rounded shadow-sm">닫기</button>
+                <button onClick={handleUploadClick} className="px-5 py-2 text-sm font-bold text-white bg-letusBlue hover:bg-blue-600 rounded shadow-sm flex items-center gap-1.5">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  분석 및 DB 저장
+                </button>
+              </div>
             </div>
           </div>
         </div>
