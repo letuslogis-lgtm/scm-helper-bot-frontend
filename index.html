@@ -2494,24 +2494,37 @@
       );
     };
 
-    // --- 📥 엑셀 업로드 전용 모달 (드래그 앤 드롭 & 파일 3개 병합) ---
+    // --- 📥 엑셀 업로드 전용 모달 (드래그 앤 드롭 & 다중 WMS 파일 지원) ---
     const AccidentUploadModal = ({ onClose, onFileUpload }) => {
       const [isDragging, setIsDragging] = useState(false);
-      const [files, setFiles] = useState({ acc: null, sch: null, wms: null });
+      // 🔥 WMS는 여러 개의 파일을 담을 수 있도록 배열([])로 변경!
+      const [files, setFiles] = useState({ acc: null, sch: null, wms: [] });
       const fileInputRef = React.useRef(null);
 
       const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
       const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
 
+      // 파일 분류 및 누적 로직
       const processFiles = (droppedFiles) => {
-        const newFiles = { ...files };
-        Array.from(droppedFiles).forEach(file => {
-          if (!file.name.includes('.xls')) return;
-          if (file.name.includes('상차이슈')) newFiles.acc = file;
-          else if (file.name.includes('시공일정')) newFiles.sch = file;
-          else if (file.name.includes('WMS')) newFiles.wms = file;
+        setFiles(prev => {
+          let newAcc = prev.acc;
+          let newSch = prev.sch;
+          let newWms = [...prev.wms];
+
+          Array.from(droppedFiles).forEach(file => {
+            if (!file.name.includes('.xls')) return;
+
+            if (file.name.includes('상차이슈')) newAcc = file;
+            else if (file.name.includes('시공일정')) newSch = file;
+            else if (file.name.includes('WMS')) {
+              // 이미 추가된 파일이면 중복 방지
+              if (!newWms.find(w => w.name === file.name)) {
+                newWms.push(file);
+              }
+            }
+          });
+          return { acc: newAcc, sch: newSch, wms: newWms };
         });
-        setFiles(newFiles);
       };
 
       const handleDrop = (e) => {
@@ -2523,11 +2536,14 @@
       const handleFileSelect = (e) => { processFiles(e.target.files); };
 
       const handleUploadClick = () => {
-        if (!files.acc || !files.sch || !files.wms) {
-          return alert('상차이슈, 시공일정, WMS 파일 3개가 모두 필요합니다!');
+        if (!files.acc || !files.sch || files.wms.length === 0) {
+          return alert('상차이슈(1개), 시공일정(1개), WMS(1개 이상) 파일이 모두 필요합니다!');
         }
         onFileUpload(files);
       };
+
+      // 파일 목록 초기화 (실수했을 때)
+      const handleResetFiles = () => setFiles({ acc: null, sch: null, wms: [] });
 
       return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -2536,17 +2552,19 @@
             <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
               <h3 className="font-bold text-gray-900 flex items-center gap-2">
                 <span className="w-1.5 h-3.5 bg-green-500 rounded-full"></span>
-                데이터 통합 업로드 (자동 분석)
+                데이터 통합 업로드 (다중 파일 지원)
               </h3>
               <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><CloseIcon /></button>
             </div>
 
             <div className="p-6 bg-white">
               <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 mb-5 text-sm">
-                <h4 className="font-bold text-letusBlue mb-2">💡 파이썬 자동 분석 탑재</h4>
-                <p className="text-gray-600 text-xs font-medium leading-relaxed">
-                  <span className="font-bold text-gray-800">상차이슈, 시공일정, WMS</span> 엑셀 파일 3개를 한 번에 끌어다 놓으세요. 시스템이 알아서 수주번호를 매칭하고 지연 횟수 및 주야간 정보를 계산하여 DB에 저장합니다.
-                </p>
+                <h4 className="font-bold text-letusBlue mb-2">💡 파일 업로드 가이드</h4>
+                <ul className="list-disc list-inside text-gray-600 space-y-1.5 text-xs font-medium ml-1">
+                  <li><span className="font-bold text-gray-800">상차이슈, 시공일정</span> 파일은 각각 1개씩 필요합니다.</li>
+                  <li><span className="font-bold text-gray-800">WMS</span> 파일은 여러 센터 파일을 동시에 올리셔도 됩니다.</li>
+                  <li>파일을 한 번에 여러 개 드래그하거나, 여러 번 나누어 드래그해도 자동으로 누적됩니다.</li>
+                </ul>
               </div>
 
               {/* 드래그 앤 드롭 영역 */}
@@ -2556,20 +2574,28 @@
               >
                 <input type="file" hidden accept=".xlsx, .xls" multiple ref={fileInputRef} onChange={handleFileSelect} />
                 <svg className={`w-8 h-8 mb-2 ${isDragging ? 'text-green-500' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                <p className="text-gray-800 font-bold text-sm">파일 3개를 이곳으로 드래그 하세요</p>
+                <p className="text-gray-800 font-bold text-sm">업로드할 파일들을 이곳으로 드래그 하세요</p>
               </div>
 
               {/* 파일 인식 상태 표시 */}
-              <div className="grid grid-cols-3 gap-2">
-                <div className={`p-2 rounded border text-center text-xs font-bold ${files.acc ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>1. 상차이슈 {files.acc && '✅'}</div>
-                <div className={`p-2 rounded border text-center text-xs font-bold ${files.sch ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>2. 시공일정 {files.sch && '✅'}</div>
-                <div className={`p-2 rounded border text-center text-xs font-bold ${files.wms ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>3. WMS {files.wms && '✅'}</div>
+              <div className="grid grid-cols-3 gap-2 relative">
+                <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.acc ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>1. 상차이슈 {files.acc && '✅'}</div>
+                <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.sch ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>2. 시공일정 {files.sch && '✅'}</div>
+                <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.wms.length > 0 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>3. WMS <span className="text-blue-500">({files.wms.length}개)</span> {files.wms.length > 0 && '✅'}</div>
+
+                {/* 초기화 버튼 */}
+                {(files.acc || files.sch || files.wms.length > 0) && (
+                  <button onClick={handleResetFiles} className="absolute -top-6 right-0 text-[10px] font-bold text-gray-400 hover:text-red-500 underline">파일 목록 비우기</button>
+                )}
               </div>
             </div>
 
             <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
               <button onClick={onClose} className="px-5 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 rounded shadow-sm">닫기</button>
-              <button onClick={handleUploadClick} className="px-5 py-2 text-sm font-bold text-white bg-letusBlue hover:bg-blue-600 rounded shadow-sm">분석 및 DB 저장</button>
+              <button onClick={handleUploadClick} className="px-5 py-2 text-sm font-bold text-white bg-letusBlue hover:bg-blue-600 rounded shadow-sm flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                분석 및 DB 저장
+              </button>
             </div>
           </div>
         </div>
@@ -2600,8 +2626,8 @@
 
       useEffect(() => { fetchAccidents(); }, [filterBrand]);
 
-      // 📊 파이썬 판다스(Pandas) 로직 자바스크립트 이식 엔진
-      const handleFileUpload = async (files) => {
+      // 📊 파이썬 판다스(Pandas) 로직 자바스크립트 이식 엔진 (다중 WMS 병합 포함)
+      const handleFileUpload = async (filesObj) => {
         setIsLoading(true);
         setIsUploadModalOpen(false);
 
@@ -2615,9 +2641,16 @@
         });
 
         try {
-          const [rawAcc, rawSch, rawWms] = await Promise.all([
-            readExcel(files.acc), readExcel(files.sch), readExcel(files.wms)
-          ]);
+          // 1. 상차이슈와 시공일정 파일 파싱
+          const rawAcc = await readExcel(filesObj.acc);
+          const rawSch = await readExcel(filesObj.sch);
+
+          // 2. 여러 개의 WMS 파일을 동시에 파싱 (Promise.all 활용)
+          const wmsPromises = filesObj.wms.map(f => readExcel(f));
+          const wmsResults = await Promise.all(wmsPromises);
+
+          // 3. 판다스의 pd.concat 처럼 모든 WMS 데이터를 하나의 배열로 평탄화(Flatten)
+          const rawWms = wmsResults.flat();
 
           // 파이썬 함수 번역
           const cleanId = (v) => {
@@ -2629,7 +2662,7 @@
           };
           const cleanTxt = (v) => v ? String(v).trim().replace(/\.0$/, '') : "";
 
-          // 1. 시공일정 Map 만들기 (수주번호 기준)
+          // 4. 시공일정 Map 만들기 (수주번호 기준)
           const schMap = {};
           rawSch.forEach(r => {
             const id = cleanId(r['수주번호']);
@@ -2638,14 +2671,14 @@
             schMap[id].add(r['시공예정일']);
           });
 
-          // 2. WMS Map 만들기 (오더번호_아이템ID 기준)
+          // 5. 합쳐진 WMS Map 만들기 (오더번호_아이템ID 기준)
           const wmsMap = {};
           rawWms.forEach(r => {
             const key = `${cleanId(r['오더번호'])}_${cleanTxt(r['ITEM ID'])}`;
             if (!wmsMap[key]) wmsMap[key] = r;
           });
 
-          // 3. 상차이슈 분석 및 병합
+          // 6. 상차이슈 분석 및 병합
           const targetTypes = ['미출고', '오출고', '물류파손', '정상출고'];
           const processed = [];
 
@@ -2677,6 +2710,7 @@
             const color = cleanTxt(row['색상']);
             const wmsKeyShort = `${orderId}_${item}`;
 
+            // 병합된 WMS 데이터에서 매칭
             const wmsRow = wmsMap[wmsKeyShort] || {};
             const loc = wmsRow['LOCATION'] || '';
             const zone = loc ? String(loc)[0] : '';
