@@ -2702,6 +2702,7 @@
         );
       };
 
+      // 📊 파이썬 판다스 로직 자바스크립트 이식 엔진 (매칭 로직 초강력 업그레이드)
       const handleFileUpload = async (filesObj) => {
         setIsLoading(true); setIsUploadModalOpen(false);
         const readExcel = (file) => new Promise(res => {
@@ -2713,11 +2714,32 @@
         try {
           const rawAcc = await readExcel(filesObj.acc); const rawSch = await readExcel(filesObj.sch);
           const wmsPromises = filesObj.wms.map(f => readExcel(f)); const wmsResults = await Promise.all(wmsPromises); const rawWms = wmsResults.flat();
+
           const cleanId = (v) => { if (!v) return ""; let s = String(v).trim().toUpperCase(); if (s.endsWith('.0')) s = s.slice(0, -2); if (s.length < 5 || !/\d/.test(s)) return ""; return s; };
           const cleanTxt = (v) => v ? String(v).trim().replace(/\.0$/, '') : "";
 
-          const schMap = {}; rawSch.forEach(r => { const id = cleanId(r['수주번호']); if (!id) return; if (!schMap[id]) schMap[id] = new Set(); schMap[id].add(r['시공예정일']); });
-          const wmsMap = {}; rawWms.forEach(r => { const key = `${cleanId(r['오더번호'])}_${cleanTxt(r['ITEM ID'])}`; if (!wmsMap[key]) wmsMap[key] = r; });
+          // 1. 시공일정 매핑 (수주번호 or 수주건호 모두 호환)
+          const schMap = {};
+          rawSch.forEach(r => {
+            const id = cleanId(r['수주번호'] || r['수주건호']);
+            if (!id) return;
+            if (!schMap[id]) schMap[id] = new Set();
+            schMap[id].add(r['시공예정일'] || r['서비스예약일']);
+          });
+
+          // 2. WMS 매핑 (오더번호 기반으로 유연하게 1차 그룹핑)
+          const wmsByOrder = {};
+          rawWms.forEach(r => {
+            const oId = cleanId(r['오더번호'] || r['수주번호'] || r['수주건호']);
+            if (!oId) return;
+            if (!wmsByOrder[oId]) wmsByOrder[oId] = [];
+            wmsByOrder[oId].push({
+              item: cleanTxt(r['ITEM ID'] || r['단품코드'] || r['품목코드']),
+              loc: r['LOCATION'] || r['로케이션'] || '',
+              worker: r['작업자'] || '',
+              time: r['작업일시'] || ''
+            });
+          });
 
           const targetTypes = ['미출고', '오출고', '물류파손', '정상출고'];
           const processed = [];
@@ -2726,26 +2748,55 @@
             if (String(row['이슈내용'] || '').startsWith('[SCM팀')) return;
             const type = cleanTxt(row['조치결과구분']);
             if (!targetTypes.includes(type)) return;
-            const orderId = cleanId(row['수주번호']);
+
+            const orderId = cleanId(row['수주건호'] || row['수주번호']);
             if (!orderId) return;
+
             const accDate = row['서비스예약일'];
 
+            // 🔥 납기지연 판별 완벽 복원
             let delayCount = 0;
-            if (schMap[orderId]) { schMap[orderId].forEach(schDate => { if (new Date(schDate) >= new Date(accDate)) delayCount++; }); }
+            if (schMap[orderId] && accDate) {
+              const accTime = new Date(accDate).getTime();
+              schMap[orderId].forEach(schDate => {
+                if (new Date(schDate).getTime() >= accTime) delayCount++;
+              });
+            }
             const isDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
             if (type === '정상출고' && isDelayed === '-') return;
 
-            const item = cleanTxt(row['단품코드']); const color = cleanTxt(row['색상']); const wmsKeyShort = `${orderId}_${item}`;
-            const wmsRow = wmsMap[wmsKeyShort] || {}; const loc = wmsRow['LOCATION'] || ''; const zone = loc ? String(loc)[0] : '';
-            const timeStr = wmsRow['작업일시']; let shift = '-'; if (timeStr) { const h = new Date(timeStr).getHours(); shift = (h >= 9 && h < 18) ? '주간' : '야간'; }
+            const item = cleanTxt(row['단품코드'] || row['품목코드']);
+            const color = cleanTxt(row['색상']);
 
-            // 🔥 품목코드 + 색상 조합 로직 (색상이 존재할 때만 ' - ' 추가)
+            // 🔥 WMS 매칭 (수주번호로 먼저 찾고, 단품코드로 좁히는 2단계 매칭)
+            const wmsCandidates = wmsByOrder[orderId] || [];
+            let matchedWms = {};
+            if (wmsCandidates.length === 1) {
+              matchedWms = wmsCandidates[0];
+            } else if (wmsCandidates.length > 1) {
+              matchedWms = wmsCandidates.find(w => w.item.includes(item) || item.includes(w.item)) || wmsCandidates[0];
+            }
+
+            const loc = matchedWms.loc;
+            const zone = loc ? String(loc)[0] : '';
+            const timeStr = matchedWms.time;
+
+            // 🔥 주/야간 판별 완벽 복원
+            let shift = '-';
+            if (timeStr) {
+              const h = new Date(timeStr).getHours();
+              if (!isNaN(h)) {
+                shift = (h >= 9 && h < 18) ? '주간' : '야간';
+              }
+            }
+
+            // 품목코드 - 색상 하이픈 추가
             const finalItemCode = color ? `${item} - ${color}` : item;
 
             processed.push({
               service_date: accDate, brand: row['브랜드'] || '알수없음', service_center: row['서비스센터'] || '', service_type: row['시공/AS'] || '',
               order_no: orderId, order_name: row['수주건명'] || '', item_code: finalItemCode, issue_qty: parseInt(row['이슈수량']) || 0,
-              action_result: type, is_delayed: isDelayed, zone: zone, worker_name: wmsRow['작업자'] || '', shift_type: shift, status: '원인 파악 중'
+              action_result: type, is_delayed: isDelayed, zone: zone, worker_name: matchedWms.worker || '', shift_type: shift, status: '원인 파악 중'
             });
           });
 
