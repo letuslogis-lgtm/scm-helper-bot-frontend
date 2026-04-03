@@ -2626,7 +2626,7 @@
 
       useEffect(() => { fetchAccidents(); }, [filterBrand]);
 
-      // 📊 파이썬 판다스(Pandas) 로직 자바스크립트 이식 엔진 (다중 WMS 병합 포함)
+      // 📊 파이썬 판다스(Pandas) 로직 자바스크립트 이식 엔진 (다중 WMS 병합 + 중복 방지 완벽 적용)
       const handleFileUpload = async (filesObj) => {
         setIsLoading(true);
         setIsUploadModalOpen(false);
@@ -2645,11 +2645,9 @@
           const rawAcc = await readExcel(filesObj.acc);
           const rawSch = await readExcel(filesObj.sch);
 
-          // 2. 여러 개의 WMS 파일을 동시에 파싱 (Promise.all 활용)
+          // 2. 여러 개의 WMS 파일을 동시에 파싱
           const wmsPromises = filesObj.wms.map(f => readExcel(f));
           const wmsResults = await Promise.all(wmsPromises);
-
-          // 3. 판다스의 pd.concat 처럼 모든 WMS 데이터를 하나의 배열로 평탄화(Flatten)
           const rawWms = wmsResults.flat();
 
           // 파이썬 함수 번역
@@ -2662,7 +2660,7 @@
           };
           const cleanTxt = (v) => v ? String(v).trim().replace(/\.0$/, '') : "";
 
-          // 4. 시공일정 Map 만들기 (수주번호 기준)
+          // 3. 시공일정 Map 만들기 (수주번호 기준)
           const schMap = {};
           rawSch.forEach(r => {
             const id = cleanId(r['수주번호']);
@@ -2671,19 +2669,18 @@
             schMap[id].add(r['시공예정일']);
           });
 
-          // 5. 합쳐진 WMS Map 만들기 (오더번호_아이템ID 기준)
+          // 4. 합쳐진 WMS Map 만들기 (오더번호_아이템ID 기준)
           const wmsMap = {};
           rawWms.forEach(r => {
             const key = `${cleanId(r['오더번호'])}_${cleanTxt(r['ITEM ID'])}`;
             if (!wmsMap[key]) wmsMap[key] = r;
           });
 
-          // 6. 상차이슈 분석 및 병합
+          // 5. 상차이슈 분석 및 병합
           const targetTypes = ['미출고', '오출고', '물류파손', '정상출고'];
           const processed = [];
 
           rawAcc.forEach(row => {
-            // SCM팀 필터 (제외)
             if (String(row['이슈내용'] || '').startsWith('[SCM팀')) return;
 
             const type = cleanTxt(row['조치결과구분']);
@@ -2694,7 +2691,6 @@
 
             const accDate = row['서비스예약일'];
 
-            // 납기지연 판별 로직
             let delayCount = 0;
             if (schMap[orderId]) {
               schMap[orderId].forEach(schDate => {
@@ -2703,19 +2699,16 @@
             }
             const isDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
 
-            // 정상출고인데 지연 안된 건 제거
             if (type === '정상출고' && isDelayed === '-') return;
 
             const item = cleanTxt(row['단품코드']);
             const color = cleanTxt(row['색상']);
             const wmsKeyShort = `${orderId}_${item}`;
 
-            // 병합된 WMS 데이터에서 매칭
             const wmsRow = wmsMap[wmsKeyShort] || {};
             const loc = wmsRow['LOCATION'] || '';
             const zone = loc ? String(loc)[0] : '';
 
-            // 주야간 판별
             const timeStr = wmsRow['작업일시'];
             let shift = '-';
             if (timeStr) {
@@ -2747,12 +2740,35 @@
             return;
           }
 
-          // DB에 Bulk Insert
-          const { error } = await supabase.from('logistics_accidents').insert(processed);
+          // 🔥 6. 중복 데이터 방지 (DB 대조 필터링 로직)
+          const orderNos = [...new Set(processed.map(p => p.order_no))];
+
+          const { data: existingData, error: fetchError } = await supabase
+            .from('logistics_accidents')
+            .select('order_no, item_code')
+            .in('order_no', orderNos);
+
+          if (fetchError) throw fetchError;
+
+          // 수주번호_품목코드 형태로 고유 키 생성
+          const existingSet = new Set((existingData || []).map(d => `${d.order_no}_${d.item_code}`));
+
+          // 기존 DB에 없는 새로운 데이터만 필터링
+          const newData = processed.filter(p => !existingSet.has(`${p.order_no}_${p.item_code}`));
+
+          if (newData.length === 0) {
+            alert(`✅ 업로드하신 ${processed.length}건의 데이터는 이미 모두 DB에 등록되어 있습니다. (중복 방지됨)`);
+            setIsLoading(false);
+            return;
+          }
+
+          // 7. 걸러진 '진짜 새 데이터'만 DB에 Insert
+          const { error } = await supabase.from('logistics_accidents').insert(newData);
           if (error) throw error;
 
-          alert(`분석 완료! ${processed.length}건의 사고 데이터가 DB에 등록되었습니다.`);
+          alert(`🎉 분석 완료!\n총 ${processed.length}건 중, 중복을 제외한 신규 데이터 ${newData.length}건이 DB에 등록되었습니다.`);
           fetchAccidents();
+
         } catch (error) {
           alert('업로드 중 오류 발생: ' + error.message);
           setIsLoading(false);
