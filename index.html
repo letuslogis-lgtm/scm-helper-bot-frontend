@@ -2616,7 +2616,7 @@
           if (filters.brands.length > 0) filtered = filtered.filter(i => filters.brands.includes(i.brand));
           if (filters.centers.length > 0) filtered = filtered.filter(i => filters.centers.includes(i.service_center));
           if (filters.depts.length > 0) filtered = filtered.filter(i => filters.depts.includes(i.responsible_dept));
-          
+
           if (filters.searchValue) {
             const val = filters.searchValue.toLowerCase();
             if (filters.searchType === '수주건명') filtered = filtered.filter(i => (i.order_name || '').toLowerCase().includes(val));
@@ -2653,16 +2653,16 @@
       };
 
       const getSortIcon = (key) => {
-        if (sortConfig.key !== key) return null; 
+        if (sortConfig.key !== key) return null;
         if (sortConfig.direction === 'asc') return <span className="ml-1 text-letusBlue font-black">↑</span>;
         if (sortConfig.direction === 'desc') return <span className="ml-1 text-letusBlue font-black">↓</span>;
-        return null; 
+        return null;
       };
 
       const MultiSelect = ({ label, options, selected, onChange }) => {
         const [isOpen, setIsOpen] = useState(false);
         const toggleOption = (opt) => {
-          if (opt === '전체') { onChange([]); } 
+          if (opt === '전체') { onChange([]); }
           else { onChange(selected.includes(opt) ? selected.filter(s => s !== opt) : [...selected, opt]); }
         };
         return (
@@ -2688,8 +2688,8 @@
         );
       };
 
-      // 🔥 날짜, ID 처리 함수 초강력 보강
-      const handleFileUpload = async (filesObj) => { 
+      // 🔥 날짜, ID 처리 함수 초강력 보강 (YYYYMMDD 대응 완료!)
+      const handleFileUpload = async (filesObj) => {
         setIsLoading(true); setIsUploadModalOpen(false);
         const readExcel = (file) => new Promise(res => {
           const reader = new FileReader();
@@ -2700,37 +2700,44 @@
         try {
           const rawAcc = await readExcel(filesObj.acc); const rawSch = await readExcel(filesObj.sch);
           const wmsPromises = filesObj.wms.map(f => readExcel(f)); const wmsResults = await Promise.all(wmsPromises); const rawWms = wmsResults.flat();
-          
+
           const findCol = (row, names) => { for (const n of names) { if (row[n] !== undefined && row[n] !== null && String(row[n]).trim() !== '') return row[n]; } return ''; };
           const cleanId = (v) => { if (!v) return ""; let s = String(v).trim().toUpperCase(); if (s.endsWith('.0')) s = s.slice(0, -2); return s; };
           const cleanTxt = (v) => v ? String(v).trim().replace(/\.0$/, '') : "";
-          
-          // 🔥 엑셀 날짜 완벽 변환기 (시간은 다 자르고 순수 '일자'만 비교)
+
+          // 🔥 기훈님이 찾아내신 핵심! 엑셀 날짜 완벽 변환기 (YYYYMMDD 형식 지원 추가)
           const normalizeDate = (d) => {
             if (!d) return 0;
             if (d instanceof Date) return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-            let s = String(d).replace(/\./g, '-').replace(/\//g, '-').split(' ')[0];
+
+            let s = String(d).replace(/\./g, '-').replace(/\//g, '-').trim().split(' ')[0];
+
+            // YYYYMMDD (8자리 숫자형 문자열)인 경우 YYYY-MM-DD로 강제 변환!
+            if (/^\d{8}$/.test(s)) {
+              s = `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}`;
+            }
+
             const parsed = new Date(s);
             if (!isNaN(parsed.getTime())) return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()).getTime();
             return 0;
           };
 
           // 1. 시공일정 맵 (배열로 변경하여 여러 날짜 모두 수집)
-          const schMap = {}; 
-          rawSch.forEach(r => { 
-            const id = cleanId(findCol(r, ['수주번호', '수주건호', '오더번호'])); 
-            if (!id) return; 
-            if (!schMap[id]) schMap[id] = []; 
+          const schMap = {};
+          rawSch.forEach(r => {
+            const id = cleanId(findCol(r, ['수주번호', '수주건호', '오더번호']));
+            if (!id) return;
+            if (!schMap[id]) schMap[id] = [];
             const dVal = findCol(r, ['시공예정일', '서비스예약일', '예약일']);
-            if (dVal) schMap[id].push(dVal); 
+            if (dVal) schMap[id].push(dVal);
           });
 
           // 2. WMS 맵
-          const wmsByOrder = {}; 
-          rawWms.forEach(r => { 
-            const oId = cleanId(findCol(r, ['오더번호', '수주번호', '수주건호', '출고번호'])); 
-            if (!oId) return; 
-            if (!wmsByOrder[oId]) wmsByOrder[oId] = []; 
+          const wmsByOrder = {};
+          rawWms.forEach(r => {
+            const oId = cleanId(findCol(r, ['오더번호', '수주번호', '수주건호', '출고번호']));
+            if (!oId) return;
+            if (!wmsByOrder[oId]) wmsByOrder[oId] = [];
             wmsByOrder[oId].push({
               item: cleanTxt(findCol(r, ['ITEM ID', '단품코드', '품목코드'])),
               loc: findCol(r, ['LOCATION', '로케이션', '존', 'ZONE']),
@@ -2746,27 +2753,26 @@
             if (String(row['이슈내용'] || '').startsWith('[SCM팀')) return;
             const type = cleanTxt(row['조치결과구분']);
             if (!targetTypes.includes(type)) return;
-            
+
             const orderId = cleanId(findCol(row, ['수주건호', '수주번호']));
             if (!orderId) return;
-            
+
             const accDate = findCol(row, ['서비스예약일', '예약일']);
 
-            // 🔥 납기지연 판별 완벽 로직 적용
+            // 🔥 납기지연 판별
             let delayCount = 0;
             const accTime = normalizeDate(accDate);
-            if (schMap[orderId] && accTime > 0) { 
-              // 해당 수주번호의 "고유한(Unique)" 날짜들만 뽑아냅니다 (중복 카운트 방지)
+            if (schMap[orderId] && accTime > 0) {
               const uniqueSchDates = [...new Set(schMap[orderId].map(d => normalizeDate(d)).filter(time => time > 0))];
-              uniqueSchDates.forEach(schTime => { 
-                if (schTime >= accTime) delayCount++; 
-              }); 
+              uniqueSchDates.forEach(schTime => {
+                if (schTime >= accTime) delayCount++;
+              });
             }
             const isDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
             if (type === '정상출고' && isDelayed === '-') return;
 
-            const item = cleanTxt(findCol(row, ['단품코드', '품목코드'])); 
-            const color = cleanTxt(row['색상']); 
+            const item = cleanTxt(findCol(row, ['단품코드', '품목코드']));
+            const color = cleanTxt(row['색상']);
 
             let finalItemCode = item;
             if (color && !item.includes(color) && !item.includes('-')) {
@@ -2778,15 +2784,15 @@
             if (wmsCandidates.length === 1) matchedWms = wmsCandidates[0];
             else if (wmsCandidates.length > 1) matchedWms = wmsCandidates.find(w => w.item.includes(item) || item.includes(w.item)) || wmsCandidates[0];
 
-            const loc = matchedWms.loc; 
+            const loc = matchedWms.loc;
             const zone = loc ? String(loc)[0].toUpperCase() : '';
-            
-            let shift = '-'; 
-            if (matchedWms.time) { 
+
+            let shift = '-';
+            if (matchedWms.time) {
               let h;
               if (matchedWms.time instanceof Date) h = matchedWms.time.getHours();
               else { const d = new Date(matchedWms.time); if (!isNaN(d.getTime())) h = d.getHours(); }
-              if (h !== undefined) shift = (h >= 9 && h < 18) ? '주간' : '야간'; 
+              if (h !== undefined) shift = (h >= 9 && h < 18) ? '주간' : '야간';
             }
 
             processed.push({
@@ -2816,25 +2822,25 @@
 
       return (
         <div className="p-6 bg-slate-100 h-[calc(100vh-64px)] flex flex-col gap-4 slide-up">
-          
+
           <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 h-[54px] flex items-center z-30 shrink-0">
             <div className="flex items-center gap-5 w-full">
-              <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우', '데스커', '시디즈', '알로소']} selected={filters.brands} onChange={(val) => setFilters({...filters, brands: val})} />
+              <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우', '데스커', '시디즈', '알로소']} selected={filters.brands} onChange={(val) => setFilters({ ...filters, brands: val })} />
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">서비스예약일</label>
                 <div className="flex items-center">
-                  <input type="date" value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
+                  <input type="date" value={filters.startDate} onChange={e => setFilters({ ...filters, startDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
                   <span className="mx-1 text-gray-400 text-xs">~</span>
-                  <input type="date" value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
+                  <input type="date" value={filters.endDate} onChange={e => setFilters({ ...filters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
                 </div>
               </div>
-              <MultiSelect label="서비스센터" options={['양지센터', '대전센터', '대구센터', '광주센터', '전북센터', '전남센터', '부산센터', '울산센터', '창원센터', '제주센터']} selected={filters.centers} onChange={(val) => setFilters({...filters, centers: val})} />
-              <MultiSelect label="귀책부서" options={['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타']} selected={filters.depts} onChange={(val) => setFilters({...filters, depts: val})} />
+              <MultiSelect label="서비스센터" options={['양지센터', '대전센터', '대구센터', '광주센터', '전북센터', '전남센터', '부산센터', '울산센터', '창원센터', '제주센터']} selected={filters.centers} onChange={(val) => setFilters({ ...filters, centers: val })} />
+              <MultiSelect label="귀책부서" options={['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타']} selected={filters.depts} onChange={(val) => setFilters({ ...filters, depts: val })} />
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">검색어</label>
                 <div className="flex gap-0.5 h-[30px]">
-                  <select value={filters.searchType} onChange={e => setFilters({...filters, searchType: e.target.value})} className="border border-gray-200 rounded-l-[3px] text-xs px-2 text-gray-700 bg-gray-50 focus:outline-none"><option>수주건명</option><option>품목코드</option></select>
-                  <input type="text" value={filters.searchValue} onChange={e => setFilters({...filters, searchValue: e.target.value})} onKeyDown={e => e.key === 'Enter' && fetchAccidents()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-32 focus:outline-none focus:border-letusOrange" placeholder="검색어 입력" />
+                  <select value={filters.searchType} onChange={e => setFilters({ ...filters, searchType: e.target.value })} className="border border-gray-200 rounded-l-[3px] text-xs px-2 text-gray-700 bg-gray-50 focus:outline-none"><option>수주건명</option><option>품목코드</option></select>
+                  <input type="text" value={filters.searchValue} onChange={e => setFilters({ ...filters, searchValue: e.target.value })} onKeyDown={e => e.key === 'Enter' && fetchAccidents()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-32 focus:outline-none focus:border-letusOrange" placeholder="검색어 입력" />
                 </div>
               </div>
               <div className="ml-auto flex items-center gap-2">
@@ -2845,11 +2851,11 @@
           </div>
 
           <div className="flex justify-end gap-3 z-30 px-2 -mb-2 shrink-0">
-              {userProfile?.role === '관리자' && (
-                <button onClick={() => setIsUploadModalOpen(true)} className="bg-white border border-green-600 text-green-600 px-4 py-1.5 rounded-[4px] text-xs font-bold flex items-center cursor-pointer hover:bg-green-50 transition-colors shadow-sm">
-                  <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg> 데이터 통합 업로드 (Excel)
-                </button>
-              )}
+            {userProfile?.role === '관리자' && (
+              <button onClick={() => setIsUploadModalOpen(true)} className="bg-white border border-green-600 text-green-600 px-4 py-1.5 rounded-[4px] text-xs font-bold flex items-center cursor-pointer hover:bg-green-50 transition-colors shadow-sm">
+                <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg> 데이터 통합 업로드 (Excel)
+              </button>
+            )}
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex-1 flex flex-col min-h-0 relative z-20">
@@ -2858,19 +2864,19 @@
                 <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 font-bold sticky top-0 z-10">
                   <tr>
                     {/* 🔥 다시 원래대로 12개 칼럼만 노출! */}
-                    {[ 
-                      { label: '서비스예약일', key: 'service_date', w: '110px' }, 
-                      { label: '브랜드', key: 'brand', w: '70px' }, 
+                    {[
+                      { label: '서비스예약일', key: 'service_date', w: '110px' },
+                      { label: '브랜드', key: 'brand', w: '70px' },
                       { label: '서비스센터', key: 'service_center', w: '90px' },
-                      { label: '시공/AS', key: 'service_type', w: '90px' }, 
-                      { label: '수주건호', key: 'order_no', w: '150px' }, 
+                      { label: '시공/AS', key: 'service_type', w: '90px' },
+                      { label: '수주건호', key: 'order_no', w: '150px' },
                       { label: '수주건명', key: 'order_name', w: 'auto' },
-                      { label: '품목코드', key: 'item_code', w: '180px' }, 
-                      { label: '수량', key: 'issue_qty', w: '80px' }, 
+                      { label: '품목코드', key: 'item_code', w: '180px' },
+                      { label: '수량', key: 'issue_qty', w: '80px' },
                       { label: '처리상태', key: 'status', w: '120px' },
-                      { label: '귀책부서', key: 'responsible_dept', w: '120px' }, 
-                      { label: '조치결과구분', key: 'action_result', w: '130px' }, 
-                      { label: '납기지연판별', key: 'is_delayed', w: '110px' } 
+                      { label: '귀책부서', key: 'responsible_dept', w: '120px' },
+                      { label: '조치결과구분', key: 'action_result', w: '130px' },
+                      { label: '납기지연판별', key: 'is_delayed', w: '110px' }
                     ].map((col, idx) => (
                       <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
                         <div className="flex items-center justify-center">{col.label} {col.key && getSortIcon(col.key)}</div>
@@ -2910,7 +2916,7 @@
               </table>
             </div>
           </div>
-          
+
           {activeRow && <AccidentModal row={activeRow} onClose={() => setActiveRow(null)} onReload={fetchAccidents} userProfile={userProfile} />}
           {isUploadModalOpen && <AccidentUploadModal onClose={() => setIsUploadModalOpen(false)} onFileUpload={handleFileUpload} />}
         </div>
