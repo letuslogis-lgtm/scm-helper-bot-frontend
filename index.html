@@ -2594,7 +2594,7 @@
       );
     };
 
-    // --- 📋 물류사고분석 LIST 컴포넌트 (테이블 복구 & 날짜 계산 엔진 업그레이드) ---
+    // --- 📋 물류사고분석 LIST 컴포넌트 (조회버튼 수동 클릭 방식으로 통일) ---
     const AccidentList = ({ userProfile }) => {
       const [items, setItems] = useState([]);
       const [isLoading, setIsLoading] = useState(false);
@@ -2602,32 +2602,53 @@
       const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
       const today = new Date().toISOString().split('T')[0];
-      const [filters, setFilters] = useState({ brands: [], centers: [], depts: [], startDate: today, endDate: today, searchType: '수주건명', searchValue: '' });
+
+      const initialFilters = { brands: [], centers: [], depts: [], startDate: today, endDate: today, searchType: '수주건명', searchValue: '' };
+
+      // 🔥 1. 화면 조작용 필터와 실제 적용 필터를 분리합니다!
+      const [draftFilters, setDraftFilters] = useState(initialFilters);
+      const [appliedFilters, setAppliedFilters] = useState(initialFilters);
+
       const [sortConfig, setSortConfig] = useState({ key: null, direction: 'none' });
 
+      // 🔥 2. 조회 함수는 "appliedFilters(적용된 필터)"를 기준으로만 작동합니다.
       const fetchAccidents = async () => {
         setIsLoading(true);
         try {
-          let query = supabase.from('logistics_accidents').select('*').gte('service_date', filters.startDate).lte('service_date', filters.endDate).order('created_at', { ascending: false });
+          let query = supabase.from('logistics_accidents')
+            .select('*')
+            .gte('service_date', appliedFilters.startDate)
+            .lte('service_date', appliedFilters.endDate)
+            .order('created_at', { ascending: false });
           const { data, error } = await query;
           if (error) throw error;
 
           let filtered = data || [];
-          if (filters.brands.length > 0) filtered = filtered.filter(i => filters.brands.includes(i.brand));
-          if (filters.centers.length > 0) filtered = filtered.filter(i => filters.centers.includes(i.service_center));
-          if (filters.depts.length > 0) filtered = filtered.filter(i => filters.depts.includes(i.responsible_dept));
+          if (appliedFilters.brands.length > 0) filtered = filtered.filter(i => appliedFilters.brands.includes(i.brand));
+          if (appliedFilters.centers.length > 0) filtered = filtered.filter(i => appliedFilters.centers.includes(i.service_center));
+          if (appliedFilters.depts.length > 0) filtered = filtered.filter(i => appliedFilters.depts.includes(i.responsible_dept));
 
-          if (filters.searchValue) {
-            const val = filters.searchValue.toLowerCase();
-            if (filters.searchType === '수주건명') filtered = filtered.filter(i => (i.order_name || '').toLowerCase().includes(val));
-            if (filters.searchType === '품목코드') filtered = filtered.filter(i => (i.item_code || '').toLowerCase().includes(val));
+          if (appliedFilters.searchValue) {
+            const val = appliedFilters.searchValue.toLowerCase();
+            if (appliedFilters.searchType === '수주건명') filtered = filtered.filter(i => (i.order_name || '').toLowerCase().includes(val));
+            if (appliedFilters.searchType === '품목코드') filtered = filtered.filter(i => (i.item_code || '').toLowerCase().includes(val));
           }
           setItems(filtered);
         } catch (err) { console.error(err); }
         finally { setIsLoading(false); }
       };
 
-      useEffect(() => { fetchAccidents(); }, [filters.startDate, filters.endDate]);
+      // 🔥 3. 버튼을 누르거나 초기 렌더링 시에만 fetch가 돕니다.
+      useEffect(() => { fetchAccidents(); }, [appliedFilters]);
+
+      const handleSearchClick = () => {
+        setAppliedFilters({ ...draftFilters });
+      };
+
+      const handleResetClick = () => {
+        setDraftFilters(initialFilters);
+        setAppliedFilters(initialFilters);
+      };
 
       const sortedItems = useMemo(() => {
         let sortableItems = [...items];
@@ -2688,7 +2709,6 @@
         );
       };
 
-      // 🔥 날짜, ID 처리 함수 초강력 보강 (YYYYMMDD 대응 완료!)
       const handleFileUpload = async (filesObj) => {
         setIsLoading(true); setIsUploadModalOpen(false);
         const readExcel = (file) => new Promise(res => {
@@ -2705,24 +2725,16 @@
           const cleanId = (v) => { if (!v) return ""; let s = String(v).trim().toUpperCase(); if (s.endsWith('.0')) s = s.slice(0, -2); return s; };
           const cleanTxt = (v) => v ? String(v).trim().replace(/\.0$/, '') : "";
 
-          // 🔥 기훈님이 찾아내신 핵심! 엑셀 날짜 완벽 변환기 (YYYYMMDD 형식 지원 추가)
           const normalizeDate = (d) => {
             if (!d) return 0;
             if (d instanceof Date) return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-
             let s = String(d).replace(/\./g, '-').replace(/\//g, '-').trim().split(' ')[0];
-
-            // YYYYMMDD (8자리 숫자형 문자열)인 경우 YYYY-MM-DD로 강제 변환!
-            if (/^\d{8}$/.test(s)) {
-              s = `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}`;
-            }
-
+            if (/^\d{8}$/.test(s)) s = `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}`;
             const parsed = new Date(s);
             if (!isNaN(parsed.getTime())) return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()).getTime();
             return 0;
           };
 
-          // 1. 시공일정 맵 (배열로 변경하여 여러 날짜 모두 수집)
           const schMap = {};
           rawSch.forEach(r => {
             const id = cleanId(findCol(r, ['수주번호', '수주건호', '오더번호']));
@@ -2732,7 +2744,6 @@
             if (dVal) schMap[id].push(dVal);
           });
 
-          // 2. WMS 맵
           const wmsByOrder = {};
           rawWms.forEach(r => {
             const oId = cleanId(findCol(r, ['오더번호', '수주번호', '수주건호', '출고번호']));
@@ -2759,14 +2770,11 @@
 
             const accDate = findCol(row, ['서비스예약일', '예약일']);
 
-            // 🔥 납기지연 판별
             let delayCount = 0;
             const accTime = normalizeDate(accDate);
             if (schMap[orderId] && accTime > 0) {
               const uniqueSchDates = [...new Set(schMap[orderId].map(d => normalizeDate(d)).filter(time => time > 0))];
-              uniqueSchDates.forEach(schTime => {
-                if (schTime >= accTime) delayCount++;
-              });
+              uniqueSchDates.forEach(schTime => { if (schTime >= accTime) delayCount++; });
             }
             const isDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
             if (type === '정상출고' && isDelayed === '-') return;
@@ -2815,37 +2823,39 @@
 
           const { error } = await supabase.from('logistics_accidents').insert(newData);
           if (error) throw error;
+
           alert(`🎉 분석 완료!\n총 ${processed.length}건 중, 중복을 제외한 신규 데이터 ${newData.length}건이 DB에 등록되었습니다.`);
-          fetchAccidents();
+          fetchAccidents(); // 업로드 직후엔 최신 데이터를 긁어오도록 호출
         } catch (error) { alert('업로드 중 오류 발생: ' + error.message); setIsLoading(false); }
       };
 
       return (
         <div className="p-6 bg-slate-100 h-[calc(100vh-64px)] flex flex-col gap-4 slide-up">
 
+          {/* 🔥 필터 UI는 draftFilters를 바라보도록 전부 교체! */}
           <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 h-[54px] flex items-center z-30 shrink-0">
             <div className="flex items-center gap-5 w-full">
-              <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우', '데스커', '시디즈', '알로소']} selected={filters.brands} onChange={(val) => setFilters({ ...filters, brands: val })} />
+              <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우', '데스커', '시디즈', '알로소']} selected={draftFilters.brands} onChange={(val) => setDraftFilters({ ...draftFilters, brands: val })} />
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">서비스예약일</label>
                 <div className="flex items-center">
-                  <input type="date" value={filters.startDate} onChange={e => setFilters({ ...filters, startDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
+                  <input type="date" value={draftFilters.startDate} onChange={e => setDraftFilters({ ...draftFilters, startDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
                   <span className="mx-1 text-gray-400 text-xs">~</span>
-                  <input type="date" value={filters.endDate} onChange={e => setFilters({ ...filters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
+                  <input type="date" value={draftFilters.endDate} onChange={e => setDraftFilters({ ...draftFilters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
                 </div>
               </div>
-              <MultiSelect label="서비스센터" options={['양지센터', '대전센터', '대구센터', '광주센터', '전북센터', '전남센터', '부산센터', '울산센터', '창원센터', '제주센터']} selected={filters.centers} onChange={(val) => setFilters({ ...filters, centers: val })} />
-              <MultiSelect label="귀책부서" options={['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타']} selected={filters.depts} onChange={(val) => setFilters({ ...filters, depts: val })} />
+              <MultiSelect label="서비스센터" options={['양지센터', '대전센터', '대구센터', '광주센터', '전북센터', '전남센터', '부산센터', '울산센터', '창원센터', '제주센터']} selected={draftFilters.centers} onChange={(val) => setDraftFilters({ ...draftFilters, centers: val })} />
+              <MultiSelect label="귀책부서" options={['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타']} selected={draftFilters.depts} onChange={(val) => setDraftFilters({ ...draftFilters, depts: val })} />
               <div className="flex items-center shrink-0">
                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">검색어</label>
                 <div className="flex gap-0.5 h-[30px]">
-                  <select value={filters.searchType} onChange={e => setFilters({ ...filters, searchType: e.target.value })} className="border border-gray-200 rounded-l-[3px] text-xs px-2 text-gray-700 bg-gray-50 focus:outline-none"><option>수주건명</option><option>품목코드</option></select>
-                  <input type="text" value={filters.searchValue} onChange={e => setFilters({ ...filters, searchValue: e.target.value })} onKeyDown={e => e.key === 'Enter' && fetchAccidents()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-32 focus:outline-none focus:border-letusOrange" placeholder="검색어 입력" />
+                  <select value={draftFilters.searchType} onChange={e => setDraftFilters({ ...draftFilters, searchType: e.target.value })} className="border border-gray-200 rounded-l-[3px] text-xs px-2 text-gray-700 bg-gray-50 focus:outline-none"><option>수주건명</option><option>품목코드</option></select>
+                  <input type="text" value={draftFilters.searchValue} onChange={e => setDraftFilters({ ...draftFilters, searchValue: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleSearchClick()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-32 focus:outline-none focus:border-letusOrange" placeholder="검색어 입력" />
                 </div>
               </div>
               <div className="ml-auto flex items-center gap-2">
-                <button onClick={() => setFilters({ brands: [], centers: [], depts: [], startDate: today, endDate: today, searchType: '수주건명', searchValue: '' })} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] text-xs transition-colors">초기화</button>
-                <button onClick={fetchAccidents} className="bg-letusOrange text-white hover:bg-orange-500 font-bold px-6 h-[30px] rounded-[3px] text-xs shadow-sm transition-all flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> 조회하기</button>
+                <button onClick={handleResetClick} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] text-xs transition-colors">초기화</button>
+                <button onClick={handleSearchClick} className="bg-letusOrange text-white hover:bg-orange-500 font-bold px-6 h-[30px] rounded-[3px] text-xs shadow-sm transition-all flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> 조회하기</button>
               </div>
             </div>
           </div>
@@ -2863,7 +2873,6 @@
               <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1420px] text-[13px]">
                 <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 font-bold sticky top-0 z-10">
                   <tr>
-                    {/* 🔥 다시 원래대로 12개 칼럼만 노출! */}
                     {[
                       { label: '서비스예약일', key: 'service_date', w: '110px' },
                       { label: '브랜드', key: 'brand', w: '70px' },
