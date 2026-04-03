@@ -2791,7 +2791,7 @@
             }
 
             // 품목코드 - 색상 하이픈 추가
-            const finalItemCode = color ? `${item} - ${color}` : item;
+            const finalItemCode = color ? `${item}-${color}` : item;
 
             processed.push({
               service_date: accDate, brand: row['브랜드'] || '알수없음', service_center: row['서비스센터'] || '', service_type: row['시공/AS'] || '',
@@ -2890,15 +2890,25 @@
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {isLoading ? <TableSkeleton colCount={12} /> : sortedItems.length === 0 ? (
-                    <tr><td colSpan="12" className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
+                  {/* 🔥 로딩 중일 때 colSpan="12"로 전체 너비를 차지하게 만들고 정중앙 정렬! */}
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan="12" className="py-32 text-center align-middle">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div>
+                          <p className="text-gray-500 font-bold text-[13px]">데이터를 불러오는 중입니다...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : sortedItems.length === 0 ? (
+                    <tr>
+                      <td colSpan="12" className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td>
+                    </tr>
                   ) : sortedItems.map(row => (
                     <tr key={row.id} onDoubleClick={() => setActiveRow(row)} className="hover:bg-blue-50/40 cursor-pointer transition-colors" title="더블클릭하여 원인을 등록하세요.">
-                      {/* 🔥 진짜 왼쪽 정렬 적용! (text-center 모두 삭제) */}
                       <td className="p-4">{row.service_date}</td>
                       <td className="p-4 font-semibold">{row.brand}</td>
                       <td className="p-4 text-gray-600">{row.service_center}</td>
-                      {/* 뱃지, 수량 등은 중앙 정렬 유지 */}
                       <td className="p-4 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${row.service_type === '시공' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>{row.service_type}</span></td>
                       <td className="p-4 font-mono text-gray-500">{row.order_no}</td>
                       <td className="p-4 font-bold text-gray-800 truncate">{row.order_name}</td>
