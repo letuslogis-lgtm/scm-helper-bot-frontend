@@ -3044,20 +3044,70 @@
 
           if (processed.length === 0) { alert('분석 결과 저장할 데이터가 없습니다.'); setIsLoading(false); return; }
 
+          // --- 여기서부터 복사해서 덮어씌우기 ---
           const orderNos = [...new Set(processed.map(p => p.order_no))];
-          const { data: existingData, error: fetchError } = await supabase.from('logistics_accidents').select('order_no, item_code').in('order_no', orderNos);
+
+          // 🔥 1. 기존 데이터 가져올 때 '납기지연(is_delayed)' 상태도 같이 가져오기
+          const { data: existingData, error: fetchError } = await supabase
+            .from('logistics_accidents')
+            .select('id, order_no, item_code, is_delayed')
+            .in('order_no', orderNos);
+
           if (fetchError) throw fetchError;
 
-          const existingSet = new Set((existingData || []).map(d => `${d.order_no}_${d.item_code}`));
-          const newData = processed.filter(p => !existingSet.has(`${p.order_no}_${p.item_code}`));
+          const existingMap = new Map();
+          (existingData || []).forEach(d => {
+            existingMap.set(`${d.order_no}_${d.item_code}`, d);
+          });
 
-          if (newData.length === 0) { alert(`✅ 업로드하신 ${processed.length}건의 데이터는 이미 모두 DB에 등록되어 있습니다.`); setIsLoading(false); return; }
+          const toInsert = [];
+          const toUpdate = [];
 
-          const { error } = await supabase.from('logistics_accidents').insert(newData);
-          if (error) throw error;
+          processed.forEach(p => {
+            const key = `${p.order_no}_${p.item_code}`;
+            const existingRow = existingMap.get(key);
 
-          alert(`🎉 분석 완료!\n총 ${processed.length}건 중, 중복을 제외한 신규 데이터 ${newData.length}건이 DB에 등록되었습니다.`);
+            if (!existingRow) {
+              // [신규] DB에 없는 완전 새로운 사고건
+              toInsert.push(p);
+            } else {
+              // [수정] 🔥 기존에 등록된 사고건이지만, '재일정'으로 변경된 경우 감지!
+              if (p.is_delayed === '재일정(지연)' && existingRow.is_delayed === '-') {
+                toUpdate.push({
+                  id: existingRow.id, // 고유 번호로 타겟팅
+                  is_delayed: '재일정(지연)', // 지연 상태만 콕 집어서 업데이트
+                  updated_at: new Date().toISOString()
+                });
+              }
+            }
+          });
+
+          if (toInsert.length === 0 && toUpdate.length === 0) {
+            alert(`✅ 업로드하신 ${processed.length}건의 데이터는 이미 DB에 최신 상태로 등록되어 있습니다.`);
+            setIsLoading(false);
+            return;
+          }
+
+          let insertMsg = 0;
+          let updateMsg = 0;
+
+          // 2. 신규 사고 등록
+          if (toInsert.length > 0) {
+            const { error: insertErr } = await supabase.from('logistics_accidents').insert(toInsert);
+            if (insertErr) throw insertErr;
+            insertMsg = toInsert.length;
+          }
+
+          // 3. 기존 사고 '재일정' 상태 업데이트
+          if (toUpdate.length > 0) {
+            const { error: updateErr } = await supabase.from('logistics_accidents').upsert(toUpdate, { onConflict: 'id' });
+            if (updateErr) throw updateErr;
+            updateMsg = toUpdate.length;
+          }
+
+          alert(`🎉 분석 및 업데이트 완료!\n- 신규 사고 등록: ${insertMsg}건\n- 기존 사고 납기지연(재일정) 업데이트: ${updateMsg}건`);
           fetchAccidents();
+          // --- 여기까지 덮어씌우기 ---
         } catch (error) { alert('업로드 중 오류 발생: ' + error.message); setIsLoading(false); }
       };
 
