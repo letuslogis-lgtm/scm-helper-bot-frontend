@@ -1033,7 +1033,7 @@
           roles: ['관리자'],
           children: [
             { id: 'user_management', label: '사용자 관리' },
-            { id: 'product_manager', label: 'DB 수동 업데이트' } // 🔥 요 한 줄이 추가되는 겁니다!
+            { id: 'product_manager', label: 'ITEM DB 수동 업데이트' } // 🔥 요 한 줄이 추가되는 겁니다!
           ]
         },
         {
@@ -1208,7 +1208,7 @@
           page === 'accident_dashboard' ? '사고분석 대시보드' :
             page === 'accident_list' ? '사고분석 LIST' :
               page === 'user_management' ? '사용자 관리' :
-                page === 'product_manager' ? '마스터 데이터 관리' : // 🔥 요 한 줄 추가!
+                page === 'product_manager' ? 'ITEM DB 수동 업데이트' : // 🔥 요 한 줄 추가!
                   page === 'support' ? '지원센터' :
                     '특이사항 LIST';
 
@@ -2026,7 +2026,7 @@
           }
 
           setResultStats({ total: data.length, inserted: insertResult, updated: updateResult, skipped: skipCount });
-          alert(`✅ 마스터 데이터 업데이트 완료!\n신규 등록: ${insertResult}건\n정보 수정: ${updateResult}건`);
+          alert(`✅ ITEM DB 업데이트 완료!\n신규 등록: ${insertResult}건\n정보 수정: ${updateResult}건`);
 
         } catch (error) {
           console.error(error);
@@ -2042,7 +2042,7 @@
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
             <div className="flex items-center gap-3 mb-6">
               <span className="w-1.5 h-5 bg-green-500 rounded-full"></span>
-              <h2 className="font-bold text-gray-800 text-lg">마스터 데이터 수동 업데이트 (임시)</h2>
+              <h2 className="font-bold text-gray-800 text-lg">ITEM DB 수동 업데이트 (임시)</h2>
             </div>
 
             <p className="text-sm text-gray-600 mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
