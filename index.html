@@ -2725,7 +2725,7 @@
       );
     };
 
-    // --- 📥 엑셀 업로드 전용 모달 (드래그 앤 드롭 & 다중 WMS 파일 지원) ---
+    // --- 📥 엑셀 업로드 전용 모달 (드래그 앤 드롭 & 단독 업로드 지원) ---
     const AccidentUploadModal = ({ onClose, onFileUpload }) => {
       const [isDragging, setIsDragging] = useState(false);
       const [files, setFiles] = useState({ acc: null, sch: null, wms: [] });
@@ -2763,10 +2763,21 @@
 
       const handleFileSelect = (e) => { processFiles(e.target.files); };
 
+      // 🔥 업로드 제한 로직 완화! (상차이슈+WMS 또는 시공일정 단독 업로드 허용)
       const handleUploadClick = () => {
-        if (!files.acc || !files.sch || files.wms.length === 0) {
-          return alert('상차이슈(1개), 시공일정(1개), WMS(1개 이상) 파일이 모두 필요합니다!');
+        const hasBaseFiles = files.acc && files.wms.length > 0;
+        const hasSchFile = !!files.sch;
+
+        if (!hasBaseFiles && !hasSchFile) {
+          return alert('🚨 신규 등록용(상차이슈+WMS) 또는 지연 업데이트용(시공일정) 파일을 올려주세요!');
         }
+        if (files.acc && files.wms.length === 0) {
+          return alert('🚨 상차이슈를 올리실 때는 WMS 파일도 최소 1개 이상 세트로 필요합니다!');
+        }
+        if (!files.acc && files.wms.length > 0) {
+          return alert('🚨 WMS 파일만으로는 등록할 수 없습니다. 상차이슈 파일을 같이 올려주세요!');
+        }
+
         onFileUpload(files);
       };
 
@@ -2779,7 +2790,7 @@
             <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
               <h3 className="font-bold text-gray-900 flex items-center gap-2">
                 <span className="w-1.5 h-3.5 bg-green-500 rounded-full"></span>
-                데이터 통합 업로드 (다중 파일 지원)
+                데이터 통합 업로드
               </h3>
               <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><CloseIcon /></button>
             </div>
@@ -2788,13 +2799,12 @@
               <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 mb-5 text-sm">
                 <h4 className="font-bold text-letusBlue mb-2">💡 파일 업로드 가이드</h4>
                 <ul className="list-disc list-inside text-gray-600 space-y-1.5 text-xs font-medium ml-1">
-                  <li><span className="font-bold text-gray-800">상차이슈, 시공일정</span> 파일은 각각 1개씩 필요합니다.</li>
-                  <li><span className="font-bold text-gray-800">WMS</span> 파일은 여러 센터 파일을 동시에 올리셔도 됩니다.</li>
-                  <li>파일을 한 번에 여러 개 드래그하거나, 여러 번 나누어 드래그해도 자동으로 누적됩니다.</li>
+                  <li><span className="font-bold text-gray-800">신규 사고 등록 시:</span> 상차이슈(1개) + WMS(여러 개 가능) 필수</li>
+                  <li><span className="font-bold text-gray-800">납기지연(재일정) 업데이트 시:</span> 시공일정(1개)만 단독 업로드 가능</li>
+                  <li>파일 이름에 <span className="text-blue-500 font-bold">상차이슈, 시공일정, WMS</span> 단어가 포함되어야 합니다.</li>
                 </ul>
               </div>
 
-              {/* 드래그 앤 드롭 영역 */}
               <div
                 className={`relative w-full h-32 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-all cursor-pointer mb-4 ${isDragging ? 'border-green-500 bg-green-50 scale-[1.02]' : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-green-400'}`}
                 onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}
@@ -2804,7 +2814,6 @@
                 <p className="text-gray-800 font-bold text-sm">업로드할 파일들을 이곳으로 드래그 하세요</p>
               </div>
 
-              {/* 파일 인식 상태 표시 */}
               <div className="grid grid-cols-3 gap-2">
                 <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.acc ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>1. 상차이슈 {files.acc && '✅'}</div>
                 <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.sch ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>2. 시공일정 {files.sch && '✅'}</div>
@@ -2812,7 +2821,6 @@
               </div>
             </div>
 
-            {/* 🔥 하단 버튼 영역 구조 변경 (왼쪽: 비우기, 오른쪽: 닫기/저장) */}
             <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
               <div>
                 {(files.acc || files.sch || files.wms.length > 0) && (
