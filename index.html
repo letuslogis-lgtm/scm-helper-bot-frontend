@@ -1933,8 +1933,8 @@
 
     // --- ⚙️ 마스터 데이터 수동 업데이트 (ProductManager) ---
     const ProductManager = () => {
-      const [isLoading, setIsLoading] = useState(false);
-      const [resultStats, setResultStats] = useState(null);
+      const [isLoading, React.useState] = React.useState(false);
+      const [resultStats, setResultStats] = React.useState(null);
 
       const handleFileUpload = async (e) => {
         const file = e.target.files[0];
@@ -1975,46 +1975,45 @@
 
           const clean = (val) => val ? String(val).trim() : '';
 
-          // 🔥 기훈님께서 요청하신 1:1 강제 매칭 룰 적용!
+          // 🔥 기훈님 맞춤형 1:1 강제 매칭 룰 적용!
           data.forEach(excelRow => {
             const itemCode = clean(excelRow['단품코드']);
             const itemColor = clean(excelRow['단품컬러']);
-            const brand = clean(excelRow['브랜드구분']);
+            const brand = clean(excelRow['브랜드구분']); // 🔥 '브랜드' -> '브랜드구분'으로 수정 완료!
             const companyDiv = clean(excelRow['사별회사구분']);
             const vendor = clean(excelRow['공급업체']);
             const prodLine = clean(excelRow['생산지창고']);
 
-            // 단품코드가 없는 빈 줄은 무시
             if (!itemCode) return;
 
             const key = `${itemCode}_${itemColor}`;
             const existingRow = existingMap.get(key);
 
             if (!existingRow) {
-              // [신규 등록] 🚨 updated_at 제거 완료!
+              // [신규 등록]
               toInsert.push({
                 item_code: itemCode,
                 item_color: itemColor,
                 brand_category: brand,
-                company_division: companyDiv, // 추가된 매칭
+                company_division: companyDiv,
                 vendor: vendor,
                 production_line: prodLine
               });
             } else {
               // [수정 여부 확인]
               const isBrandChanged = existingRow.brand_category !== brand;
-              const isCompanyDivChanged = existingRow.company_division !== companyDiv; // 추가된 확인
+              const isCompanyDivChanged = existingRow.company_division !== companyDiv;
               const isVendorChanged = existingRow.vendor !== vendor;
               const isProdLineChanged = existingRow.production_line !== prodLine;
 
               if (isBrandChanged || isCompanyDivChanged || isVendorChanged || isProdLineChanged) {
-                // [정보 수정] 🚨 updated_at 제거 완료!
+                // [정보 수정]
                 toUpdate.push({
-                  id: existingRow.id, // 업데이트용 고유키 유지
+                  id: existingRow.id,
                   item_code: itemCode,
                   item_color: itemColor,
                   brand_category: brand,
-                  company_division: companyDiv, // 추가된 매칭
+                  company_division: companyDiv,
                   vendor: vendor,
                   production_line: prodLine
                 });
@@ -2061,9 +2060,7 @@
 
             <p className="text-sm text-gray-600 mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
               💡 <strong>안내:</strong> 엑셀 데이터를 업로드하면 기존 DB와 전체 내용을 1:1로 비교합니다.<br />
-              코드가 없으면 <strong>신규 등록</strong>, 정보가 다르면 <strong>수정</strong>, 내용이 완전히 같으면 <strong>무시(Skip)</strong> 처리됩니다. <br /><br />
-
-              {/* 🔥 추가된 엑셀 추출 경로 안내! */}
+              코드가 없으면 <strong>신규 등록</strong>, 정보가 다르면 <strong>수정</strong>, 내용이 완전히 같으면 <strong>무시(Skip)</strong> 처리됩니다.<br />
               <span className="inline-block mt-2 font-bold text-letusBlue bg-blue-100/50 px-2 py-1 rounded">
                 📥 추출 경로: {"[ERP > 단품정보추출 > 번호/단품코드/단품컬러/브랜드구분/사별회사구분/공급업체/생산지창고]"}
               </span>
