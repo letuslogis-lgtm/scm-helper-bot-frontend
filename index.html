@@ -97,7 +97,7 @@
     const { useState, useEffect, useMemo } = React;
 
     // --- Recharts 컴포넌트 ---
-    const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } = window.Recharts;
+    const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } = window.Recharts || {};
 
     const BRANDS = ['(주)한국물류', '글로벌테크', '퍼시스', '일룸', '스마트패키징', '에이스코리아'];
 
