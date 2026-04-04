@@ -1933,7 +1933,6 @@
 
     // --- ⚙️ 마스터 데이터 수동 업데이트 (ProductManager) ---
     const ProductManager = () => {
-      // 🔥 드디어 오타 완벽 수정!
       const [isLoading, setIsLoading] = useState(false);
       const [resultStats, setResultStats] = useState(null);
 
@@ -1945,7 +1944,8 @@
         setResultStats(null);
 
         try {
-          const data = await new Promise((resolve) => {
+          // 1. 엑셀 데이터 로드
+          const rawData = await new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (e) => {
               const wb = XLSX.read(e.target.result, { type: 'binary' });
@@ -1954,88 +1954,106 @@
             reader.readAsBinaryString(file);
           });
 
-          if (data.length === 0) {
+          if (rawData.length === 0) {
             alert('엑셀 파일에 데이터가 없습니다.');
             setIsLoading(false);
             return;
           }
 
-          // 기존 DB 가져오기
-          const { data: existingData, error: fetchError } = await supabase.from('products').select('*');
-          if (fetchError) throw fetchError;
-
-          const existingMap = new Map();
-          existingData.forEach(row => {
-            const key = `${row.item_code}_${row.item_color || ''}`.trim();
-            existingMap.set(key, row);
-          });
-
-          const toInsert = [];
-          const toUpdate = [];
-          let skipCount = 0;
-
           const clean = (val) => val ? String(val).trim() : '';
 
-          data.forEach(excelRow => {
+          // 2. 엑셀 파일 내부 자체 중복 제거 (같은 코드가 여러 개면 마지막 줄 기준)
+          const uniqueMap = new Map();
+          rawData.forEach(excelRow => {
             const itemCode = clean(excelRow['단품코드']);
             const itemColor = clean(excelRow['단품컬러']);
-            const brand = clean(excelRow['브랜드구분']); // 🔥 '브랜드구분' 매칭 유지
-            const companyDiv = clean(excelRow['사별회사구분']);
-            const vendor = clean(excelRow['공급업체']);
-            const prodLine = clean(excelRow['생산지창고']);
-
-            if (!itemCode) return;
-
-            const key = `${itemCode}_${itemColor}`;
-            const existingRow = existingMap.get(key);
-
-            if (!existingRow) {
-              toInsert.push({
-                item_code: itemCode,
-                item_color: itemColor,
-                brand_category: brand,
-                company_division: companyDiv,
-                vendor: vendor,
-                production_line: prodLine
-              });
-            } else {
-              const isBrandChanged = existingRow.brand_category !== brand;
-              const isCompanyDivChanged = existingRow.company_division !== companyDiv;
-              const isVendorChanged = existingRow.vendor !== vendor;
-              const isProdLineChanged = existingRow.production_line !== prodLine;
-
-              if (isBrandChanged || isCompanyDivChanged || isVendorChanged || isProdLineChanged) {
-                toUpdate.push({
-                  id: existingRow.id,
-                  item_code: itemCode,
-                  item_color: itemColor,
-                  brand_category: brand,
-                  company_division: companyDiv,
-                  vendor: vendor,
-                  production_line: prodLine
-                });
-              } else {
-                skipCount++;
-              }
+            if (itemCode) {
+              uniqueMap.set(`${itemCode}_${itemColor}`, excelRow);
             }
           });
+          const uniqueData = Array.from(uniqueMap.values());
 
           let insertResult = 0;
           let updateResult = 0;
+          let skipCount = 0;
 
-          if (toInsert.length > 0) {
-            const { error } = await supabase.from('products').insert(toInsert);
-            if (error) throw error;
-            insertResult = toInsert.length;
+          // 3. Supabase API 1000건 제한 극복을 위한 300개 단위 청크(Chunk) 처리
+          const chunkSize = 300;
+
+          for (let i = 0; i < uniqueData.length; i += chunkSize) {
+            const chunk = uniqueData.slice(i, i + chunkSize);
+
+            // 현재 청크의 단품코드 리스트만 추출
+            const chunkItemCodes = [...new Set(chunk.map(r => clean(r['단품코드'])))];
+
+            // DB에서 해당 단품코드들만 정확히 핀셋 검색
+            const { data: existingData, error: fetchError } = await supabase
+              .from('products')
+              .select('id, item_code, item_color, brand_category, company_division, vendor, production_line')
+              .in('item_code', chunkItemCodes);
+
+            if (fetchError) throw fetchError;
+
+            // 검색된 기존 데이터 매핑
+            const existingDBMap = new Map();
+            existingData.forEach(row => {
+              const key = `${row.item_code}_${row.item_color || ''}`.trim();
+              existingDBMap.set(key, row);
+            });
+
+            const toInsert = [];
+            const toUpdate = [];
+
+            chunk.forEach(excelRow => {
+              const itemCode = clean(excelRow['단품코드']);
+              const itemColor = clean(excelRow['단품컬러']);
+              const brand = clean(excelRow['브랜드구분']);
+              const companyDiv = clean(excelRow['사별회사구분']);
+              const vendor = clean(excelRow['공급업체']);
+              const prodLine = clean(excelRow['생산지창고']);
+
+              const key = `${itemCode}_${itemColor}`;
+              const existingRow = existingDBMap.get(key);
+
+              if (!existingRow) {
+                // DB에 진짜 없는 경우 신규 등록
+                toInsert.push({
+                  item_code: itemCode, item_color: itemColor, brand_category: brand,
+                  company_division: companyDiv, vendor: vendor, production_line: prodLine
+                });
+              } else {
+                // 기존 데이터가 있으면 변경점 체크
+                const isBrandChanged = existingRow.brand_category !== brand;
+                const isCompanyDivChanged = existingRow.company_division !== companyDiv;
+                const isVendorChanged = existingRow.vendor !== vendor;
+                const isProdLineChanged = existingRow.production_line !== prodLine;
+
+                if (isBrandChanged || isCompanyDivChanged || isVendorChanged || isProdLineChanged) {
+                  toUpdate.push({
+                    id: existingRow.id, item_code: itemCode, item_color: itemColor,
+                    brand_category: brand, company_division: companyDiv, vendor: vendor, production_line: prodLine
+                  });
+                } else {
+                  skipCount++;
+                }
+              }
+            });
+
+            // 청크 단위로 즉시 DB 꽂아넣기
+            if (toInsert.length > 0) {
+              const { error } = await supabase.from('products').insert(toInsert);
+              if (error) throw error;
+              insertResult += toInsert.length;
+            }
+
+            if (toUpdate.length > 0) {
+              const { error } = await supabase.from('products').upsert(toUpdate, { onConflict: 'id' });
+              if (error) throw error;
+              updateResult += toUpdate.length;
+            }
           }
 
-          if (toUpdate.length > 0) {
-            const { error } = await supabase.from('products').upsert(toUpdate, { onConflict: 'id' });
-            if (error) throw error;
-            updateResult = toUpdate.length;
-          }
-
-          setResultStats({ total: data.length, inserted: insertResult, updated: updateResult, skipped: skipCount });
+          setResultStats({ total: rawData.length, inserted: insertResult, updated: updateResult, skipped: skipCount });
           alert(`✅ 마스터 데이터 업데이트 완료!\n신규 등록: ${insertResult}건\n정보 수정: ${updateResult}건`);
 
         } catch (error) {
