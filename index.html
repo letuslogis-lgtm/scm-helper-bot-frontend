@@ -1933,8 +1933,9 @@
 
     // --- ⚙️ 마스터 데이터 수동 업데이트 (ProductManager) ---
     const ProductManager = () => {
-      const [isLoading, React.useState] = React.useState(false);
-      const [resultStats, setResultStats] = React.useState(null);
+      // 🔥 드디어 오타 완벽 수정!
+      const [isLoading, setIsLoading] = useState(false);
+      const [resultStats, setResultStats] = useState(null);
 
       const handleFileUpload = async (e) => {
         const file = e.target.files[0];
@@ -1975,11 +1976,10 @@
 
           const clean = (val) => val ? String(val).trim() : '';
 
-          // 🔥 기훈님 맞춤형 1:1 강제 매칭 룰 적용!
           data.forEach(excelRow => {
             const itemCode = clean(excelRow['단품코드']);
             const itemColor = clean(excelRow['단품컬러']);
-            const brand = clean(excelRow['브랜드구분']); // 🔥 '브랜드' -> '브랜드구분'으로 수정 완료!
+            const brand = clean(excelRow['브랜드구분']); // 🔥 '브랜드구분' 매칭 유지
             const companyDiv = clean(excelRow['사별회사구분']);
             const vendor = clean(excelRow['공급업체']);
             const prodLine = clean(excelRow['생산지창고']);
@@ -1990,7 +1990,6 @@
             const existingRow = existingMap.get(key);
 
             if (!existingRow) {
-              // [신규 등록]
               toInsert.push({
                 item_code: itemCode,
                 item_color: itemColor,
@@ -2000,14 +1999,12 @@
                 production_line: prodLine
               });
             } else {
-              // [수정 여부 확인]
               const isBrandChanged = existingRow.brand_category !== brand;
               const isCompanyDivChanged = existingRow.company_division !== companyDiv;
               const isVendorChanged = existingRow.vendor !== vendor;
               const isProdLineChanged = existingRow.production_line !== prodLine;
 
               if (isBrandChanged || isCompanyDivChanged || isVendorChanged || isProdLineChanged) {
-                // [정보 수정]
                 toUpdate.push({
                   id: existingRow.id,
                   item_code: itemCode,
