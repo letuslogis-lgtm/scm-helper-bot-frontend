@@ -2725,10 +2725,12 @@
       );
     };
 
-    // --- 📥 엑셀 업로드 전용 모달 (드래그 앤 드롭 & 단독 업로드 지원) ---
+    // --- 📥 엑셀 업로드 전용 모달 (필터링 ON/OFF 토글 적용) ---
     const AccidentUploadModal = ({ onClose, onFileUpload }) => {
       const [isDragging, setIsDragging] = useState(false);
       const [files, setFiles] = useState({ acc: null, sch: null, wms: [] });
+      // 🔥 필터 ON/OFF 상태 추가 (기본값 ON)
+      const [applyFilters, setApplyFilters] = useState(true);
       const fileInputRef = React.useRef(null);
 
       const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
@@ -2763,7 +2765,6 @@
 
       const handleFileSelect = (e) => { processFiles(e.target.files); };
 
-      // 🔥 업로드 제한 로직 완화! (상차이슈+WMS 또는 시공일정 단독 업로드 허용)
       const handleUploadClick = () => {
         const hasBaseFiles = files.acc && files.wms.length > 0;
         const hasSchFile = !!files.sch;
@@ -2778,7 +2779,8 @@
           return alert('🚨 WMS 파일만으로는 등록할 수 없습니다. 상차이슈 파일을 같이 올려주세요!');
         }
 
-        onFileUpload(files);
+        // 🔥 파일 데이터와 함께 필터 ON/OFF 상태도 같이 넘겨줍니다!
+        onFileUpload({ ...files, applyFilters });
       };
 
       const handleResetFiles = () => setFiles({ acc: null, sch: null, wms: [] });
@@ -2818,6 +2820,18 @@
                 <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.acc ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>1. 상차이슈 {files.acc && '✅'}</div>
                 <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.sch ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>2. 시공일정 {files.sch && '✅'}</div>
                 <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.wms.length > 0 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>3. WMS <span className="text-blue-500">({files.wms.length}개)</span> {files.wms.length > 0 && '✅'}</div>
+              </div>
+
+              {/* 🔥 예외 데이터 필터링 토글 스위치 */}
+              <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+                <div>
+                  <p className="text-[12px] font-bold text-gray-800">🛠️ 예외 데이터 자동 제외 필터</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">'이케아' 브랜드 및 '[SCM팀 부종량 CUT...]' 포함 건 무시</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={applyFilters} onChange={(e) => setApplyFilters(e.target.checked)} />
+                  <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-letusBlue"></div>
+                </label>
               </div>
             </div>
 
@@ -2950,15 +2964,25 @@
 
       const handleFileUpload = async (filesObj) => {
         setIsLoading(true); setIsUploadModalOpen(false);
+        const applyFilters = filesObj.applyFilters; // 🔥 토글 상태 받아오기
+
         const readExcel = (file) => new Promise(res => {
+          if (!file) return res([]);
           const reader = new FileReader();
           reader.onload = e => { const wb = XLSX.read(e.target.result, { type: 'binary', cellDates: true }); res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { raw: false, dateNF: 'yyyy-mm-dd' })); };
           reader.readAsBinaryString(file);
         });
 
         try {
-          const rawAcc = await readExcel(filesObj.acc); const rawSch = await readExcel(filesObj.sch);
-          const wmsPromises = filesObj.wms.map(f => readExcel(f)); const wmsResults = await Promise.all(wmsPromises); const rawWms = wmsResults.flat();
+          const rawAcc = filesObj.acc ? await readExcel(filesObj.acc) : [];
+          const rawSch = filesObj.sch ? await readExcel(filesObj.sch) : [];
+
+          let rawWms = [];
+          if (filesObj.wms && filesObj.wms.length > 0) {
+            const wmsPromises = filesObj.wms.map(f => readExcel(f));
+            const wmsResults = await Promise.all(wmsPromises);
+            rawWms = wmsResults.flat();
+          }
 
           const findCol = (row, names) => { for (const n of names) { if (row[n] !== undefined && row[n] !== null && String(row[n]).trim() !== '') return row[n]; } return ''; };
           const cleanId = (v) => { if (!v) return ""; let s = String(v).trim().toUpperCase(); if (s.endsWith('.0')) s = s.slice(0, -2); return s; };
@@ -2975,148 +2999,161 @@
           };
 
           const schMap = {};
-          rawSch.forEach(r => {
-            const id = cleanId(findCol(r, ['수주번호', '수주건호', '오더번호']));
-            if (!id) return;
-            if (!schMap[id]) schMap[id] = [];
-            const dVal = findCol(r, ['시공예정일', '서비스예약일', '예약일']);
-            if (dVal) schMap[id].push(dVal);
-          });
-
-          const wmsByOrder = {};
-          rawWms.forEach(r => {
-            const oId = cleanId(findCol(r, ['오더번호', '수주번호', '수주건호', '출고번호']));
-            if (!oId) return;
-            if (!wmsByOrder[oId]) wmsByOrder[oId] = [];
-            wmsByOrder[oId].push({
-              item: cleanTxt(findCol(r, ['ITEM ID', '단품코드', '품목코드'])),
-              loc: findCol(r, ['LOCATION', '로케이션', '존', 'ZONE']),
-              worker: findCol(r, ['작업자', '작업자명', '피커']),
-              time: findCol(r, ['작업일시', '출고일시', '작업시간'])
+          if (rawSch.length > 0) {
+            rawSch.forEach(r => {
+              const id = cleanId(findCol(r, ['수주번호', '수주건호', '오더번호']));
+              if (!id) return;
+              if (!schMap[id]) schMap[id] = [];
+              const dVal = findCol(r, ['시공예정일', '서비스예약일', '예약일']);
+              if (dVal) schMap[id].push(dVal);
             });
-          });
+          }
 
-          const targetTypes = ['미출고', '오출고', '물류파손', '정상출고'];
-          const processed = [];
-
-          rawAcc.forEach(row => {
-            if (String(row['이슈내용'] || '').startsWith('[SCM팀')) return;
-            const type = cleanTxt(row['조치결과구분']);
-            if (!targetTypes.includes(type)) return;
-
-            const orderId = cleanId(findCol(row, ['수주건호', '수주번호']));
-            if (!orderId) return;
-
-            const accDate = findCol(row, ['서비스예약일', '예약일']);
-
-            let delayCount = 0;
-            const accTime = normalizeDate(accDate);
-            if (schMap[orderId] && accTime > 0) {
-              const uniqueSchDates = [...new Set(schMap[orderId].map(d => normalizeDate(d)).filter(time => time > 0))];
-              uniqueSchDates.forEach(schTime => { if (schTime >= accTime) delayCount++; });
-            }
-            const isDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
-            if (type === '정상출고' && isDelayed === '-') return;
-
-            const item = cleanTxt(findCol(row, ['단품코드', '품목코드']));
-            const color = cleanTxt(row['색상']);
-
-            // 🔥 하이픈 좌우 공백 제거 적용! (OOOO-OOO 형태)
-            let finalItemCode = item;
-            if (color && !item.includes(color) && !item.includes('-')) {
-              finalItemCode = `${item}-${color}`;
-            }
-
-            const wmsCandidates = wmsByOrder[orderId] || [];
-            let matchedWms = {};
-            if (wmsCandidates.length === 1) matchedWms = wmsCandidates[0];
-            else if (wmsCandidates.length > 1) matchedWms = wmsCandidates.find(w => w.item.includes(item) || item.includes(w.item)) || wmsCandidates[0];
-
-            const loc = matchedWms.loc;
-            const zone = loc ? String(loc)[0].toUpperCase() : '';
-
-            let shift = '-';
-            if (matchedWms.time) {
-              let h;
-              if (matchedWms.time instanceof Date) h = matchedWms.time.getHours();
-              else { const d = new Date(matchedWms.time); if (!isNaN(d.getTime())) h = d.getHours(); }
-              if (h !== undefined) shift = (h >= 9 && h < 18) ? '주간' : '야간';
-            }
-
-            processed.push({
-              service_date: accDate, brand: row['브랜드'] || '알수없음', service_center: row['서비스센터'] || '', service_type: row['시공/AS'] || '',
-              order_no: orderId, order_name: row['수주건명'] || '', item_code: finalItemCode, issue_qty: parseInt(row['이슈수량']) || 0,
-              action_result: type, is_delayed: isDelayed, zone: zone, worker_name: matchedWms.worker || '', shift_type: shift, status: '원인 파악 중'
+          if (rawAcc.length > 0) {
+            const wmsByOrder = {};
+            rawWms.forEach(r => {
+              const oId = cleanId(findCol(r, ['오더번호', '수주번호', '수주건호', '출고번호']));
+              if (!oId) return;
+              if (!wmsByOrder[oId]) wmsByOrder[oId] = [];
+              wmsByOrder[oId].push({
+                item: cleanTxt(findCol(r, ['ITEM ID', '단품코드', '품목코드'])),
+                loc: findCol(r, ['LOCATION', '로케이션', '존', 'ZONE']),
+                worker: findCol(r, ['작업자', '작업자명', '피커']),
+                time: findCol(r, ['작업일시', '출고일시', '작업시간'])
+              });
             });
-          });
 
-          if (processed.length === 0) { alert('분석 결과 저장할 데이터가 없습니다.'); setIsLoading(false); return; }
+            const targetTypes = ['미출고', '오출고', '물류파손', '정상출고'];
+            const processed = [];
 
-          // --- 여기서부터 복사해서 덮어씌우기 ---
-          const orderNos = [...new Set(processed.map(p => p.order_no))];
+            rawAcc.forEach(row => {
+              const brandStr = cleanTxt(row['브랜드']);
+              const issueStr = cleanTxt(row['이슈내용']);
 
-          // 🔥 1. 기존 데이터 가져올 때 '납기지연(is_delayed)' 상태도 같이 가져오기
-          const { data: existingData, error: fetchError } = await supabase
-            .from('logistics_accidents')
-            .select('id, order_no, item_code, is_delayed')
-            .in('order_no', orderNos);
-
-          if (fetchError) throw fetchError;
-
-          const existingMap = new Map();
-          (existingData || []).forEach(d => {
-            existingMap.set(`${d.order_no}_${d.item_code}`, d);
-          });
-
-          const toInsert = [];
-          const toUpdate = [];
-
-          processed.forEach(p => {
-            const key = `${p.order_no}_${p.item_code}`;
-            const existingRow = existingMap.get(key);
-
-            if (!existingRow) {
-              // [신규] DB에 없는 완전 새로운 사고건
-              toInsert.push(p);
-            } else {
-              // [수정] 🔥 기존에 등록된 사고건이지만, '재일정'으로 변경된 경우 감지!
-              if (p.is_delayed === '재일정(지연)' && existingRow.is_delayed === '-') {
-                toUpdate.push({
-                  id: existingRow.id, // 고유 번호로 타겟팅
-                  is_delayed: '재일정(지연)', // 지연 상태만 콕 집어서 업데이트
-                  updated_at: new Date().toISOString()
-                });
+              // 🔥 사용자가 요청한 필터 로직 적용 (토글이 ON일 때만 작동)
+              if (applyFilters) {
+                if (brandStr.includes('이케아')) return;
+                if (issueStr.includes('[SCM팀 부종량 CUT 조치결과]')) return;
+              } else {
+                // 필터가 OFF일 때도 SCM팀 로직은 기본적으로 제외해야 한다면 아래 주석을 풀어주세요.
+                // if (issueStr.startsWith('[SCM팀')) return;
               }
+
+              const type = cleanTxt(row['조치결과구분']);
+              if (!targetTypes.includes(type)) return;
+
+              const orderId = cleanId(findCol(row, ['수주건호', '수주번호']));
+              if (!orderId) return;
+
+              const accDate = findCol(row, ['서비스예약일', '예약일']);
+
+              let delayCount = 0;
+              const accTime = normalizeDate(accDate);
+              if (schMap[orderId] && accTime > 0) {
+                const uniqueSchDates = [...new Set(schMap[orderId].map(d => normalizeDate(d)).filter(time => time > 0))];
+                uniqueSchDates.forEach(schTime => { if (schTime >= accTime) delayCount++; });
+              }
+              const isDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
+              if (type === '정상출고' && isDelayed === '-') return;
+
+              const item = cleanTxt(findCol(row, ['단품코드', '품목코드']));
+              const color = cleanTxt(row['색상']);
+
+              let finalItemCode = item;
+              if (color && !item.includes(color) && !item.includes('-')) {
+                finalItemCode = `${item}-${color}`;
+              }
+
+              const wmsCandidates = wmsByOrder[orderId] || [];
+              let matchedWms = {};
+              if (wmsCandidates.length === 1) matchedWms = wmsCandidates[0];
+              else if (wmsCandidates.length > 1) matchedWms = wmsCandidates.find(w => w.item.includes(item) || item.includes(w.item)) || wmsCandidates[0];
+
+              const loc = matchedWms.loc;
+              const zone = loc ? String(loc)[0].toUpperCase() : '';
+
+              let shift = '-';
+              if (matchedWms.time) {
+                let h;
+                if (matchedWms.time instanceof Date) h = matchedWms.time.getHours();
+                else { const d = new Date(matchedWms.time); if (!isNaN(d.getTime())) h = d.getHours(); }
+                if (h !== undefined) shift = (h >= 9 && h < 18) ? '주간' : '야간';
+              }
+
+              processed.push({
+                service_date: accDate, brand: brandStr || '알수없음', service_center: row['서비스센터'] || '', service_type: row['시공/AS'] || '',
+                order_no: orderId, order_name: row['수주건명'] || '', item_code: finalItemCode, issue_qty: parseInt(row['이슈수량']) || 0,
+                action_result: type, is_delayed: isDelayed, zone: zone, worker_name: matchedWms.worker || '', shift_type: shift, status: '원인 파악 중'
+              });
+            });
+
+            if (processed.length === 0) { alert('분석 결과 저장할 데이터가 없습니다.'); setIsLoading(false); return; }
+
+            const orderNos = [...new Set(processed.map(p => p.order_no))];
+            const { data: existingData, error: fetchError } = await supabase.from('logistics_accidents').select('id, order_no, item_code, is_delayed').in('order_no', orderNos);
+            if (fetchError) throw fetchError;
+
+            const existingMap = new Map();
+            (existingData || []).forEach(d => { existingMap.set(`${d.order_no}_${d.item_code}`, d); });
+
+            const toInsert = [];
+            const toUpdate = [];
+
+            processed.forEach(p => {
+              const key = `${p.order_no}_${p.item_code}`;
+              const existingRow = existingMap.get(key);
+
+              if (!existingRow) {
+                toInsert.push(p);
+              } else {
+                if (p.is_delayed === '재일정(지연)' && existingRow.is_delayed === '-') {
+                  toUpdate.push({ id: existingRow.id, is_delayed: '재일정(지연)', updated_at: new Date().toISOString() });
+                }
+              }
+            });
+
+            if (toInsert.length === 0 && toUpdate.length === 0) { alert(`✅ 업로드하신 데이터는 이미 DB에 최신 상태로 등록되어 있습니다.`); setIsLoading(false); return; }
+
+            let insertMsg = 0; let updateMsg = 0;
+            if (toInsert.length > 0) { const { error } = await supabase.from('logistics_accidents').insert(toInsert); if (error) throw error; insertMsg = toInsert.length; }
+            if (toUpdate.length > 0) { const { error } = await supabase.from('logistics_accidents').upsert(toUpdate, { onConflict: 'id' }); if (error) throw error; updateMsg = toUpdate.length; }
+
+            alert(`🎉 사고 데이터 업데이트 완료!\n- 신규 등록: ${insertMsg}건\n- 지연 업데이트: ${updateMsg}건`);
+          }
+
+          else if (rawSch.length > 0) {
+            const orderNos = Object.keys(schMap);
+            if (orderNos.length === 0) { alert('시공일정 파일에서 수주번호를 찾을 수 없습니다.'); setIsLoading(false); return; }
+
+            const { data: existingData, error: fetchError } = await supabase.from('logistics_accidents').select('id, order_no, service_date, is_delayed').in('order_no', orderNos);
+            if (fetchError) throw fetchError;
+
+            const toUpdate = [];
+            existingData.forEach(row => {
+              const accTime = normalizeDate(row.service_date);
+              let delayCount = 0;
+              if (schMap[row.order_no] && accTime > 0) {
+                const uniqueSchDates = [...new Set(schMap[row.order_no].map(d => normalizeDate(d)).filter(time => time > 0))];
+                uniqueSchDates.forEach(schTime => { if (schTime >= accTime) delayCount++; });
+              }
+              const newIsDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
+
+              if (newIsDelayed === '재일정(지연)' && row.is_delayed === '-') {
+                toUpdate.push({ id: row.id, is_delayed: '재일정(지연)', updated_at: new Date().toISOString() });
+              }
+            });
+
+            if (toUpdate.length > 0) {
+              const { error } = await supabase.from('logistics_accidents').upsert(toUpdate, { onConflict: 'id' });
+              if (error) throw error;
+              alert(`✅ 시공일정 단독 반영 완료!\n기존 등록된 사고 중 ${toUpdate.length}건이 '재일정(지연)' 상태로 자동 업데이트되었습니다.`);
+            } else {
+              alert('✅ 시공일정을 스캔했으나, 새롭게 지연(재일정) 처리된 사고 건이 없습니다.');
             }
-          });
-
-          if (toInsert.length === 0 && toUpdate.length === 0) {
-            alert(`✅ 업로드하신 ${processed.length}건의 데이터는 이미 DB에 최신 상태로 등록되어 있습니다.`);
-            setIsLoading(false);
-            return;
           }
 
-          let insertMsg = 0;
-          let updateMsg = 0;
-
-          // 2. 신규 사고 등록
-          if (toInsert.length > 0) {
-            const { error: insertErr } = await supabase.from('logistics_accidents').insert(toInsert);
-            if (insertErr) throw insertErr;
-            insertMsg = toInsert.length;
-          }
-
-          // 3. 기존 사고 '재일정' 상태 업데이트
-          if (toUpdate.length > 0) {
-            const { error: updateErr } = await supabase.from('logistics_accidents').upsert(toUpdate, { onConflict: 'id' });
-            if (updateErr) throw updateErr;
-            updateMsg = toUpdate.length;
-          }
-
-          alert(`🎉 분석 및 업데이트 완료!\n- 신규 사고 등록: ${insertMsg}건\n- 기존 사고 납기지연(재일정) 업데이트: ${updateMsg}건`);
           fetchAccidents();
-          // --- 여기까지 덮어씌우기 ---
-        } catch (error) { alert('업로드 중 오류 발생: ' + error.message); setIsLoading(false); }
+        } catch (error) { alert('업로드 중 오류 발생: ' + error.message); console.error(error); setIsLoading(false); }
       };
 
       return (
