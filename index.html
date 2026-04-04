@@ -2554,6 +2554,34 @@
       const [startDate, setStartDate] = useState(firstDay);
       const [endDate, setEndDate] = useState(todayStr);
 
+      // 🔥 1. 여기서부터 추가! (날짜 프리셋 상태 및 클릭 이벤트)
+      const [datePreset, setDatePreset] = useState('월간'); // 기본값 월간
+
+      const handlePresetChange = (preset) => {
+        setDatePreset(preset);
+        const t = new Date();
+        const end = t.toISOString().split('T')[0];
+        let start = end;
+
+        if (preset === '당일') {
+          start = end;
+        } else if (preset === '주간') {
+          const lastWeek = new Date(t);
+          lastWeek.setDate(t.getDate() - 6); // 최근 7일
+          start = lastWeek.toISOString().split('T')[0];
+        } else if (preset === '월간') {
+          start = new Date(t.getFullYear(), t.getMonth(), 1).toISOString().split('T')[0];
+        }
+        setStartDate(start);
+        setEndDate(end);
+      };
+
+      const handleManualDateChange = (type, value) => {
+        setDatePreset('직접지정');
+        if (type === 'start') setStartDate(value);
+        else setEndDate(value);
+      };
+
       const fetchDashboardData = async () => {
         setIsLoading(true);
         try {
@@ -2611,18 +2639,40 @@
       return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-5">
 
-          {/* 상단 날짜 필터 영역 */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 px-6 h-[54px] flex items-center justify-between shrink-0 z-10">
-            <div className="flex items-center gap-3">
-              <span className="w-1.5 h-4 bg-letusBlue rounded-full"></span>
-              <h2 className="font-bold text-gray-800 text-sm">사고분석 종합 현황</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[11px] font-bold text-gray-500">조회 기간</label>
-              <div className="flex items-center">
-                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[115px] focus:outline-none focus:border-letusBlue" />
-                <span className="mx-1.5 text-gray-400 text-xs">~</span>
-                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[115px] focus:outline-none focus:border-letusBlue" />
+          {/* 🔥 2. 상단 날짜 필터 영역 완벽 교체! (특이사항 대시보드 스타일) */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 shrink-0 z-10 flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="font-bold text-gray-800 text-lg">사고분석 종합 현황</h2>
+                  {/* 선택된 버튼에 따라 뱃지 글자가 바뀝니다 */}
+                  <span className="bg-blue-50 text-letusBlue text-[11px] px-2 py-0.5 rounded font-bold border border-blue-100">
+                    {datePreset === '당일' ? '당일 현황' : datePreset === '주간' ? '주간 현황' : datePreset === '월간' ? '월간 현황' : '사용자 지정 기간'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">조회 기간: {startDate} ~ {endDate}</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* 캘린더 직접 선택 영역 */}
+                <div className="flex items-center bg-white border border-gray-200 rounded-[4px] overflow-hidden p-1 shadow-sm">
+                  <input type="date" value={startDate} onChange={e => handleManualDateChange('start', e.target.value)} className="text-xs px-2 py-1 outline-none font-medium text-gray-600 bg-transparent cursor-pointer" />
+                  <span className="text-gray-400 text-xs px-1">~</span>
+                  <input type="date" value={endDate} onChange={e => handleManualDateChange('end', e.target.value)} className="text-xs px-2 py-1 outline-none font-medium text-gray-600 bg-transparent cursor-pointer" />
+                </div>
+
+                {/* 퀵 버튼 그룹 영역 */}
+                <div className="flex items-center bg-slate-50 border border-gray-200 rounded-[4px] overflow-hidden shadow-sm text-xs font-bold">
+                  {['당일', '주간', '월간', '직접지정'].map(preset => (
+                    <button
+                      key={preset}
+                      onClick={() => handlePresetChange(preset)}
+                      className={`px-4 py-2 transition-colors border-r border-gray-200 last:border-r-0 ${datePreset === preset ? 'bg-white text-letusBlue shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
