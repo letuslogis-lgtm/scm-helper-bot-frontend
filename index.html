@@ -2546,41 +2546,46 @@
       const [accidents, setAccidents] = useState([]);
       const [isLoading, setIsLoading] = useState(true);
 
-      // 이번 달 1일 ~ 오늘까지 기본 세팅
-      const today = new Date();
-      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-      const todayStr = today.toISOString().split('T')[0];
+      // 🔥 1. 특이사항 대시보드와 완벽하게 동일한 날짜 상태 관리
+      const [filterType, setFilterType] = useState('M'); // 기본값 월간
 
-      const [startDate, setStartDate] = useState(firstDay);
-      const [endDate, setEndDate] = useState(todayStr);
+      const getTodayStr = () => {
+        const d = new Date();
+        const pad = n => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      };
 
-      // 🔥 1. 여기서부터 추가! (날짜 프리셋 상태 및 클릭 이벤트)
-      const [datePreset, setDatePreset] = useState('월간'); // 기본값 월간
+      const [customDate, setCustomDate] = useState({ start: getTodayStr(), end: getTodayStr() });
 
-      const handlePresetChange = (preset) => {
-        setDatePreset(preset);
-        const t = new Date();
-        const end = t.toISOString().split('T')[0];
-        let start = end;
+      const getFilterDates = () => {
+        const now = new Date();
+        const pad = n => n.toString().padStart(2, '0');
+        const format = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-        if (preset === '당일') {
-          start = end;
-        } else if (preset === '주간') {
-          const lastWeek = new Date(t);
-          lastWeek.setDate(t.getDate() - 6); // 최근 7일
-          start = lastWeek.toISOString().split('T')[0];
-        } else if (preset === '월간') {
-          start = new Date(t.getFullYear(), t.getMonth(), 1).toISOString().split('T')[0];
+        if (filterType === 'D') {
+          const today = format(now);
+          return { startDate: today, endDate: today, label: '당일 현황' };
         }
-        setStartDate(start);
-        setEndDate(end);
+        else if (filterType === 'W') {
+          const day = now.getDay();
+          const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
+          const monday = new Date(now);
+          monday.setDate(diffToMonday);
+          const sunday = new Date(monday);
+          sunday.setDate(monday.getDate() + 6);
+          return { startDate: format(monday), endDate: format(sunday), label: '이번 주 현황' };
+        }
+        else if (filterType === 'M') {
+          const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+          const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          return { startDate: format(firstDay), endDate: format(lastDay), label: '이번 달 현황' };
+        }
+        else {
+          return { startDate: customDate.start, endDate: customDate.end, label: '사용자 지정 기간' };
+        }
       };
 
-      const handleManualDateChange = (type, value) => {
-        setDatePreset('직접지정');
-        if (type === 'start') setStartDate(value);
-        else setEndDate(value);
-      };
+      const { startDate, endDate, label } = getFilterDates();
 
       const fetchDashboardData = async () => {
         setIsLoading(true);
@@ -2600,6 +2605,7 @@
         }
       };
 
+      // startDate나 endDate가 바뀔 때마다 자동으로 갱신
       useEffect(() => { fetchDashboardData(); }, [startDate, endDate]);
 
       // 📊 요약 데이터 계산
@@ -2639,49 +2645,43 @@
       return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-5">
 
-          {/* 🔥 2. 상단 날짜 필터 영역 완벽 교체! (진짜 특이사항 대시보드와 '완전 똑같이' 디자인) */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 shrink-0 z-10 flex flex-col gap-4">
-            <div className="flex justify-between items-center">
+          {/* 🔥 2. 완벽하게 복사된 상단 날짜 필터 UI */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 shrink-0 z-10">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="font-bold text-gray-800 text-lg">사고분석 종합 현황</h2>
-                  {/* 선택된 버튼에 따라 뱃지 글자가 바뀝니다 */}
-                  <span className="bg-blue-50 text-letusBlue text-[11px] px-2 py-0.5 rounded font-bold border border-blue-100">
-                    {datePreset === '당일' ? '당일 현황' : datePreset === '주간' ? '주간 현황' : datePreset === '월간' ? '월간 현황' : '사용자 지정 기간'}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">조회 기간: {startDate} ~ {endDate}</p>
+                <h2 className="text-lg font-bold text-gray-900 font-sans flex items-center gap-2">
+                  사고분석 종합 현황
+                  <span className="bg-blue-50 text-letusBlue text-[10px] px-2 py-0.5 rounded border border-blue-100 font-black">{label}</span>
+                </h2>
+                <p className="text-xs text-gray-400 font-medium mt-1.5">조회 기간: {startDate} ~ {endDate}</p>
               </div>
 
-              {/* 🔥 Target Design과 완전 똑같은 단일 컨테이너 디자인 적용 */}
-              <div className="flex items-center bg-slate-50 border border-gray-200 rounded-[4px] p-0.5 shadow-sm text-xs font-bold">
-                {/* 1. 날짜 프리셋 버튼 그룹 (내부 구분선 포함) */}
-                <div className="flex items-center">
-                  {['당일', '주간', '월간'].map(preset => (
+              <div className="flex items-center gap-2">
+                {/* 사용자 지정 시 나타나는 달력 폼 */}
+                {filterType === 'CUSTOM' && (
+                  <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm">
+                    <input type="date" value={customDate.start} onChange={e => setCustomDate({ ...customDate, start: e.target.value })} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                    <span className="text-gray-400 text-xs mx-1">~</span>
+                    <input type="date" value={customDate.end} onChange={e => setCustomDate({ ...customDate, end: e.target.value })} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                  </div>
+                )}
+
+                {/* D, W, M, 사용자지정 세그먼트 컨트롤 */}
+                <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner">
+                  {[
+                    { id: 'D', name: '당일' },
+                    { id: 'W', name: '주간' },
+                    { id: 'M', name: '월간' },
+                    { id: 'CUSTOM', name: '직접지정' }
+                  ].map(btn => (
                     <button
-                      key={preset}
-                      onClick={() => handlePresetChange(preset)}
-                      className={`px-4 py-2 transition-colors border-r border-gray-200 last:border-r-0 ${datePreset === preset ? 'bg-white text-letusBlue shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                      key={btn.id}
+                      onClick={() => setFilterType(btn.id)}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}
                     >
-                      {preset}
+                      {btn.name}
                     </button>
                   ))}
-                </div>
-
-                {/* 2. 날짜 직접 지정 영역 (수직 구분선 후 배치) */}
-                <div className="flex items-center">
-                  {/* 수직 구분선 */}
-                  <div className="w-[1px] h-6 bg-gray-200 mx-2"></div>
-
-                  {/* 캘린더 입력 필드 (배경 투명 처리로 컨테이너에 녹아들게 함) */}
-                  <input type="date" value={startDate} onChange={e => handleManualDateChange('start', e.target.value)} className="text-xs px-2 py-1 outline-none font-medium text-gray-600 bg-transparent cursor-pointer" />
-                  <span className="text-gray-400 text-xs px-1">~</span>
-                  <input type="date" value={endDate} onChange={e => handleManualDateChange('end', e.target.value)} className="text-xs px-2 py-1 outline-none font-medium text-gray-600 bg-transparent cursor-pointer" />
-
-                  {/* 직접지정 뱃지 (Target Design처럼 마지막에 배치) */}
-                  <span className={`px-2 py-1 ml-1 rounded font-bold transition-colors ${datePreset === '직접지정' ? 'bg-blue-50 text-letusBlue border border-blue-100' : 'text-gray-400'}`}>
-                    직접지정
-                  </span>
                 </div>
               </div>
             </div>
@@ -2723,7 +2723,6 @@
 
               {/* 차트 영역 */}
               <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
-
                 {/* 1. 귀책 부서별 현황 (가로 막대형) */}
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
                   <h3 className="font-bold text-gray-700 text-sm mb-4">🏢 귀책 부서별 현황 <span className="text-xs text-gray-400 font-normal ml-1">(등록 완료 기준)</span></h3>
