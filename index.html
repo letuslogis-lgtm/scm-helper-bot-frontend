@@ -3154,7 +3154,79 @@
             </div>
           ) : (
             <>
-              {/* 요약 카드 영역 */}
+              {/* --- 신규: 브랜드별 사고 처리 현황 (카드형을 위로 배치) --- */}
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 shrink-0 sm:mt-2">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  {displayBrands.map(brand => {
+                    const stats = brandStatsDetails[brand];
+                    const isAllSelected = selectedBrands.length === 0;
+                    const isActive = selectedBrands.includes(brand);
+                    
+                    let cardStyle = '';
+                    let titleStyle = '';
+                    let valueStyle = '';
+                    
+                    if (isAllSelected) {
+                      cardStyle = 'bg-white border-gray-100 opacity-100 hover:border-gray-200 hover:shadow-sm';
+                      titleStyle = 'text-gray-800';
+                      valueStyle = 'font-bold'; // 디폴트 상태일 때 숫자 색상은 각각의 고유색 적용을 허용
+                    } else if (isActive) {
+                      cardStyle = 'bg-white border-letusOrange/40 ring-1 ring-letusOrange/20 shadow-sm transform -translate-y-0.5';
+                      titleStyle = 'text-letusOrange';
+                      valueStyle = 'font-bold'; // 활성화 시 고유색 유지
+                    } else {
+                      cardStyle = 'bg-slate-50 border-transparent opacity-50 grayscale-[50%]';
+                      titleStyle = 'text-gray-500';
+                      valueStyle = 'font-medium text-gray-400'; // 비활성화 시 탁하게
+                    }
+
+                    return (
+                      <div 
+                        key={brand} 
+                        onClick={() => toggleBrand(brand)}
+                        className={`rounded-xl px-5 py-4 flex items-center border transition-all duration-200 text-sm cursor-pointer ${cardStyle}`}
+                      >
+                        {/* 브랜드명 */}
+                        <div style={{ width: '31%' }} className={`font-bold tracking-tight whitespace-nowrap truncate pr-2 ${titleStyle}`}>
+                          {brand}
+                        </div>
+                        {/* 3가지 지표 영역 */}
+                        <div className="flex items-center flex-1">
+                          <div style={{ width: '33.33%' }} className="flex justify-between items-center pr-3 sm:pr-4 border-r border-gray-100">
+                            <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">파악 중</span>
+                            <span 
+                              className={`text-[15px] sm:text-base hover:underline cursor-pointer ${valueStyle} ${stats.pending > 0 && (isAllSelected || isActive) ? 'text-red-500' : 'text-gray-400'}`}
+                              onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], statuses: ['원인 파악 중'] }); }}
+                            >
+                              {stats.pending}
+                            </span>
+                          </div>
+                          <div style={{ width: '33.33%' }} className="flex justify-between items-center px-3 sm:px-4 border-r border-gray-100">
+                            <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">등록 완료</span>
+                            <span 
+                              className={`text-[15px] sm:text-base hover:underline cursor-pointer ${valueStyle} ${stats.completed > 0 && (isAllSelected || isActive) ? 'text-green-600' : 'text-gray-400'}`}
+                              onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], statuses: ['등록 완료'] }); }}
+                            >
+                              {stats.completed}
+                            </span>
+                          </div>
+                          <div style={{ width: '33.33%' }} className="flex justify-between items-center pl-3 sm:pl-4">
+                            <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">납기 지연</span>
+                            <span 
+                              className={`text-[15px] sm:text-base hover:underline cursor-pointer ${valueStyle} ${stats.delayed > 0 && (isAllSelected || isActive) ? 'text-letusOrange' : 'text-gray-400'}`}
+                              onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], isDelayed: '지연' }); }}
+                            >
+                              {stats.delayed}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 요약 카드 영역 (브랜드 필터 하단부로 이동) */}
               <div className="grid grid-cols-4 gap-4 shrink-0">
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform"><svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" /></svg></div>
@@ -3178,61 +3250,6 @@
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform"><svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zM12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" /></svg></div>
                   <div className="text-letusOrange text-[13px] font-bold z-10">납기 지연 발생</div>
                   <div className="text-3xl font-black text-letusOrange mt-2 z-10">{delayedCount}<span className="text-lg font-bold text-orange-300 ml-1">건</span></div>
-                </div>
-              </div>
-
-              {/* --- 신규: 브랜드별 사고 처리 현황 (카드형) --- */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 shrink-0 mt-2">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {displayBrands.map(brand => {
-                    const stats = brandStatsDetails[brand];
-                    const isSelected = selectedBrands.length === 0 || selectedBrands.includes(brand);
-                    
-                    return (
-                      <div 
-                        key={brand} 
-                        onClick={() => toggleBrand(brand)}
-                        className={`rounded-xl px-5 py-4 flex items-center border transition-all text-sm cursor-pointer hover:shadow-md
-                          ${isSelected ? 'bg-white border-letusOrange/40 ring-1 ring-letusOrange/20' : 'bg-gray-50 border-gray-100 opacity-60'}
-                        `}
-                      >
-                        {/* 브랜드명 */}
-                        <div style={{ width: '31%' }} className={`font-bold tracking-tight whitespace-nowrap truncate pr-2 ${isSelected ? 'text-letusOrange' : 'text-gray-800'}`}>
-                          {brand}
-                        </div>
-                        {/* 3가지 지표 영역 */}
-                        <div className="flex items-center flex-1">
-                          <div style={{ width: '33.33%' }} className="flex justify-between items-center pr-3 sm:pr-4 border-r border-gray-200">
-                            <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">파악 중</span>
-                            <span 
-                              className={`font-bold text-[15px] sm:text-base hover:underline cursor-pointer ${stats.pending > 0 && isSelected ? 'text-red-500' : 'text-gray-500'}`}
-                              onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], statuses: ['원인 파악 중'] }); }}
-                            >
-                              {stats.pending}
-                            </span>
-                          </div>
-                          <div style={{ width: '33.33%' }} className="flex justify-between items-center px-3 sm:px-4 border-r border-gray-200">
-                            <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">등록 완료</span>
-                            <span 
-                              className={`font-bold text-[15px] sm:text-base hover:underline cursor-pointer ${stats.completed > 0 && isSelected ? 'text-green-600' : 'text-gray-500'}`}
-                              onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], statuses: ['등록 완료'] }); }}
-                            >
-                              {stats.completed}
-                            </span>
-                          </div>
-                          <div style={{ width: '33.33%' }} className="flex justify-between items-center pl-3 sm:pl-4">
-                            <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">납기 지연</span>
-                            <span 
-                              className={`font-bold text-[15px] sm:text-base hover:underline cursor-pointer ${stats.delayed > 0 && isSelected ? 'text-letusOrange' : 'text-gray-500'}`}
-                              onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], isDelayed: '지연' }); }}
-                            >
-                              {stats.delayed}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
 
