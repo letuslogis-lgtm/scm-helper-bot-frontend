@@ -2316,7 +2316,7 @@
           {editTarget && <UserEditModal user={editTarget} onClose={() => setEditTarget(null)} onReload={fetchUsers} />}
           {vendorListTarget && <VendorListModal user={vendorListTarget} onClose={() => setVendorListTarget(null)} />}
           {isBulkUploadModalOpen && <UserBulkUploadModal onClose={() => setIsBulkUploadModalOpen(false)} onReload={fetchUsers} />}
-          {isBulkEditModalOpen && <UserBulkEditModal selectedUserIds={selectedUserIds} users={users} onClose={() => { setIsBulkEditModalOpen(false); setSelectedUserIds([]); }} onReload={fetchUsers} />}
+          {isBulkEditModalOpen && (<UserBulkEditModal selectedUserIds={selectedUsers} users={users} onClose={() => setIsBulkEditModalOpen(false)} onReload={fetchUsers} />)}
         </div>
       );
     };
