@@ -3405,7 +3405,8 @@
                   </div>
                 </div>
                 
-                <div className="flex-1 w-full relative">
+                {/* Recharts ResponsiveContainer 높이 버그 방지를 위한 명시적 min-height 적용 */}
+                <div className="flex-1 w-full relative min-h-[250px]">
                   {isTrendLoading ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10"><div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div></div>
                   ) : trendDataMapped.data && trendDataMapped.data.length > 0 ? (
