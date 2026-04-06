@@ -3054,7 +3054,7 @@
         try {
           // endDate("YYYY-MM-DD") 파싱 시 UTC 오차 방지를 위해 직접 분해
           const [eYear, eMonth, eDay] = endDate.split('-').map(Number);
-          
+
           let tStart, tEnd;
           const pad = n => n.toString().padStart(2, '0');
           const format = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -3079,7 +3079,7 @@
 
           if (error) throw error;
           setTrendAccidents(data || []);
-        } catch(err) {
+        } catch (err) {
           console.error(err);
         } finally {
           setIsTrendLoading(false);
@@ -3089,12 +3089,12 @@
       useEffect(() => { fetchTrendData(); }, [endDate, trendType]);
 
       // 📊 필터 적용 사고 (요약 통계 및 하단 차트용)
-      const filteredAccidents = selectedBrands.length > 0 
+      const filteredAccidents = selectedBrands.length > 0
         ? accidents.filter(a => {
-            let b = a.brand || '기타';
-            if (!['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소'].includes(b)) b = '기타';
-            return selectedBrands.includes(b);
-          })
+          let b = a.brand || '기타';
+          if (!['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소'].includes(b)) b = '기타';
+          return selectedBrands.includes(b);
+        })
         : accidents;
 
       // 📊 요약 데이터 계산
@@ -3137,10 +3137,10 @@
       accidents.forEach(acc => {
         let b = acc.brand || '기타';
         if (!displayBrands.includes(b)) b = '기타';
-        
+
         if (acc.status === '원인 파악 중') brandStatsDetails[b].pending += 1;
         else if (acc.status === '등록 완료') brandStatsDetails[b].completed += 1;
-        
+
         if (acc.is_delayed && acc.is_delayed !== '-') brandStatsDetails[b].delayed += 1;
       });
 
@@ -3152,41 +3152,41 @@
         // endDate 파싱 시 UTC 오차 방지를 위해 예외 처리
         const [eYear, eMonth] = endDate.split('-').map(Number);
         const dataList = [];
-        
+
         if (trendType === 'daily') {
           const lastDate = new Date(eYear, eMonth, 0).getDate(); // 해당 월의 말일 산출
           for (let i = 1; i <= lastDate; i++) {
-              const dayStr = i.toString().padStart(2, '0');
-              const dateStr = `${eYear}-${eMonth.toString().padStart(2, '0')}-${dayStr}`;
-              const dayData = { name: `${i}일` };
-              targetBrands.forEach(b => dayData[b] = 0);
-              
-              trendAccidents.forEach(acc => {
-                 let b = acc.brand || '기타';
-                 if (!displayBrands.includes(b)) b = '기타';
-                 // 데이터 내의 날짜시간 포맷을 더 강건하게 처리하기 위해 startsWith 사용
-                 if (acc.service_date && String(acc.service_date).startsWith(dateStr) && targetBrands.includes(b)) {
-                     dayData[b] += 1;
-                 }
-              });
-              dataList.push(dayData);
+            const dayStr = i.toString().padStart(2, '0');
+            const dateStr = `${eYear}-${eMonth.toString().padStart(2, '0')}-${dayStr}`;
+            const dayData = { name: `${i}일` };
+            targetBrands.forEach(b => dayData[b] = 0);
+
+            trendAccidents.forEach(acc => {
+              let b = acc.brand || '기타';
+              if (!displayBrands.includes(b)) b = '기타';
+              // 데이터 내의 날짜시간 포맷을 더 강건하게 처리하기 위해 startsWith 사용
+              if (acc.service_date && String(acc.service_date).startsWith(dateStr) && targetBrands.includes(b)) {
+                dayData[b] += 1;
+              }
+            });
+            dataList.push(dayData);
           }
         } else {
           for (let i = 1; i <= 12; i++) {
-              const monthStr = i.toString().padStart(2, '0');
-              const prefix = `${eYear}-${monthStr}`;
-              const monthData = { name: `${i}월` };
-              targetBrands.forEach(b => monthData[b] = 0);
-              
-              trendAccidents.forEach(acc => {
-                 let b = acc.brand || '기타';
-                 if (!displayBrands.includes(b)) b = '기타';
-                 // 월 비교 시 2026-04 와 같이 매칭
-                 if (acc.service_date && String(acc.service_date).startsWith(prefix) && targetBrands.includes(b)) {
-                     monthData[b] += 1;
-                 }
-              });
-              dataList.push(monthData);
+            const monthStr = i.toString().padStart(2, '0');
+            const prefix = `${eYear}-${monthStr}`;
+            const monthData = { name: `${i}월` };
+            targetBrands.forEach(b => monthData[b] = 0);
+
+            trendAccidents.forEach(acc => {
+              let b = acc.brand || '기타';
+              if (!displayBrands.includes(b)) b = '기타';
+              // 월 비교 시 2026-04 와 같이 매칭
+              if (acc.service_date && String(acc.service_date).startsWith(prefix) && targetBrands.includes(b)) {
+                monthData[b] += 1;
+              }
+            });
+            dataList.push(monthData);
           }
         }
         return { data: dataList, brands: targetBrands };
@@ -3249,11 +3249,10 @@
                   <div
                     key={brand}
                     onClick={() => toggleBrand(brand)}
-                    className={`rounded-xl px-5 py-4 flex items-center border text-sm cursor-pointer transition-all ${
-                      isSelected
+                    className={`rounded-xl px-5 py-4 flex items-center border text-sm cursor-pointer transition-all ${isSelected
                         ? 'bg-orange-50 border-orange-400 shadow-sm ring-1 ring-orange-400/50'
                         : 'bg-slate-50/60 border-gray-100 hover:border-gray-200 hover:bg-slate-100'
-                    }`}
+                      }`}
                   >
                     <div style={{ width: '31%' }} className={`font-bold tracking-tight whitespace-nowrap truncate pr-2 ${isSelected ? 'text-orange-700' : 'text-gray-800'}`}>
                       {brand}
@@ -3262,9 +3261,9 @@
                     <div className="flex items-center flex-1">
                       <div style={{ width: '33.33%' }} className="flex justify-between items-center pr-3 sm:pr-4 border-r border-gray-200">
                         <span className="text-gray-400 font-medium whitespace-nowrap text-xs sm:text-sm">파악 중</span>
-                        <span 
+                        <span
                           className={`font-bold text-base sm:text-lg cursor-pointer hover:underline ${isAllSelected || isSelected ? 'text-red-500' : 'text-gray-400'}`}
-                          onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], statuses: ['원인 파악 중'] }); }}
+                          onClick={(e) => { e.stopPropagation(); if (onDrillDown) onDrillDown({ brands: [brand], statuses: ['원인 파악 중'] }); }}
                         >
                           {stats.pending}
                         </span>
@@ -3272,9 +3271,9 @@
 
                       <div style={{ width: '33.33%' }} className="flex justify-between items-center px-3 sm:px-4 border-r border-gray-200">
                         <span className="text-gray-400 font-medium whitespace-nowrap text-xs sm:text-sm">등록 완료</span>
-                        <span 
+                        <span
                           className={`font-bold text-base sm:text-lg cursor-pointer hover:underline ${isAllSelected || isSelected ? 'text-green-500' : 'text-gray-400'}`}
-                          onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], statuses: ['등록 완료'] }); }}
+                          onClick={(e) => { e.stopPropagation(); if (onDrillDown) onDrillDown({ brands: [brand], statuses: ['등록 완료'] }); }}
                         >
                           {stats.completed}
                         </span>
@@ -3282,9 +3281,9 @@
 
                       <div style={{ width: '33.33%' }} className="flex justify-between items-center pl-3 sm:pl-4">
                         <span className="text-gray-400 font-medium whitespace-nowrap text-xs sm:text-sm">납기 지연</span>
-                        <span 
+                        <span
                           className={`font-bold text-base sm:text-lg cursor-pointer hover:underline ${isAllSelected || isSelected ? 'text-orange-500' : 'text-gray-400'}`}
-                          onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], isDelayed: '지연' }); }}
+                          onClick={(e) => { e.stopPropagation(); if (onDrillDown) onDrillDown({ brands: [brand], isDelayed: '지연' }); }}
                         >
                           {stats.delayed}
                         </span>
@@ -3388,7 +3387,7 @@
                 </div>
 
               </div>
-              
+
               {/* --- 📈 추가: 사고 추이 현황 (독립적 꺾은선 차트) --- */}
               <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-200 mt-4 flex flex-col shrink-0 min-h-[350px]">
                 <div className="flex justify-between items-center mb-6">
@@ -3420,7 +3419,7 @@
                         <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', paddingTop: '15px' }} iconType="circle" />
                         {trendDataMapped.brands && trendDataMapped.brands.length > 0 ? (
                           trendDataMapped.brands.map((bName) => (
-                           <Line key={bName} type="monotone" dataKey={bName} stroke={TREND_COLORS[bName] || '#94a3b8'} strokeWidth={3} dot={{ r: 4, strokeWidth: 1 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} animationDuration={1000} />
+                            <Line key={bName} type="monotone" dataKey={bName} stroke={TREND_COLORS[bName] || '#94a3b8'} strokeWidth={3} dot={{ r: 4, strokeWidth: 1 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} animationDuration={1000} />
                           ))
                         ) : (
                           /* 만약 브랜드 배열이 텅 비는 오류가 날 경우를 대비한 가짜 투명 라인 */
@@ -3818,6 +3817,8 @@
               }
               const orderId = cleanId(findCol(row, ['수주번호']));
               if (!orderId) return;
+
+              const accDate = findCol(row, ['서비스예약일', '예약일', '시공예정일']);
 
               let delayCount = 0; // 기존 뒤쪽 코드와 호환성을 위해 변수명은 유지
 
