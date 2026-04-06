@@ -3052,19 +3052,21 @@
       const fetchTrendData = async () => {
         setIsTrendLoading(true);
         try {
-          const end = new Date(endDate); // 글로벌 뷰의 endDate 기준점
+          // endDate("YYYY-MM-DD") 파싱 시 UTC 오차 방지를 위해 직접 분해
+          const [eYear, eMonth, eDay] = endDate.split('-').map(Number);
+          
           let tStart, tEnd;
           const pad = n => n.toString().padStart(2, '0');
           const format = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
           if (trendType === 'daily') {
-            const firstDay = new Date(end.getFullYear(), end.getMonth(), 1);
-            const lastDay = new Date(end.getFullYear(), end.getMonth() + 1, 0);
+            const firstDay = new Date(eYear, eMonth - 1, 1);
+            const lastDay = new Date(eYear, eMonth, 0);
             tStart = format(firstDay);
             tEnd = format(lastDay);
           } else {
-            const firstDay = new Date(end.getFullYear(), 0, 1);
-            const lastDay = new Date(end.getFullYear(), 11, 31);
+            const firstDay = new Date(eYear, 0, 1);
+            const lastDay = new Date(eYear, 11, 31);
             tStart = format(firstDay);
             tEnd = format(lastDay);
           }
@@ -3144,24 +3146,26 @@
 
       // 📈 추이 그래프 데이터 매핑 로직
       const trendDataMapped = useMemo(() => {
-        if (!trendAccidents.length && !isTrendLoading) return [];
+        if (!trendAccidents.length && !isTrendLoading) return { data: [], brands: [] };
         const targetBrands = selectedBrands.length > 0 ? selectedBrands : displayBrands.filter(b => b !== '기타' && b !== '알로소'); // 너무 많으면 복잡하므로 5개로 제한
 
-        const end = new Date(endDate);
+        // endDate 파싱 시 UTC 오차 방지를 위해 예외 처리
+        const [eYear, eMonth] = endDate.split('-').map(Number);
         const dataList = [];
         
         if (trendType === 'daily') {
-          const lastDate = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
+          const lastDate = new Date(eYear, eMonth, 0).getDate(); // 해당 월의 말일 산출
           for (let i = 1; i <= lastDate; i++) {
               const dayStr = i.toString().padStart(2, '0');
-              const dateStr = `${end.getFullYear()}-${(end.getMonth() + 1).toString().padStart(2, '0')}-${dayStr}`;
+              const dateStr = `${eYear}-${eMonth.toString().padStart(2, '0')}-${dayStr}`;
               const dayData = { name: `${i}일` };
               targetBrands.forEach(b => dayData[b] = 0);
               
               trendAccidents.forEach(acc => {
                  let b = acc.brand || '기타';
                  if (!displayBrands.includes(b)) b = '기타';
-                 if (acc.service_date === dateStr && targetBrands.includes(b)) {
+                 // 데이터 내의 날짜시간 포맷을 더 강건하게 처리하기 위해 startsWith 사용
+                 if (acc.service_date && String(acc.service_date).startsWith(dateStr) && targetBrands.includes(b)) {
                      dayData[b] += 1;
                  }
               });
@@ -3170,14 +3174,15 @@
         } else {
           for (let i = 1; i <= 12; i++) {
               const monthStr = i.toString().padStart(2, '0');
-              const prefix = `${end.getFullYear()}-${monthStr}-`;
+              const prefix = `${eYear}-${monthStr}`;
               const monthData = { name: `${i}월` };
               targetBrands.forEach(b => monthData[b] = 0);
               
               trendAccidents.forEach(acc => {
                  let b = acc.brand || '기타';
                  if (!displayBrands.includes(b)) b = '기타';
-                 if (acc.service_date && acc.service_date.startsWith(prefix) && targetBrands.includes(b)) {
+                 // 월 비교 시 2026-04 와 같이 매칭
+                 if (acc.service_date && String(acc.service_date).startsWith(prefix) && targetBrands.includes(b)) {
                      monthData[b] += 1;
                  }
               });
