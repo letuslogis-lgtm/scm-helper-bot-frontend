@@ -3540,8 +3540,15 @@
               const id = cleanId(findCol(r, ['수주번호', '오더번호']));
               if (!id) return;
               if (!schMap[id]) schMap[id] = [];
-              const dVal = findCol(r, ['시공예정일', '서비스예약일', '예약일']);
-              if (dVal) schMap[id].push(dVal);
+
+              const dVal = findCol(r, ['시공예정일', '서비스예약일', '예약일']); // 바뀐 헤더 완벽 대응!
+              const reworkFlag = findCol(r, ['재시공']); // '재시공' 열 값 추출
+
+              // 날짜만 담던 것에서 -> { 날짜, 재시공여부 } 객체로 담도록 업그레이드!
+              schMap[id].push({
+                date: dVal,
+                rework: reworkFlag ? String(reworkFlag).trim().toUpperCase() : ''
+              });
             });
           }
 
@@ -3576,12 +3583,16 @@
               }
               const orderId = cleanId(findCol(row, ['수주번호']));
               if (!orderId) return;
-              const accDate = findCol(row, ['서비스예약일', '예약일']);
-              let delayCount = 0;
-              const accTime = normalizeDate(accDate);
-              if (schMap[orderId] && accTime > 0) {
-                const uniqueSchDates = [...new Set(schMap[orderId].map(d => normalizeDate(d)).filter(time => time > 0))];
-                uniqueSchDates.forEach(schTime => { if (schTime >= accTime) delayCount++; });
+
+              let delayCount = 0; // 기존 뒤쪽 코드와 호환성을 위해 변수명은 유지
+
+              if (schMap[orderId]) {
+                // 바구니에 담긴 내역 중 '재시공' 값이 'R'인 게 하나라도 있는지 확인! (초간단)
+                const hasDelay = schMap[orderId].some(item => item.rework === 'R');
+
+                if (hasDelay) {
+                  delayCount = 1; // 'R'이 있으면 무조건 연기된 건(delayCount > 0)으로 판정!
+                }
               }
               const isDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
               const item = cleanTxt(findCol(row, ['단품코드', '품목코드']));
