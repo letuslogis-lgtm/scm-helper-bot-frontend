@@ -3250,8 +3250,8 @@
                     key={brand}
                     onClick={() => toggleBrand(brand)}
                     className={`rounded-xl px-5 py-4 flex items-center border text-sm cursor-pointer transition-all ${isSelected
-                        ? 'bg-orange-50 border-orange-400 shadow-sm ring-1 ring-orange-400/50'
-                        : 'bg-slate-50/60 border-gray-100 hover:border-gray-200 hover:bg-slate-100'
+                      ? 'bg-orange-50 border-orange-400 shadow-sm ring-1 ring-orange-400/50'
+                      : 'bg-slate-50/60 border-gray-100 hover:border-gray-200 hover:bg-slate-100'
                       }`}
                   >
                     <div style={{ width: '31%' }} className={`font-bold tracking-tight whitespace-nowrap truncate pr-2 ${isSelected ? 'text-orange-700' : 'text-gray-800'}`}>
@@ -3884,28 +3884,39 @@
               return;
             }
 
-            // 🔥 한 번에 전송할 데이터 개수 (500~1000개가 적당합니다)
+            // 🔥 신규 추가: 엑셀 자체 중복 데이터 제거 (동일한 id나 코드가 여러 줄 있으면 마지막 줄만 남김)
+            // 1. 수정(Update) 데이터 중복 제거
+            const uniqueUpdateMap = new Map();
+            toUpdate.forEach(item => uniqueUpdateMap.set(item.id, item));
+            const finalToUpdate = Array.from(uniqueUpdateMap.values());
+
+            // 2. 신규(Insert) 데이터 중복 제거 (수주번호_품목코드 기준)
+            const uniqueInsertMap = new Map();
+            toInsert.forEach(item => uniqueInsertMap.set(`${item.order_no}_${item.item_code}`, item));
+            const finalToInsert = Array.from(uniqueInsertMap.values());
+
+            // 🔥 한 번에 전송할 데이터 개수 (500개)
             const CHUNK_SIZE = 500;
 
             // 1. 신규 데이터(Insert) 쪼개서 올리기
-            if (toInsert.length > 0) {
-              for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
-                const chunk = toInsert.slice(i, i + CHUNK_SIZE);
+            if (finalToInsert.length > 0) {
+              for (let i = 0; i < finalToInsert.length; i += CHUNK_SIZE) {
+                const chunk = finalToInsert.slice(i, i + CHUNK_SIZE);
                 const { error } = await supabase.from('logistics_accidents').insert(chunk);
                 if (error) throw error;
               }
             }
 
             // 2. 수정 데이터(Upsert) 쪼개서 올리기
-            if (toUpdate.length > 0) {
-              for (let i = 0; i < toUpdate.length; i += CHUNK_SIZE) {
-                const chunk = toUpdate.slice(i, i + CHUNK_SIZE);
+            if (finalToUpdate.length > 0) {
+              for (let i = 0; i < finalToUpdate.length; i += CHUNK_SIZE) {
+                const chunk = finalToUpdate.slice(i, i + CHUNK_SIZE);
                 const { error } = await supabase.from('logistics_accidents').upsert(chunk, { onConflict: 'id' });
                 if (error) throw error;
               }
             }
 
-            alert(`🎉 업데이트 완료!\n- 신규: ${toInsert.length}건\n- 수정: ${toUpdate.length}건`);
+            alert(`🎉 업데이트 완료!\n- 신규: ${finalToInsert.length}건\n- 수정: ${finalToUpdate.length}건\n(중복 제외됨)`);
           }
           else if (rawSch.length > 0) {
             const orderNos = Object.keys(schMap);
