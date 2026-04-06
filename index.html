@@ -3404,25 +3404,35 @@
                     <button onClick={() => setTrendType('monthly')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${trendType === 'monthly' ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}>월간</button>
                   </div>
                 </div>
-                
-                {/* Recharts ResponsiveContainer 높이 버그 방지를 위한 명시적 min-height 적용 */}
-                <div className="flex-1 w-full relative min-h-[250px]">
+                {/* Recharts 렌더링 미스테리를 우회하기 위해 강제 사이즈 및 보호 로직 추가 */}
+                <div style={{ height: '300px', width: '100%', position: 'relative' }}>
                   {isTrendLoading ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10"><div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div></div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+                      <div className="w-8 h-8 border-4 border-slate-200 border-t-letusBlue rounded-full animate-spin"></div>
+                    </div>
                   ) : trendDataMapped.data && trendDataMapped.data.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={trendDataMapped.data} margin={{ top: 10, right: 30, left: -20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b', fontWeight: '500' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '13px' }} cursor={{ stroke: '#e2e8f0', strokeWidth: 1 }} />
-                        <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', paddingTop: '10px' }} iconType="circle" />
-                        {trendDataMapped.brands.map((bName) => (
-                           <Line key={bName} type="monotone" dataKey={bName} stroke={TREND_COLORS[bName]} strokeWidth={3} dot={{ r: 3, strokeWidth: 2 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} animationDuration={1000} />
-                        ))}
+                    <ResponsiveContainer width="99%" height="100%">
+                      <LineChart data={trendDataMapped.data} margin={{ top: 20, right: 30, left: 0, bottom: 10 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                        <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b', fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '13px' }} cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }} />
+                        <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', paddingTop: '15px' }} iconType="circle" />
+                        {trendDataMapped.brands && trendDataMapped.brands.length > 0 ? (
+                          trendDataMapped.brands.map((bName) => (
+                           <Line key={bName} type="monotone" dataKey={bName} stroke={TREND_COLORS[bName] || '#94a3b8'} strokeWidth={3} dot={{ r: 4, strokeWidth: 1 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} animationDuration={1000} />
+                          ))
+                        ) : (
+                          /* 만약 브랜드 배열이 텅 비는 오류가 날 경우를 대비한 가짜 투명 라인 */
+                          <Line type="monotone" dataKey="none" stroke="transparent" />
+                        )}
                       </LineChart>
                     </ResponsiveContainer>
-                  ) : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">해당 기간의 사고 추이 데이터가 없습니다.</div>}
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-bold text-sm bg-slate-50/50 rounded-xl">
+                      해당 기간( {trendType === 'daily' ? '일간' : '월간'} )에 해당하는 사고 추이 데이터가 1건도 발견되지 않았습니다.
+                    </div>
+                  )}
                 </div>
               </div>
             </>
