@@ -701,6 +701,109 @@
       );
     };
 
+    // --- 👥 선택 항목 일괄 수정 모달 (Web UI 체크박스 기반) ---
+    const UserBulkEditModal = ({ selectedUserIds, users, onClose, onReload }) => {
+      const [updateTarget, setUpdateTarget] = useState({ vendor: false, menu: false });
+      const [managedVendors, setManagedVendors] = useState('');
+      const [managedBrands, setManagedBrands] = useState('');
+      const [accessibleMenus, setAccessibleMenus] = useState([]);
+      const [vendorModalOpen, setVendorModalOpen] = useState(false);
+      const [menuModalOpen, setMenuModalOpen] = useState(false);
+      const [isSaving, setIsSaving] = useState(false);
+
+      const targetUsers = users.filter(u => selectedUserIds.includes(u.id));
+
+      const handleSave = async () => {
+        if (!updateTarget.vendor && !updateTarget.menu) return alert('변경할 대상을 선택해 주세요.');
+
+        setIsSaving(true);
+        try {
+          const updateData = {};
+          if (updateTarget.vendor) {
+            updateData.managed_vendors = managedVendors;
+            updateData.managed_brands = managedBrands;
+          }
+          if (updateTarget.menu) {
+            updateData.accessible_menus = accessibleMenus.join(',');
+          }
+
+          // 선택된 유저 ID들에 대해 일괄 업데이트 쿼리 실행
+          const { error } = await adminSupabase.from('profiles').update(updateData).in('id', selectedUserIds);
+          if (error) throw error;
+
+          alert(`총 ${selectedUserIds.length}명의 정보가 일괄 수정되었습니다.`);
+          onReload();
+          onClose();
+        } catch (err) {
+          alert('일괄 수정 중 오류 발생: ' + err.message);
+        } finally {
+          setIsSaving(false);
+        }
+      };
+
+      return (
+        <>
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-[450px] overflow-hidden flex flex-col slide-up">
+              <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-white">
+                <h3 className="text-sm font-bold text-gray-800 flex items-center"><span className="w-1.5 h-3.5 bg-letusBlue rounded-full mr-2"></span>선택 항목 일괄 수정</h3>
+                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><CloseIcon /></button>
+              </div>
+              <div className="p-6 bg-slate-50 flex-1 space-y-5">
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs font-bold text-letusBlue text-center">
+                  현재 <span className="text-lg mx-1">{selectedUserIds.length}</span>명의 사용자가 선택되었습니다.
+                </div>
+
+                <div className="space-y-4">
+                  {/* 옵션 1: 업체/브랜드 일괄 변경 */}
+                  <div className={`border rounded-lg p-4 transition-colors ${updateTarget.vendor ? 'border-letusBlue bg-white shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
+                    <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm mb-3">
+                      <input type="checkbox" checked={updateTarget.vendor} onChange={e => setUpdateTarget({ ...updateTarget, vendor: e.target.checked })} className="w-4 h-4 accent-letusBlue" />
+                      담당 브랜드 및 업체 일괄 변경
+                    </label>
+                    {updateTarget.vendor && (
+                      <div className="pl-6 animate-fade-in space-y-2">
+                        <div className="flex flex-wrap gap-1.5 text-[10px] font-bold">
+                          <span className="bg-orange-50 text-letusOrange border border-orange-200 px-2 py-0.5 rounded-full">{managedBrands || '선택된 브랜드 없음'}</span>
+                          <span className="bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full">{managedVendors || '선택된 업체 없음'}</span>
+                        </div>
+                        <button onClick={() => setVendorModalOpen(true)} className="text-[11px] font-bold text-letusBlue bg-blue-50 border border-blue-200 px-3 py-1.5 rounded hover:bg-blue-100">업체/브랜드 재설정 모달 열기</button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 옵션 2: 메뉴 권한 일괄 변경 */}
+                  <div className={`border rounded-lg p-4 transition-colors ${updateTarget.menu ? 'border-purple-400 bg-white shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
+                    <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm mb-3">
+                      <input type="checkbox" checked={updateTarget.menu} onChange={e => setUpdateTarget({ ...updateTarget, menu: e.target.checked })} className="w-4 h-4 accent-purple-500" />
+                      메뉴 접근 권한 일괄 덮어쓰기
+                    </label>
+                    {updateTarget.menu && (
+                      <div className="pl-6 animate-fade-in">
+                        <button onClick={() => setMenuModalOpen(true)} className="text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1.5 rounded hover:bg-purple-100 flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                          메뉴 권한 아코디언 열기 ({accessibleMenus.length}개 선택됨)
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t bg-white flex justify-end gap-2">
+                <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 text-[11px] font-bold rounded hover:bg-gray-50">취소</button>
+                <button onClick={handleSave} disabled={isSaving || (!updateTarget.vendor && !updateTarget.menu)} className="px-5 py-2 bg-letusBlue text-white text-[11px] font-bold rounded hover:bg-blue-600 flex items-center gap-1.5 disabled:opacity-50">
+                  {isSaving ? '일괄 적용 중...' : '선택 대상 일괄 적용'}
+                </button>
+              </div>
+            </div>
+          </div>
+          {vendorModalOpen && <VendorSearchModal initialVendors={managedVendors} onApplyVendors={setManagedVendors} initialBrands={managedBrands} onApplyBrands={setManagedBrands} onClose={() => setVendorModalOpen(false)} />}
+          {menuModalOpen && <MenuPermissionModal initialMenus={accessibleMenus} onApply={setAccessibleMenus} onClose={() => setMenuModalOpen(false)} />}
+        </>
+      );
+    };
+
     // --- 👤 사용자 추가 모달 (UserAddModal - UI 간소화 및 메뉴권한 모달 분리) ---
     const UserAddModal = ({ onClose, onReload }) => {
       const [name, setName] = useState('');
@@ -877,50 +980,37 @@
       );
     };
 
-    // --- 👥 사용자 일괄 업로드 전용 모달 (Excel Bulk Upload) ---
+    // --- 👥 사용자 일괄 업로드 전용 모달 (Excel Upsert: 신규생성 + 기존수정) ---
     const UserBulkUploadModal = ({ onClose, onReload }) => {
       const [file, setFile] = useState(null);
       const [isUploading, setIsUploading] = useState(false);
       const [uploadStats, setUploadStats] = useState(null);
 
-      // 📝 1. 엑셀 양식 다운로드 기능
       const handleDownloadTemplate = () => {
         const templateData = [
           {
-            '이름(필수)': '홍길동', '아이디(필수)': 'gildong', '비밀번호(필수)': '123456',
+            '이름(필수)': '홍길동', '아이디(필수)': 'gildong', '비밀번호(필수/선택)': '123456',
             '소속팀(필수)': '물류사업1팀', '소속브랜드': '퍼시스', '권한그룹': '사용자', '상태': '정상',
             '담당브랜드': '퍼시스, 일룸', '담당업체': 'CJ대한통운',
             '허용메뉴(ID)': 'dashboard,list,accident_dashboard,accident_list'
-          },
-          {
-            '이름(필수)': '김철수', '아이디(필수)': 'chulsoo', '비밀번호(필수)': '123456',
-            '소속팀(필수)': '구매팀', '소속브랜드': '전체', '권한그룹': '사용자', '상태': '정상',
-            '담당브랜드': '', '담당업체': '',
-            '허용메뉴(ID)': 'accident_dashboard,accident_list'
           }
         ];
-
         const ws = XLSX.utils.json_to_sheet(templateData);
-        // 열 너비 자동 맞춤
         ws['!cols'] = [{ wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 20 }, { wch: 20 }, { wch: 40 }];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "사용자업로드양식");
-        XLSX.writeFile(wb, `사용자_일괄등록_양식_${new Date().toISOString().split('T')[0]}.xlsx`);
+        XLSX.writeFile(wb, `사용자_일괄등록수정_양식_${new Date().toISOString().split('T')[0]}.xlsx`);
       };
 
-      // 📥 2. 파일 선택 처리
       const handleFileChange = (e) => {
         const selected = e.target.files[0];
         if (selected && selected.name.includes('.xls')) setFile(selected);
         else { alert('엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.'); e.target.value = null; }
       };
 
-      // 🚀 3. 엑셀 데이터 파싱 및 DB 일괄 저장 로직
       const handleUpload = async () => {
         if (!file) return alert('업로드할 엑셀 파일을 선택해 주세요.');
-
-        setIsUploading(true);
-        setUploadStats(null);
+        setIsUploading(true); setUploadStats(null);
 
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -930,77 +1020,65 @@
 
             if (rows.length === 0) throw new Error('엑셀 파일에 데이터가 없습니다.');
 
-            let successCount = 0;
-            let failCount = 0;
+            let insertCount = 0; let updateCount = 0; let failCount = 0;
             const errorLogs = [];
 
-            // Supabase API 속도 제한을 고려하여 순차적(for...of)으로 처리합니다.
             for (const [index, row] of rows.entries()) {
-              const rowNum = index + 2; // 헤더 제외 2행부터 시작
-
+              const rowNum = index + 2;
               const name = String(row['이름(필수)'] || '').trim();
               const loginId = String(row['아이디(필수)'] || '').trim();
-              const password = String(row['비밀번호(필수)'] || '').trim();
+              const password = String(row['비밀번호(필수/선택)'] || '').trim();
               const team = String(row['소속팀(필수)'] || '').trim();
 
-              if (!name || !loginId || !password || !team) {
-                failCount++;
-                errorLogs.push(`${rowNum}행: 필수 항목(이름, 아이디, 비밀번호, 소속팀) 누락`);
-                continue;
-              }
-
-              if (password.length < 6) {
-                failCount++;
-                errorLogs.push(`${rowNum}행: ${loginId} - 비밀번호 6자리 미만`);
-                continue;
+              if (!name || !loginId || !team) {
+                failCount++; errorLogs.push(`${rowNum}행: 필수 항목 누락`); continue;
               }
 
               try {
-                // 1) Auth 계정 생성 (이메일 형식이 아니면 @letus.com 붙임)
-                const targetEmail = loginId.includes('@') ? loginId : `${loginId}@letus.com`;
-                const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
-                  email: targetEmail,
-                  password: password,
-                  email_confirm: true
-                });
+                // 🔥 DB에서 기존 계정 존재 여부 확인
+                const { data: existingProfiles } = await adminSupabase.from('profiles').select('id').eq('login_id', loginId);
+                const existingProfile = existingProfiles?.[0];
 
-                if (authError) throw authError;
-
-                // 2) Profile 정보 생성
-                const newUserId = authData.user.id;
                 const role = String(row['권한그룹'] || '사용자').trim();
                 const status = String(row['상태'] || '정상').trim();
                 const brand = String(row['소속브랜드'] || '전체').trim();
                 const mBrands = String(row['담당브랜드'] || '').trim();
                 const mVendors = String(row['담당업체'] || '').trim();
-
-                // 허용 메뉴가 빈칸이면 기본 사고분석 메뉴 권한만 줌
                 let menus = String(row['허용메뉴(ID)'] || '').trim();
                 if (!menus) menus = 'accident_dashboard,accident_list';
 
-                const { error: profileError } = await adminSupabase.from('profiles').insert([{
-                  id: newUserId, name, login_id: loginId, role, status, brands: brand, team,
-                  managed_vendors: mVendors, managed_brands: mBrands, accessible_menus: menus,
-                  created_at: new Date().toISOString()
-                }]);
+                if (existingProfile) {
+                  // 🔥 기존 계정 업데이트
+                  if (password && password.length >= 6) {
+                    await adminSupabase.auth.admin.updateUserById(existingProfile.id, { password });
+                  }
+                  await adminSupabase.from('profiles').update({
+                    name, role, status, brands: brand, team,
+                    managed_vendors: mVendors, managed_brands: mBrands, accessible_menus: menus
+                  }).eq('id', existingProfile.id);
+                  updateCount++;
+                } else {
+                  // 🔥 신규 계정 생성
+                  if (!password || password.length < 6) throw new Error('신규 계정은 6자리 이상의 비밀번호가 필수입니다.');
+                  const targetEmail = loginId.includes('@') ? loginId : `${loginId}@letus.com`;
+                  const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({ email: targetEmail, password: password, email_confirm: true });
+                  if (authError) throw authError;
 
-                if (profileError) throw profileError;
-                successCount++;
-
+                  await adminSupabase.from('profiles').insert([{
+                    id: authData.user.id, name, login_id: loginId, role, status, brands: brand, team,
+                    managed_vendors: mVendors, managed_brands: mBrands, accessible_menus: menus, created_at: new Date().toISOString()
+                  }]);
+                  insertCount++;
+                }
               } catch (err) {
-                failCount++;
-                errorLogs.push(`${rowNum}행: ${loginId} - ${err.message.includes('already registered') ? '이미 존재하는 아이디' : err.message}`);
+                failCount++; errorLogs.push(`${rowNum}행 (${loginId}): ${err.message}`);
               }
             }
+            setUploadStats({ insert: insertCount, update: updateCount, fail: failCount, logs: errorLogs });
+            if (insertCount > 0 || updateCount > 0) onReload();
 
-            setUploadStats({ success: successCount, fail: failCount, logs: errorLogs });
-            if (successCount > 0) onReload();
-
-          } catch (err) {
-            alert('업로드 처리 중 오류 발생: ' + err.message);
-          } finally {
-            setIsUploading(false);
-          }
+          } catch (err) { alert('업로드 중 오류 발생: ' + err.message); }
+          finally { setIsUploading(false); }
         };
         reader.readAsBinaryString(file);
       };
@@ -1008,73 +1086,42 @@
       return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-[500px] overflow-hidden flex flex-col slide-up">
-            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-white shrink-0">
-              <h3 className="text-sm font-bold text-gray-800 flex items-center">
-                <span className="w-1.5 h-3.5 bg-green-500 rounded-full mr-2"></span>사용자 일괄 등록 (Excel)
-              </h3>
-              <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1"><CloseIcon /></button>
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-white">
+              <h3 className="text-sm font-bold text-gray-800 flex items-center"><span className="w-1.5 h-3.5 bg-green-500 rounded-full mr-2"></span>사용자 일괄 등록/수정 (Excel)</h3>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><CloseIcon /></button>
             </div>
-
             <div className="p-6 bg-slate-50 flex-1 overflow-y-auto max-h-[70vh] custom-scrollbar">
-
               {!uploadStats ? (
                 <div className="space-y-4">
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-xs">
-                    <h4 className="font-bold text-letusBlue mb-2 flex items-center gap-1">
-                      💡 일괄 등록 가이드
-                    </h4>
-                    <ul className="list-disc list-inside text-gray-600 space-y-1 ml-1 font-medium">
-                      <li>먼저 아래의 <span className="font-bold text-gray-800">양식 다운로드</span> 버튼을 눌러 엑셀 파일을 받으세요.</li>
-                      <li>양식에 맞게 사용자 정보를 입력한 후 파일을 업로드해 주세요.</li>
-                      <li>이미 존재하는 아이디(ID)는 등록이 건너뛰어집니다.</li>
-                      <li>허용 메뉴 ID 예시: <span className="text-gray-400">dashboard, list, accident_list 등</span></li>
-                    </ul>
+                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-xs font-medium text-gray-600 space-y-1">
+                    <p className="font-bold text-letusBlue mb-2">💡 엑셀 일괄 처리 가이드</p>
+                    <p>- <span className="font-bold text-green-600">신규 아이디:</span> 시스템에 새로운 계정으로 등록됩니다.</p>
+                    <p>- <span className="font-bold text-orange-500">기존 아이디:</span> 엑셀 데이터로 기존 정보가 <b>업데이트(덮어쓰기)</b> 됩니다.</p>
                   </div>
-
-                  <button onClick={handleDownloadTemplate} className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-green-500 text-green-600 text-xs font-bold rounded-lg hover:bg-green-50 transition-colors shadow-sm">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    엑셀 입력 양식 다운로드
-                  </button>
-
-                  <div className="pt-2">
-                    <label className="text-[11px] font-bold text-gray-700 mb-1.5 block">엑셀 파일 업로드</label>
-                    <input type="file" accept=".xlsx, .xls" onChange={handleFileChange} className="block w-full text-xs text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-letusBlue hover:file:bg-blue-100 border border-gray-300 rounded-lg bg-white cursor-pointer transition-all" />
-                  </div>
+                  <button onClick={handleDownloadTemplate} className="w-full flex justify-center gap-2 py-2.5 border border-green-500 text-green-600 text-xs font-bold rounded-lg hover:bg-green-50 shadow-sm"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>양식 다운로드</button>
+                  <input type="file" accept=".xlsx, .xls" onChange={handleFileChange} className="block w-full text-xs text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded file:border-0 file:font-bold file:bg-blue-50 file:text-letusBlue hover:file:bg-blue-100 border border-gray-300 rounded-lg bg-white cursor-pointer" />
                 </div>
               ) : (
-                <div className="space-y-4 slide-up">
-                  <div className={`p-4 rounded-lg border ${uploadStats.fail === 0 ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
-                    <h4 className="font-bold text-gray-800 mb-2 text-sm text-center">업로드 결과 리포트</h4>
-                    <div className="flex justify-center gap-6 text-sm font-bold">
-                      <span className="text-green-600">✅ 성공: {uploadStats.success}명</span>
-                      <span className="text-red-500">❌ 실패: {uploadStats.fail}명</span>
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg border bg-white border-gray-200">
+                    <h4 className="font-bold text-gray-800 mb-2 text-center">업로드 처리 결과</h4>
+                    <div className="flex justify-center gap-4 text-sm font-bold">
+                      <span className="text-green-600">✨ 신규: {uploadStats.insert}</span>
+                      <span className="text-blue-600">🔄 수정: {uploadStats.update}</span>
+                      <span className="text-red-500">❌ 실패: {uploadStats.fail}</span>
                     </div>
                   </div>
-
                   {uploadStats.logs.length > 0 && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-3">
-                      <p className="text-[11px] font-bold text-gray-600 mb-2 border-b border-gray-100 pb-1">실패 내역 (에러 로그)</p>
-                      <ul className="text-[11px] text-red-500 space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
-                        {uploadStats.logs.map((log, idx) => <li key={idx}>- {log}</li>)}
-                      </ul>
+                    <div className="bg-red-50 border border-red-100 rounded-lg p-3 max-h-32 overflow-auto text-[11px] text-red-500">
+                      {uploadStats.logs.map((l, i) => <p key={i}>- {l}</p>)}
                     </div>
                   )}
                 </div>
               )}
-
             </div>
-
-            <div className="p-4 border-t border-gray-200 bg-white flex justify-end gap-2 shrink-0">
-              <button type="button" onClick={onClose} className="px-5 py-[9px] border border-gray-300 text-gray-600 text-[11px] font-bold rounded-[3px] hover:bg-gray-50 transition-colors">
-                {uploadStats ? '닫기' : '취소'}
-              </button>
-
-              {!uploadStats && (
-                <button onClick={handleUpload} disabled={isUploading || !file} className={`px-5 py-[9px] bg-letusBlue text-white text-[11px] font-bold rounded-[3px] hover:bg-blue-600 transition-colors flex items-center gap-1.5 ${(isUploading || !file) ? 'opacity-70 cursor-not-allowed' : ''}`}>
-                  {isUploading ? <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : null}
-                  {isUploading ? '일괄 등록 중...' : '데이터 분석 및 등록'}
-                </button>
-              )}
+            <div className="p-4 border-t bg-white flex justify-end gap-2">
+              <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 text-[11px] font-bold rounded hover:bg-gray-50">{uploadStats ? '닫기' : '취소'}</button>
+              {!uploadStats && <button onClick={handleUpload} disabled={isUploading || !file} className="px-5 py-2 bg-letusBlue text-white text-[11px] font-bold rounded hover:bg-blue-600 flex items-center gap-1.5">{isUploading ? '처리 중...' : '데이터 분석 및 적용'}</button>}
             </div>
           </div>
         </div>
@@ -1961,6 +2008,8 @@
       const [filterKeyword, setFilterKeyword] = useState('');
       const [filterVendor, setFilterVendor] = useState('');
       const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+      const [selectedUserIds, setSelectedUserIds] = useState([]);
+      const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
 
       const isAllSelected = users.length > 0 && selectedUsers.length === users.length;
 
@@ -2105,6 +2154,16 @@
                   )}
                 </button>
               </div>
+              {/* 🔥 선택 항목 일괄 수정 버튼 (1명 이상 선택 시 노출) */}
+              {selectedUserIds.length > 0 && (
+                <button
+                  onClick={() => setIsBulkEditModalOpen(true)}
+                  className="flex items-center text-xs font-bold text-letusBlue bg-blue-50 border border-blue-200 rounded shadow-sm px-3 py-[7px] hover:bg-blue-100 transition-all mr-2"
+                >
+                  <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  <span>선택 항목 일괄 수정 ({selectedUserIds.length})</span>
+                </button>
+              )}
               {/* 🔥 신규: 엑셀 일괄 등록 버튼 */}
               <button
                 onClick={() => setIsBulkUploadModalOpen(true)}
@@ -2225,6 +2284,7 @@
           {editTarget && <UserEditModal user={editTarget} onClose={() => setEditTarget(null)} onReload={fetchUsers} />}
           {vendorListTarget && <VendorListModal user={vendorListTarget} onClose={() => setVendorListTarget(null)} />}
           {isBulkUploadModalOpen && <UserBulkUploadModal onClose={() => setIsBulkUploadModalOpen(false)} onReload={fetchUsers} />}
+          {isBulkEditModalOpen && <UserBulkEditModal selectedUserIds={selectedUserIds} users={users} onClose={() => { setIsBulkEditModalOpen(false); setSelectedUserIds([]); }} onReload={fetchUsers} />}
         </div>
       );
     };
