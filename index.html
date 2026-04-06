@@ -3642,9 +3642,33 @@
                 });
               }
             });
-            if (toInsert.length === 0 && toUpdate.length === 0) { alert(`✅ 이미 최신 상태입니다.`); setIsLoading(false); return; }
-            if (toInsert.length > 0) { const { error } = await supabase.from('logistics_accidents').insert(toInsert); if (error) throw error; }
-            if (toUpdate.length > 0) { const { error } = await supabase.from('logistics_accidents').upsert(toUpdate, { onConflict: 'id' }); if (error) throw error; }
+            if (toInsert.length === 0 && toUpdate.length === 0) {
+              alert(`✅ 이미 최신 상태입니다.`);
+              setIsLoading(false);
+              return;
+            }
+
+            // 🔥 한 번에 전송할 데이터 개수 (500~1000개가 적당합니다)
+            const CHUNK_SIZE = 500;
+
+            // 1. 신규 데이터(Insert) 쪼개서 올리기
+            if (toInsert.length > 0) {
+              for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
+                const chunk = toInsert.slice(i, i + CHUNK_SIZE);
+                const { error } = await supabase.from('logistics_accidents').insert(chunk);
+                if (error) throw error;
+              }
+            }
+
+            // 2. 수정 데이터(Upsert) 쪼개서 올리기
+            if (toUpdate.length > 0) {
+              for (let i = 0; i < toUpdate.length; i += CHUNK_SIZE) {
+                const chunk = toUpdate.slice(i, i + CHUNK_SIZE);
+                const { error } = await supabase.from('logistics_accidents').upsert(chunk, { onConflict: 'id' });
+                if (error) throw error;
+              }
+            }
+
             alert(`🎉 업데이트 완료!\n- 신규: ${toInsert.length}건\n- 수정: ${toUpdate.length}건`);
           }
           else if (rawSch.length > 0) {
