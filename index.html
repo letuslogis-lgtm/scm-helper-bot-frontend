@@ -2784,11 +2784,10 @@
       );
     };
 
-    // --- 📥 엑셀 업로드 전용 모달 (필터링 ON/OFF 토글 적용) ---
+    // --- 📥 엑셀 업로드 전용 모달 (필터링 ON/OFF 토글 및 단독 업로드 허용) ---
     const AccidentUploadModal = ({ onClose, onFileUpload }) => {
       const [isDragging, setIsDragging] = useState(false);
       const [files, setFiles] = useState({ acc: null, sch: null, wms: [] });
-      // 🔥 필터 ON/OFF 상태 추가 (기본값 ON)
       const [applyFilters, setApplyFilters] = useState(true);
       const fileInputRef = React.useRef(null);
 
@@ -2825,20 +2824,14 @@
       const handleFileSelect = (e) => { processFiles(e.target.files); };
 
       const handleUploadClick = () => {
-        const hasBaseFiles = files.acc && files.wms.length > 0;
-        const hasSchFile = !!files.sch;
-
-        if (!hasBaseFiles && !hasSchFile) {
-          return alert('🚨 신규 등록용(상차이슈+WMS) 또는 지연 업데이트용(시공일정) 파일을 올려주세요!');
-        }
-        if (files.acc && files.wms.length === 0) {
-          return alert('🚨 상차이슈를 올리실 때는 WMS 파일도 최소 1개 이상 세트로 필요합니다!');
+        // 🔥 WMS 필수 제한 완전 해제! 상차이슈나 시공일정 중 하나만 있어도 통과!
+        if (!files.acc && !files.sch && files.wms.length === 0) {
+          return alert('🚨 업로드할 파일을 선택해주세요!');
         }
         if (!files.acc && files.wms.length > 0) {
-          return alert('🚨 WMS 파일만으로는 등록할 수 없습니다. 상차이슈 파일을 같이 올려주세요!');
+          return alert('🚨 WMS 파일만으로는 분석할 수 없습니다. 상차이슈 파일을 같이 올려주세요!');
         }
 
-        // 🔥 파일 데이터와 함께 필터 ON/OFF 상태도 같이 넘겨줍니다!
         onFileUpload({ ...files, applyFilters });
       };
 
@@ -2860,8 +2853,9 @@
               <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 mb-5 text-sm">
                 <h4 className="font-bold text-letusBlue mb-2">💡 파일 업로드 가이드</h4>
                 <ul className="list-disc list-inside text-gray-600 space-y-1.5 text-xs font-medium ml-1">
-                  <li><span className="font-bold text-gray-800">신규 사고 등록 시:</span> 상차이슈(1개) + WMS(여러 개 가능) 필수</li>
-                  <li><span className="font-bold text-gray-800">납기지연(재일정) 업데이트 시:</span> 시공일정(1개)만 단독 업로드 가능</li>
+                  {/* 🔥 가이드 텍스트 수정 */}
+                  <li><span className="font-bold text-gray-800">사고 등록 및 수정 시:</span> 상차이슈 1개 필수 <span className="text-gray-400">(WMS는 선택)</span></li>
+                  <li><span className="font-bold text-gray-800">납기지연(재일정) 업데이트 시:</span> 시공일정 단독 업로드 가능</li>
                   <li>파일 이름에 <span className="text-blue-500 font-bold">상차이슈, 시공일정, WMS</span> 단어가 포함되어야 합니다.</li>
                 </ul>
               </div>
@@ -2881,7 +2875,6 @@
                 <div className={`p-2 rounded border text-center text-xs font-bold transition-colors ${files.wms.length > 0 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>3. WMS <span className="text-blue-500">({files.wms.length}개)</span> {files.wms.length > 0 && '✅'}</div>
               </div>
 
-              {/* 🔥 예외 데이터 필터링 토글 스위치 */}
               <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
                 <div>
                   <p className="text-[12px] font-bold text-gray-800">🛠️ 예외 데이터 자동 제외 필터</p>
@@ -3216,7 +3209,8 @@
             if (processed.length === 0) { alert('분석 결과 저장할 데이터가 없습니다.'); setIsLoading(false); return; }
 
             const orderNos = [...new Set(processed.map(p => p.order_no))];
-            const { data: existingData, error: fetchError } = await supabase.from('logistics_accidents').select('id, order_no, item_code, is_delayed').in('order_no', orderNos);
+            // 🔥 WMS 보호를 위해 기존 데이터에서 zone, worker_name, shift_type 까지 통째로 불러옵니다!
+            const { data: existingData, error: fetchError } = await supabase.from('logistics_accidents').select('id, order_no, item_code, is_delayed, zone, worker_name, shift_type').in('order_no', orderNos);
             if (fetchError) throw fetchError;
 
             const existingMap = new Map();
@@ -3230,11 +3224,43 @@
               const existingRow = existingMap.get(key);
 
               if (!existingRow) {
+                // 완전히 새로운 건일 경우 삽입
                 toInsert.push(p);
               } else {
-                if (p.is_delayed === '재일정(지연)' && existingRow.is_delayed === '-') {
-                  toUpdate.push({ id: existingRow.id, is_delayed: '재일정(지연)', updated_at: new Date().toISOString() });
+                // 🔥 기존 건 덮어쓰기 (수정 모드)
+                let finalDelayed = existingRow.is_delayed;
+                if (p.is_delayed === '재일정(지연)') finalDelayed = '재일정(지연)';
+
+                // 기존 WMS 데이터를 백업
+                let finalZone = existingRow.zone;
+                let finalWorker = existingRow.worker_name;
+                let finalShift = existingRow.shift_type;
+
+                // 만약 이번 업로드에 WMS 파일이 같이 들어와서 새로운 작업자 정보가 파싱되었다면 갱신
+                if (p.worker_name) {
+                  finalZone = p.zone;
+                  finalWorker = p.worker_name;
+                  finalShift = p.shift_type;
                 }
+
+                // 기존 ID를 타겟으로 최신 데이터로 업데이트 (상태값은 보존됨)
+                toUpdate.push({
+                  id: existingRow.id,
+                  service_date: p.service_date,
+                  brand: p.brand,
+                  service_center: p.service_center,
+                  service_type: p.service_type,
+                  order_no: p.order_no,
+                  order_name: p.order_name,
+                  item_code: p.item_code,
+                  issue_qty: p.issue_qty,
+                  action_result: p.action_result,
+                  is_delayed: finalDelayed,
+                  zone: finalZone,
+                  worker_name: finalWorker,
+                  shift_type: finalShift,
+                  updated_at: new Date().toISOString()
+                });
               }
             });
 
@@ -3242,7 +3268,11 @@
 
             let insertMsg = 0; let updateMsg = 0;
             if (toInsert.length > 0) { const { error } = await supabase.from('logistics_accidents').insert(toInsert); if (error) throw error; insertMsg = toInsert.length; }
+
+            // 변경된 정보(또는 유지된 정보)를 덮어씌움
             if (toUpdate.length > 0) { const { error } = await supabase.from('logistics_accidents').upsert(toUpdate, { onConflict: 'id' }); if (error) throw error; updateMsg = toUpdate.length; }
+
+            alert(`🎉 사고 데이터 업데이트 완료!\n- 신규 등록: ${insertMsg}건\n- 기존 데이터 수정/갱신: ${updateMsg}건`);
 
             alert(`🎉 사고 데이터 업데이트 완료!\n- 신규 등록: ${insertMsg}건\n- 지연 업데이트: ${updateMsg}건`);
           }
