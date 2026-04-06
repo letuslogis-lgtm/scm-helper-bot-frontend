@@ -2973,12 +2973,17 @@
     };
 
     // --- 📊 사고분석 대시보드 (AccidentDashboard) ---
-    const AccidentDashboard = () => {
+    const AccidentDashboard = ({ userProfile, onDrillDown }) => {
       const [accidents, setAccidents] = useState([]);
       const [isLoading, setIsLoading] = useState(true);
 
       // 🔥 1. 특이사항 대시보드와 완벽하게 동일한 날짜 상태 관리
       const [filterType, setFilterType] = useState('M'); // 기본값 월간
+
+      const [selectedBrands, setSelectedBrands] = useState([]);
+      const toggleBrand = (brand) => {
+        setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]);
+      };
 
       const getTodayStr = () => {
         const d = new Date();
@@ -3039,14 +3044,23 @@
       // startDate나 endDate가 바뀔 때마다 자동으로 갱신
       useEffect(() => { fetchDashboardData(); }, [startDate, endDate]);
 
+      // 📊 필터 적용 사고 (요약 통계 및 하단 차트용)
+      const filteredAccidents = selectedBrands.length > 0 
+        ? accidents.filter(a => {
+            let b = a.brand || '기타';
+            if (!['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소'].includes(b)) b = '기타';
+            return selectedBrands.includes(b);
+          })
+        : accidents;
+
       // 📊 요약 데이터 계산
-      const totalCount = accidents.length;
-      const pendingCount = accidents.filter(a => a.status === '원인 파악 중').length;
-      const completedCount = accidents.filter(a => a.status === '등록 완료').length;
-      const delayedCount = accidents.filter(a => a.is_delayed !== '-').length;
+      const totalCount = filteredAccidents.length;
+      const pendingCount = filteredAccidents.filter(a => a.status === '원인 파악 중').length;
+      const completedCount = filteredAccidents.filter(a => a.status === '등록 완료').length;
+      const delayedCount = filteredAccidents.filter(a => a.is_delayed && a.is_delayed !== '-').length;
 
       // 📊 귀책 부서별 통계
-      const deptStats = accidents.reduce((acc, curr) => {
+      const deptStats = filteredAccidents.reduce((acc, curr) => {
         if (curr.status === '등록 완료') {
           const dept = curr.responsible_dept || '미배정';
           acc[dept] = (acc[dept] || 0) + 1;
@@ -3056,15 +3070,15 @@
       const deptData = Object.keys(deptStats).map(name => ({ name, value: deptStats[name] })).sort((a, b) => b.value - a.value);
 
       // 📊 조치결과별 통계 (파이 차트용)
-      const resultStats = accidents.reduce((acc, curr) => {
+      const resultStats = filteredAccidents.reduce((acc, curr) => {
         const res = curr.action_result || '기타';
         acc[res] = (acc[res] || 0) + 1;
         return acc;
       }, {});
       const resultData = Object.keys(resultStats).map(name => ({ name, value: resultStats[name] })).sort((a, b) => b.value - a.value);
 
-      // 📊 브랜드별 통계
-      const brandStats = accidents.reduce((acc, curr) => {
+      // 📊 브랜드별 통계 (하단 차트 표시용)
+      const brandStats = filteredAccidents.reduce((acc, curr) => {
         const brand = curr.brand || '알수없음';
         acc[brand] = (acc[brand] || 0) + 1;
         return acc;
@@ -3096,7 +3110,7 @@
             <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
               <div>
                 <h2 className="text-lg font-bold text-gray-900 font-sans flex items-center gap-2">
-                  사고분석 종합 현황
+                  브랜드별 사고 처리 현황
                   <span className="bg-blue-50 text-letusBlue text-[10px] px-2 py-0.5 rounded border border-blue-100 font-black">{label}</span>
                 </h2>
                 <p className="text-xs text-gray-400 font-medium mt-1.5">조회 기간: {startDate} ~ {endDate}</p>
@@ -3168,30 +3182,52 @@
               </div>
 
               {/* --- 신규: 브랜드별 사고 처리 현황 (카드형) --- */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 shrink-0">
-                <div className="mb-4">
-                  <h3 className="text-lg font-bold text-gray-900 font-sans">브랜드별 사고 처리 현황</h3>
-                </div>
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 shrink-0 mt-2">
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                   {displayBrands.map(brand => {
                     const stats = brandStatsDetails[brand];
+                    const isSelected = selectedBrands.length === 0 || selectedBrands.includes(brand);
+                    
                     return (
-                      <div key={brand} className="rounded-xl px-5 py-4 flex items-center border border-gray-100 bg-gray-50/60 transition-all text-sm">
+                      <div 
+                        key={brand} 
+                        onClick={() => toggleBrand(brand)}
+                        className={`rounded-xl px-5 py-4 flex items-center border transition-all text-sm cursor-pointer hover:shadow-md
+                          ${isSelected ? 'bg-white border-letusOrange/40 ring-1 ring-letusOrange/20' : 'bg-gray-50 border-gray-100 opacity-60'}
+                        `}
+                      >
                         {/* 브랜드명 */}
-                        <div style={{ width: '31%' }} className="font-bold tracking-tight whitespace-nowrap truncate pr-2 text-gray-800">{brand}</div>
+                        <div style={{ width: '31%' }} className={`font-bold tracking-tight whitespace-nowrap truncate pr-2 ${isSelected ? 'text-letusOrange' : 'text-gray-800'}`}>
+                          {brand}
+                        </div>
                         {/* 3가지 지표 영역 */}
                         <div className="flex items-center flex-1">
                           <div style={{ width: '33.33%' }} className="flex justify-between items-center pr-3 sm:pr-4 border-r border-gray-200">
                             <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">파악 중</span>
-                            <span className="text-red-500 font-bold text-[15px] sm:text-base">{stats.pending}</span>
+                            <span 
+                              className={`font-bold text-[15px] sm:text-base hover:underline cursor-pointer ${stats.pending > 0 && isSelected ? 'text-red-500' : 'text-gray-500'}`}
+                              onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], statuses: ['원인 파악 중'] }); }}
+                            >
+                              {stats.pending}
+                            </span>
                           </div>
                           <div style={{ width: '33.33%' }} className="flex justify-between items-center px-3 sm:px-4 border-r border-gray-200">
                             <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">등록 완료</span>
-                            <span className="text-green-600 font-bold text-[15px] sm:text-base">{stats.completed}</span>
+                            <span 
+                              className={`font-bold text-[15px] sm:text-base hover:underline cursor-pointer ${stats.completed > 0 && isSelected ? 'text-green-600' : 'text-gray-500'}`}
+                              onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], statuses: ['등록 완료'] }); }}
+                            >
+                              {stats.completed}
+                            </span>
                           </div>
                           <div style={{ width: '33.33%' }} className="flex justify-between items-center pl-3 sm:pl-4">
                             <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">납기 지연</span>
-                            <span className="text-letusOrange font-bold text-[15px] sm:text-base">{stats.delayed}</span>
+                            <span 
+                              className={`font-bold text-[15px] sm:text-base hover:underline cursor-pointer ${stats.delayed > 0 && isSelected ? 'text-letusOrange' : 'text-gray-500'}`}
+                              onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], isDelayed: '지연' }); }}
+                            >
+                              {stats.delayed}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -3389,7 +3425,7 @@
     };
 
     // --- 📋 물류사고분석 LIST 컴포넌트 ('정상출고 제외' 로직 및 상세조회 적용 완결판) ---
-    const AccidentList = ({ userProfile }) => {
+    const AccidentList = ({ userProfile, initialFilter }) => {
       const [items, setItems] = useState([]);
       const [isLoading, setIsLoading] = useState(false);
       const [activeRow, setActiveRow] = useState(null);
@@ -3400,7 +3436,7 @@
       const today = new Date().toISOString().split('T')[0];
 
       // 🔥 1. showNormal(포함)을 excludeNormal(제외)로 변경하고 기본값을 false(제외 안 함=포함)로 설정!
-      const initialFilters = {
+      const initialFiltersMap = {
         brands: [],
         centers: [],
         serviceTypes: [],
@@ -3415,9 +3451,18 @@
         isDelayed: '전체'
       };
 
-      const [draftFilters, setDraftFilters] = useState(initialFilters);
-      const [appliedFilters, setAppliedFilters] = useState(initialFilters);
+      const [draftFilters, setDraftFilters] = useState(initialFiltersMap);
+      const [appliedFilters, setAppliedFilters] = useState(initialFiltersMap);
       const [sortConfig, setSortConfig] = useState({ key: null, direction: 'none' });
+
+      // 🔥 드릴다운 필터 통신 처리
+      useEffect(() => {
+        if (initialFilter) {
+          const newF = { ...initialFiltersMap, ...initialFilter };
+          setDraftFilters(newF);
+          setAppliedFilters(newF);
+        }
+      }, [initialFilter]);
 
       const fetchAccidents = async () => {
         setIsLoading(true);
@@ -4507,6 +4552,15 @@
         setCurrentPage('list');
       };
 
+      const handleAccidentDrillDown = (filterObj) => {
+        setAccidentDrillDownFilters({
+          brands: filterObj.brands || [],
+          statuses: filterObj.statuses || [],
+          isDelayed: filterObj.isDelayed || '전체'
+        });
+        setCurrentPage('accident_list');
+      };
+
       const fetchIssues = async () => {
         setIsLoading(true);
         try {
@@ -4661,12 +4715,12 @@
               </div>
               {/* 🔥 사고분석 대시보드 화면 */}
               <div className={currentPage === 'accident_dashboard' ? 'block' : 'hidden'}>
-                <AccidentDashboard userProfile={userProfile} />
+                <AccidentDashboard userProfile={userProfile} onDrillDown={handleAccidentDrillDown} />
               </div>
 
               {/* 🔥 사고분석 LIST (임시 뼈대 삭제 후 실제 컴포넌트 연결) */}
               <div className={currentPage === 'accident_list' ? 'block' : 'hidden'}>
-                <AccidentList userProfile={userProfile} />
+                <AccidentList userProfile={userProfile} initialFilter={accidentDrillDownFilters} />
               </div>
 
               {/* 🔥 마스터 데이터 관리 화면 */}
