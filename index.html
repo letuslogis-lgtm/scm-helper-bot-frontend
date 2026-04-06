@@ -2950,7 +2950,7 @@
         actionResults: [],
         startDate: today,
         endDate: today,
-        searchType: '수주명', // '수주건명'에서 '수주명'으로 변경 (UI 공간 확보)
+        searchType: '수주건명', // '수주건명'에서 '수주건명'으로 변경 (UI 공간 확보)
         searchValue: '',
         showNormal: false,
         isDelayed: '전체'
@@ -2986,7 +2986,7 @@
           if (appliedFilters.searchValue) {
             const val = appliedFilters.searchValue.toLowerCase();
             if (appliedFilters.searchType === '수주번호') filtered = filtered.filter(i => (i.order_no || '').toLowerCase().includes(val));
-            if (appliedFilters.searchType === '수주명') filtered = filtered.filter(i => (i.order_name || '').toLowerCase().includes(val));
+            if (appliedFilters.searchType === '수주건명') filtered = filtered.filter(i => (i.order_name || '').toLowerCase().includes(val));
             if (appliedFilters.searchType === '품목코드') filtered = filtered.filter(i => (i.item_code || '').toLowerCase().includes(val));
           }
 
@@ -3045,7 +3045,7 @@
         const targetItems = sortedItems.filter(item => selectedIds.includes(item.id));
         const headersMap = {
           service_date: '서비스예약일', brand: '브랜드', service_center: '서비스센터', service_type: '시공/AS',
-          order_no: '수주번호', order_name: '수주명', item_code: '품목코드', issue_qty: '이슈수량',
+          order_no: '수주번호', order_name: '수주건명', item_code: '품목코드', issue_qty: '이슈수량',
           action_result: '조치결과구분', is_delayed: '납기지연판별', zone: 'ZONE', worker_name: '작업자',
           shift_type: '주/야', status: '처리상태', responsible_dept: '귀책부서', cause_detail: '발생원인 상세',
           handler_name: '최종처리자', created_at: '등록일시', updated_at: '수정일시'
@@ -3275,7 +3275,7 @@
                 <div className="flex gap-0.5 h-[30px]">
                   <select value={draftFilters.searchType} onChange={e => setDraftFilters({ ...draftFilters, searchType: e.target.value })} className="border border-gray-200 rounded-l-[3px] text-xs px-2 text-gray-700 bg-gray-50 focus:outline-none cursor-pointer">
                     <option>수주번호</option>
-                    <option>수주명</option>
+                    <option>수주건명</option>
                     <option>품목코드</option>
                   </select>
                   <input type="text" value={draftFilters.searchValue} onChange={e => setDraftFilters({ ...draftFilters, searchValue: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleSearchClick()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-36 focus:outline-none focus:border-letusOrange" placeholder="검색어 입력" />
@@ -3321,7 +3321,7 @@
 
                   {/* 6. 납기지연판별 */}
                   <div className="flex items-center shrink-0">
-                    <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">지연판별</label>
+                    <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">납기지연판별</label>
                     <select value={draftFilters.isDelayed} onChange={e => setDraftFilters({ ...draftFilters, isDelayed: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusBlue cursor-pointer bg-white text-gray-700 w-32 font-medium">
                       <option value="전체">전체 (All)</option>
                       <option value="지연">재일정(지연)</option>
@@ -3357,7 +3357,7 @@
                       { label: '서비스센터', key: 'service_center', w: '90px' },
                       { label: '시공/AS', key: 'service_type', w: '80px' },
                       { label: '수주번호', key: 'order_no', w: '150px' },
-                      { label: '수주명', key: 'order_name', w: 'auto' },
+                      { label: '수주건명', key: 'order_name', w: 'auto' },
                       { label: '품목코드', key: 'item_code', w: '180px' },
                       { label: '수량', key: 'issue_qty', w: '70px' },
                       { label: '처리상태', key: 'status', w: '120px' },
