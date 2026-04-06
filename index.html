@@ -97,7 +97,7 @@
     const { useState, useEffect, useMemo } = React;
 
     // --- Recharts 컴포넌트 ---
-    const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } = window.Recharts || {};
+    const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } = window.Recharts || {};
 
     const BRANDS = ['(주)한국물류', '글로벌테크', '퍼시스', '일룸', '스마트패키징', '에이스코리아'];
 
@@ -3044,6 +3044,48 @@
       // startDate나 endDate가 바뀔 때마다 자동으로 갱신
       useEffect(() => { fetchDashboardData(); }, [startDate, endDate]);
 
+      // --- 📈 사고 추이 꺾은선 그래프용 전용 상태 및 데이터 페치 ---
+      const [trendType, setTrendType] = useState('daily'); // 'daily' | 'monthly'
+      const [trendAccidents, setTrendAccidents] = useState([]);
+      const [isTrendLoading, setIsTrendLoading] = useState(false);
+
+      const fetchTrendData = async () => {
+        setIsTrendLoading(true);
+        try {
+          const end = new Date(endDate); // 글로벌 뷰의 endDate 기준점
+          let tStart, tEnd;
+          const pad = n => n.toString().padStart(2, '0');
+          const format = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+          if (trendType === 'daily') {
+            const firstDay = new Date(end.getFullYear(), end.getMonth(), 1);
+            const lastDay = new Date(end.getFullYear(), end.getMonth() + 1, 0);
+            tStart = format(firstDay);
+            tEnd = format(lastDay);
+          } else {
+            const firstDay = new Date(end.getFullYear(), 0, 1);
+            const lastDay = new Date(end.getFullYear(), 11, 31);
+            tStart = format(firstDay);
+            tEnd = format(lastDay);
+          }
+
+          const { data, error } = await supabase
+            .from('logistics_accidents')
+            .select('service_date, brand')
+            .gte('service_date', tStart)
+            .lte('service_date', tEnd);
+
+          if (error) throw error;
+          setTrendAccidents(data || []);
+        } catch(err) {
+          console.error(err);
+        } finally {
+          setIsTrendLoading(false);
+        }
+      };
+
+      useEffect(() => { fetchTrendData(); }, [endDate, trendType]);
+
       // 📊 필터 적용 사고 (요약 통계 및 하단 차트용)
       const filteredAccidents = selectedBrands.length > 0 
         ? accidents.filter(a => {
@@ -3067,7 +3109,7 @@
         }
         return acc;
       }, {});
-      const deptData = Object.keys(deptStats).map(name => ({ name, value: deptStats[name] })).sort((a, b) => b.value - a.value);
+      const deptData = Object.keys(deptStats).map(name => ({ name, value: deptStats[name] })).sort((a, b) => b.value - a.value).slice(0, 5);
 
       // 📊 조치결과별 통계 (파이 차트용)
       const resultStats = filteredAccidents.reduce((acc, curr) => {
@@ -3083,7 +3125,7 @@
         acc[brand] = (acc[brand] || 0) + 1;
         return acc;
       }, {});
-      const brandData = Object.keys(brandStats).map(name => ({ name, value: brandStats[name] })).sort((a, b) => b.value - a.value);
+      const brandData = Object.keys(brandStats).map(name => ({ name, value: brandStats[name] })).sort((a, b) => b.value - a.value).slice(0, 5);
 
       // 📊 신규: 브랜드별 상태 상세 통계
       const displayBrands = ['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소', '기타'];
@@ -3100,7 +3142,53 @@
         if (acc.is_delayed && acc.is_delayed !== '-') brandStatsDetails[b].delayed += 1;
       });
 
+      // 📈 추이 그래프 데이터 매핑 로직
+      const trendDataMapped = useMemo(() => {
+        if (!trendAccidents.length && !isTrendLoading) return [];
+        const targetBrands = selectedBrands.length > 0 ? selectedBrands : displayBrands.filter(b => b !== '기타' && b !== '알로소'); // 너무 많으면 복잡하므로 5개로 제한
+
+        const end = new Date(endDate);
+        const dataList = [];
+        
+        if (trendType === 'daily') {
+          const lastDate = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
+          for (let i = 1; i <= lastDate; i++) {
+              const dayStr = i.toString().padStart(2, '0');
+              const dateStr = `${end.getFullYear()}-${(end.getMonth() + 1).toString().padStart(2, '0')}-${dayStr}`;
+              const dayData = { name: `${i}일` };
+              targetBrands.forEach(b => dayData[b] = 0);
+              
+              trendAccidents.forEach(acc => {
+                 let b = acc.brand || '기타';
+                 if (!displayBrands.includes(b)) b = '기타';
+                 if (acc.service_date === dateStr && targetBrands.includes(b)) {
+                     dayData[b] += 1;
+                 }
+              });
+              dataList.push(dayData);
+          }
+        } else {
+          for (let i = 1; i <= 12; i++) {
+              const monthStr = i.toString().padStart(2, '0');
+              const prefix = `${end.getFullYear()}-${monthStr}-`;
+              const monthData = { name: `${i}월` };
+              targetBrands.forEach(b => monthData[b] = 0);
+              
+              trendAccidents.forEach(acc => {
+                 let b = acc.brand || '기타';
+                 if (!displayBrands.includes(b)) b = '기타';
+                 if (acc.service_date && acc.service_date.startsWith(prefix) && targetBrands.includes(b)) {
+                     monthData[b] += 1;
+                 }
+              });
+              dataList.push(monthData);
+          }
+        }
+        return { data: dataList, brands: targetBrands };
+      }, [trendAccidents, selectedBrands, trendType, endDate, isTrendLoading]);
+
       const PIE_COLORS = ['#3b82f6', '#f97316', '#10b981', '#ef4444', '#8b5cf6', '#f59e0b'];
+      const TREND_COLORS = { '퍼시스': '#f97316', '일룸': '#ef4444', '시디즈': '#3b82f6', '데스커': '#10b981', '슬로우베드': '#8b5cf6', '알로소': '#f59e0b', '기타': '#94a3b8' };
 
       return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-5">
@@ -3170,7 +3258,7 @@
                       <div style={{ width: '33.33%' }} className="flex justify-between items-center pr-3 sm:pr-4 border-r border-gray-200">
                         <span className="text-gray-400 font-medium whitespace-nowrap text-xs sm:text-sm">파악 중</span>
                         <span 
-                          className={`font-bold text-base sm:text-lg cursor-pointer hover:underline ${stats.pending > 0 && (isAllSelected || isSelected) ? 'text-red-500' : 'text-gray-400'}`}
+                          className={`font-bold text-base sm:text-lg cursor-pointer hover:underline ${isAllSelected || isSelected ? 'text-red-500' : 'text-gray-400'}`}
                           onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], statuses: ['원인 파악 중'] }); }}
                         >
                           {stats.pending}
@@ -3180,7 +3268,7 @@
                       <div style={{ width: '33.33%' }} className="flex justify-between items-center px-3 sm:px-4 border-r border-gray-200">
                         <span className="text-gray-400 font-medium whitespace-nowrap text-xs sm:text-sm">등록 완료</span>
                         <span 
-                          className={`font-bold text-base sm:text-lg cursor-pointer hover:underline ${stats.completed > 0 && (isAllSelected || isSelected) ? 'text-green-500' : 'text-gray-400'}`}
+                          className={`font-bold text-base sm:text-lg cursor-pointer hover:underline ${isAllSelected || isSelected ? 'text-green-500' : 'text-gray-400'}`}
                           onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], statuses: ['등록 완료'] }); }}
                         >
                           {stats.completed}
@@ -3190,7 +3278,7 @@
                       <div style={{ width: '33.33%' }} className="flex justify-between items-center pl-3 sm:pl-4">
                         <span className="text-gray-400 font-medium whitespace-nowrap text-xs sm:text-sm">납기 지연</span>
                         <span 
-                          className={`font-bold text-base sm:text-lg cursor-pointer hover:underline ${stats.delayed > 0 && (isAllSelected || isSelected) ? 'text-orange-500' : 'text-gray-400'}`}
+                          className={`font-bold text-base sm:text-lg cursor-pointer hover:underline ${isAllSelected || isSelected ? 'text-orange-500' : 'text-gray-400'}`}
                           onClick={(e) => { e.stopPropagation(); if(onDrillDown) onDrillDown({ brands: [brand], isDelayed: '지연' }); }}
                         >
                           {stats.delayed}
@@ -3240,9 +3328,9 @@
 
               {/* 차트 영역 */}
               <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
-                {/* 1. 귀책 부서별 현황 (가로 막대형) */}
+                {/* 1. 귀책 부서별 현황 (가로 막대형, Top 5) */}
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
-                  <h3 className="font-bold text-gray-700 text-sm mb-4">🏢 귀책 부서별 현황 <span className="text-xs text-gray-400 font-normal ml-1">(등록 완료 기준)</span></h3>
+                  <h3 className="font-bold text-gray-700 text-sm mb-4">🏢 귀책 부서별 현황 (Top 5) <span className="text-xs text-gray-400 font-normal ml-1">(등록 완료 기준)</span></h3>
                   <div className="flex-1 min-h-[200px]">
                     {deptData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
@@ -3251,7 +3339,7 @@
                           <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                           <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11, fill: '#475569', fontWeight: 'bold' }} axisLine={false} tickLine={false} />
                           <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                          <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+                          <Bar dataKey="value" fill="#3b82f6" radius={[0, 8, 8, 0]} barSize={16} />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">데이터가 없습니다.</div>}
@@ -3265,7 +3353,7 @@
                     {resultData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                          <Pie data={resultData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none">
+                          <Pie data={resultData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={4} cornerRadius={8} dataKey="value" stroke="none">
                             {resultData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                           </Pie>
                           <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
@@ -3276,24 +3364,60 @@
                   </div>
                 </div>
 
-                {/* 3. 브랜드별 현황 (세로 막대형) */}
+                {/* 3. 브랜드별 현황 (가로 막대형으로 변경, Top 5) */}
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
-                  <h3 className="font-bold text-gray-700 text-sm mb-4">🏷️ 브랜드별 사고 현황</h3>
+                  <h3 className="font-bold text-gray-700 text-sm mb-4">🏷️ 브랜드별 사고 현황 (Top 5)</h3>
                   <div className="flex-1 min-h-[200px]">
                     {brandData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={brandData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#475569', fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                        <BarChart data={brandData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                          <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                          <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11, fill: '#475569', fontWeight: 'bold' }} axisLine={false} tickLine={false} />
                           <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                          <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} barSize={28} />
+                          <Bar dataKey="value" fill="#10b981" radius={[0, 8, 8, 0]} barSize={16} />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">데이터가 없습니다.</div>}
                   </div>
                 </div>
 
+              </div>
+              
+              {/* --- 📈 추가: 사고 추이 현황 (독립적 꺾은선 차트) --- */}
+              <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-200 mt-4 flex flex-col shrink-0 min-h-[350px]">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex flex-col">
+                    <h3 className="font-bold text-gray-800 text-sm md:text-base flex items-center gap-2">
+                      📈 브랜드별 사고 추이
+                      <span className="bg-blue-50 text-letusBlue text-[10px] px-2 py-0.5 rounded border border-blue-100 font-black">{trendType === 'daily' ? '일간 현황' : '월간 현황'}</span>
+                    </h3>
+                    <p className="text-[11px] text-gray-400 font-medium mt-1">상단의 글로벌 기준의 <span className="font-bold text-gray-500">{trendType === 'daily' ? '최근 월' : '최근 년도'}</span> 데이터만 추출합니다.</p>
+                  </div>
+                  <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner">
+                    <button onClick={() => setTrendType('daily')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${trendType === 'daily' ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}>일간</button>
+                    <button onClick={() => setTrendType('monthly')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${trendType === 'monthly' ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}>월간</button>
+                  </div>
+                </div>
+                
+                <div className="flex-1 w-full relative">
+                  {isTrendLoading ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10"><div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div></div>
+                  ) : trendDataMapped.data && trendDataMapped.data.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={trendDataMapped.data} margin={{ top: 10, right: 30, left: -20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b', fontWeight: '500' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '13px' }} cursor={{ stroke: '#e2e8f0', strokeWidth: 1 }} />
+                        <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#475569', paddingTop: '10px' }} iconType="circle" />
+                        {trendDataMapped.brands.map((bName) => (
+                           <Line key={bName} type="monotone" dataKey={bName} stroke={TREND_COLORS[bName]} strokeWidth={3} dot={{ r: 3, strokeWidth: 2 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} animationDuration={1000} />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">해당 기간의 사고 추이 데이터가 없습니다.</div>}
+                </div>
               </div>
             </>
           )}
