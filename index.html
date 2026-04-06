@@ -2514,10 +2514,17 @@
                     className={`w-full border rounded-lg p-2.5 text-sm font-bold outline-none transition-all ${userProfile?.role === '관리자' ? 'border-blue-300 focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-blue-50/30 text-letusBlue' : 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200'}`}
                   >
                     <option value="미확인">미확인 (빈칸)</option>
+                    <option value="정상출고">정상출고</option>
                     <option value="미출고">미출고</option>
                     <option value="오출고">오출고</option>
+                    <option value="과출고">과출고</option>
                     <option value="물류파손">물류파손</option>
-                    <option value="정상출고">정상출고</option>
+                    <option value="시공파손">시공파손</option>
+                    <option value="현장직출">현장직출</option>
+                    <option value="센터직출">센터직출</option>
+                    <option value="납기연기(건)">납기연기(건)</option>
+                    <option value="납기연기(품목)">납기연기(폼목)</option>
+                    <option value="제품분실">제품분실</option>
                   </select>
                   {actionResult === '미확인' && <p className="text-[10px] text-red-500 mt-1 font-bold">⚠️ 현재 엑셀에 조치결과가 누락되어 '미확인' 상태입니다.</p>}
                 </div>
@@ -3157,8 +3164,8 @@
               });
             });
 
-            // 🔥 빈칸 허용을 위해 targetTypes 대신 validTypes로 이름 변경
-            const validTypes = ['미출고', '오출고', '물류파손', '정상출고'];
+            // 🔥 빈칸 허용 로직 완벽 적용
+            const validTypes = ['정상출고', '미출고', '오출고', '과출고', '물류파손', '시공파손', '현장직출', '센터직출', '납기연기(건)', '납기연기(품목)', '제품분실'];
             const processed = [];
 
             rawAcc.forEach(row => {
@@ -3167,13 +3174,10 @@
 
               if (applyFilters) {
                 if (brandStr.includes('이케아')) return;
-                if (issueStr.includes('[SCM팀 부종량 CUT 조치결과]')) return;
+                if (issueStr.includes('[SCM팀 부족량 CUT 조치결과]')) return;
               }
 
-              // 🔥 엑셀에서 읽어온 값
               let type = cleanTxt(row['조치결과구분']);
-
-              // 🔥 빈칸이면 '미확인'으로 예쁘게 바꿔서 통과시키고, 완전 엉뚱한 값이면 여전히 스킵!
               if (!validTypes.includes(type)) {
                 if (type === '') type = '미확인';
                 else return;
@@ -3184,74 +3188,108 @@
 
               const accDate = findCol(row, ['서비스예약일', '예약일']);
 
-              if (processed.length === 0) { alert('분석 결과 저장할 데이터가 없습니다.'); setIsLoading(false); return; }
+              let delayCount = 0;
+              const accTime = normalizeDate(accDate);
+              if (schMap[orderId] && accTime > 0) {
+                const uniqueSchDates = [...new Set(schMap[orderId].map(d => normalizeDate(d)).filter(time => time > 0))];
+                uniqueSchDates.forEach(schTime => { if (schTime >= accTime) delayCount++; });
+              }
+              const isDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
 
-              const orderNos = [...new Set(processed.map(p => p.order_no))];
+              const item = cleanTxt(findCol(row, ['단품코드', '품목코드']));
+              const color = cleanTxt(row['색상']);
 
-              // 🔥 WMS 보호를 위해 기존 데이터에서 zone, worker_name, shift_type 까지 통째로 불러옵니다!
-              const { data: existingData, error: fetchError } = await supabase.from('logistics_accidents').select('id, order_no, item_code, is_delayed, zone, worker_name, shift_type').in('order_no', orderNos);
-              if (fetchError) throw fetchError;
+              let finalItemCode = item;
+              if (color && !item.includes(color) && !item.includes('-')) {
+                finalItemCode = `${item}-${color}`;
+              }
 
-              const existingMap = new Map();
-              (existingData || []).forEach(d => { existingMap.set(`${d.order_no}_${d.item_code}`, d); });
+              const wmsCandidates = wmsByOrder[orderId] || [];
+              let matchedWms = {};
+              if (wmsCandidates.length === 1) matchedWms = wmsCandidates[0];
+              else if (wmsCandidates.length > 1) matchedWms = wmsCandidates.find(w => w.item.includes(item) || item.includes(w.item)) || wmsCandidates[0];
 
-              const toInsert = [];
-              const toUpdate = [];
+              const loc = matchedWms.loc;
+              const zone = loc ? String(loc)[0].toUpperCase() : '';
 
-              processed.forEach(p => {
-                const key = `${p.order_no}_${p.item_code}`;
-                const existingRow = existingMap.get(key);
+              let shift = '-';
+              if (matchedWms.time) {
+                let h;
+                if (matchedWms.time instanceof Date) h = matchedWms.time.getHours();
+                else { const d = new Date(matchedWms.time); if (!isNaN(d.getTime())) h = d.getHours(); }
+                if (h !== undefined) shift = (h >= 9 && h < 18) ? '주간' : '야간';
+              }
 
-                if (!existingRow) {
-                  // 완전히 새로운 건일 경우 삽입
-                  toInsert.push(p);
-                } else {
-                  // 🔥 기존 건 덮어쓰기 (수정 모드)
-                  let finalDelayed = existingRow.is_delayed;
-                  if (p.is_delayed === '재일정(지연)') finalDelayed = '재일정(지연)';
-
-                  // 기존 WMS 데이터를 백업
-                  let finalZone = existingRow.zone;
-                  let finalWorker = existingRow.worker_name;
-                  let finalShift = existingRow.shift_type;
-
-                  // 만약 이번 업로드에 WMS 파일이 같이 들어와서 새로운 작업자 정보가 파싱되었다면 갱신
-                  if (p.worker_name) {
-                    finalZone = p.zone;
-                    finalWorker = p.worker_name;
-                    finalShift = p.shift_type;
-                  }
-
-                  toUpdate.push({
-                    id: existingRow.id,
-                    service_date: p.service_date,
-                    brand: p.brand,
-                    service_center: p.service_center,
-                    service_type: p.service_type,
-                    order_no: p.order_no,
-                    order_name: p.order_name,
-                    item_code: p.item_code,
-                    issue_qty: p.issue_qty,
-                    action_result: p.action_result,
-                    is_delayed: finalDelayed,
-                    zone: finalZone,
-                    worker_name: finalWorker,
-                    shift_type: finalShift,
-                    updated_at: new Date().toISOString()
-                  });
-                }
+              processed.push({
+                service_date: accDate, brand: brandStr || '알수없음', service_center: row['서비스센터'] || '', service_type: row['시공/AS'] || '',
+                order_no: orderId, order_name: row['수주건명'] || '', item_code: finalItemCode, issue_qty: parseInt(row['이슈수량']) || 0,
+                action_result: type, is_delayed: isDelayed, zone: zone, worker_name: matchedWms.worker || '', shift_type: shift, status: '원인 파악 중'
               });
+            });
 
-              if (toInsert.length === 0 && toUpdate.length === 0) { alert(`✅ 업로드하신 데이터는 이미 DB에 최신 상태로 등록되어 있습니다.`); setIsLoading(false); return; }
+            if (processed.length === 0) { alert('분석 결과 저장할 데이터가 없습니다.'); setIsLoading(false); return; }
 
-              let insertMsg = 0; let updateMsg = 0;
-              if (toInsert.length > 0) { const { error } = await supabase.from('logistics_accidents').insert(toInsert); if (error) throw error; insertMsg = toInsert.length; }
-              if (toUpdate.length > 0) { const { error } = await supabase.from('logistics_accidents').upsert(toUpdate, { onConflict: 'id' }); if (error) throw error; updateMsg = toUpdate.length; }
+            const orderNos = [...new Set(processed.map(p => p.order_no))];
 
-              alert(`🎉 사고 데이터 업데이트 완료!\n- 신규 등록: ${insertMsg}건\n- 기존 데이터 수정/갱신: ${updateMsg}건`);
+            // 🔥 WMS 보호를 위한 데이터 조회 (이제 forEach 루프 바깥이라 에러 안 납니다!)
+            const { data: existingData, error: fetchError } = await supabase.from('logistics_accidents').select('id, order_no, item_code, is_delayed, zone, worker_name, shift_type').in('order_no', orderNos);
+            if (fetchError) throw fetchError;
 
-              alert(`🎉 사고 데이터 업데이트 완료!\n- 신규 등록: ${insertMsg}건\n- 지연 업데이트: ${updateMsg}건`);
-            }
+            const existingMap = new Map();
+            (existingData || []).forEach(d => { existingMap.set(`${d.order_no}_${d.item_code}`, d); });
+
+            const toInsert = [];
+            const toUpdate = [];
+
+            processed.forEach(p => {
+              const key = `${p.order_no}_${p.item_code}`;
+              const existingRow = existingMap.get(key);
+
+              if (!existingRow) {
+                toInsert.push(p);
+              } else {
+                let finalDelayed = existingRow.is_delayed;
+                if (p.is_delayed === '재일정(지연)') finalDelayed = '재일정(지연)';
+
+                let finalZone = existingRow.zone;
+                let finalWorker = existingRow.worker_name;
+                let finalShift = existingRow.shift_type;
+
+                // 새로운 작업자 정보가 파싱되었을 때만 덮어쓰기
+                if (p.worker_name) {
+                  finalZone = p.zone;
+                  finalWorker = p.worker_name;
+                  finalShift = p.shift_type;
+                }
+
+                toUpdate.push({
+                  id: existingRow.id,
+                  service_date: p.service_date,
+                  brand: p.brand,
+                  service_center: p.service_center,
+                  service_type: p.service_type,
+                  order_no: p.order_no,
+                  order_name: p.order_name,
+                  item_code: p.item_code,
+                  issue_qty: p.issue_qty,
+                  action_result: p.action_result,
+                  is_delayed: finalDelayed,
+                  zone: finalZone,
+                  worker_name: finalWorker,
+                  shift_type: finalShift,
+                  updated_at: new Date().toISOString()
+                });
+              }
+            });
+
+            if (toInsert.length === 0 && toUpdate.length === 0) { alert(`✅ 업로드하신 데이터는 이미 DB에 최신 상태로 등록되어 있습니다.`); setIsLoading(false); return; }
+
+            let insertMsg = 0; let updateMsg = 0;
+            if (toInsert.length > 0) { const { error } = await supabase.from('logistics_accidents').insert(toInsert); if (error) throw error; insertMsg = toInsert.length; }
+            if (toUpdate.length > 0) { const { error } = await supabase.from('logistics_accidents').upsert(toUpdate, { onConflict: 'id' }); if (error) throw error; updateMsg = toUpdate.length; }
+
+            alert(`🎉 사고 데이터 업데이트 완료!\n- 신규 등록: ${insertMsg}건\n- 기존 데이터 수정/갱신: ${updateMsg}건`);
+          }
 
           else if (rawSch.length > 0) {
             const orderNos = Object.keys(schMap);
