@@ -4484,7 +4484,7 @@
       const [notifications, setNotifications] = useState([]);
       const [isNotiOpen, setIsNotiOpen] = useState(false);
       const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
+      const [accidentDrillDownFilters, setAccidentDrillDownFilters] = useState(null);
       const [favorites, setFavorites] = useState(() => {
         const savedFavs = localStorage.getItem('letus_favorites');
         return savedFavs ? JSON.parse(savedFavs) : [];
