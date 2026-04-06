@@ -3071,6 +3071,21 @@
       }, {});
       const brandData = Object.keys(brandStats).map(name => ({ name, value: brandStats[name] })).sort((a, b) => b.value - a.value);
 
+      // 📊 신규: 브랜드별 상태 상세 통계
+      const displayBrands = ['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소', '기타'];
+      const brandStatsDetails = {};
+      displayBrands.forEach(b => brandStatsDetails[b] = { pending: 0, completed: 0, delayed: 0 });
+
+      accidents.forEach(acc => {
+        let b = acc.brand || '기타';
+        if (!displayBrands.includes(b)) b = '기타';
+        
+        if (acc.status === '원인 파악 중') brandStatsDetails[b].pending += 1;
+        else if (acc.status === '등록 완료') brandStatsDetails[b].completed += 1;
+        
+        if (acc.is_delayed && acc.is_delayed !== '-') brandStatsDetails[b].delayed += 1;
+      });
+
       const PIE_COLORS = ['#3b82f6', '#f97316', '#10b981', '#ef4444', '#8b5cf6', '#f59e0b'];
 
       return (
@@ -3149,6 +3164,39 @@
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform"><svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zM12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" /></svg></div>
                   <div className="text-letusOrange text-[13px] font-bold z-10">납기 지연 발생</div>
                   <div className="text-3xl font-black text-letusOrange mt-2 z-10">{delayedCount}<span className="text-lg font-bold text-orange-300 ml-1">건</span></div>
+                </div>
+              </div>
+
+              {/* --- 신규: 브랜드별 사고 처리 현황 (카드형) --- */}
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 shrink-0">
+                <div className="mb-4">
+                  <h3 className="text-lg font-bold text-gray-900 font-sans">브랜드별 사고 처리 현황</h3>
+                </div>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  {displayBrands.map(brand => {
+                    const stats = brandStatsDetails[brand];
+                    return (
+                      <div key={brand} className="rounded-xl px-5 py-4 flex items-center border border-gray-100 bg-gray-50/60 transition-all text-sm">
+                        {/* 브랜드명 */}
+                        <div style={{ width: '31%' }} className="font-bold tracking-tight whitespace-nowrap truncate pr-2 text-gray-800">{brand}</div>
+                        {/* 3가지 지표 영역 */}
+                        <div className="flex items-center flex-1">
+                          <div style={{ width: '33.33%' }} className="flex justify-between items-center pr-3 sm:pr-4 border-r border-gray-200">
+                            <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">파악 중</span>
+                            <span className="text-red-500 font-bold text-[15px] sm:text-base">{stats.pending}</span>
+                          </div>
+                          <div style={{ width: '33.33%' }} className="flex justify-between items-center px-3 sm:px-4 border-r border-gray-200">
+                            <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">등록 완료</span>
+                            <span className="text-green-600 font-bold text-[15px] sm:text-base">{stats.completed}</span>
+                          </div>
+                          <div style={{ width: '33.33%' }} className="flex justify-between items-center pl-3 sm:pl-4">
+                            <span className="text-gray-400 font-medium whitespace-nowrap text-[11px] sm:text-xs">납기 지연</span>
+                            <span className="text-letusOrange font-bold text-[15px] sm:text-base">{stats.delayed}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
