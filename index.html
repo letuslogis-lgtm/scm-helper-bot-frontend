@@ -4008,23 +4008,50 @@
 
           else if (rawSch.length > 0) {
             const orderNos = Object.keys(schMap);
-            const { data: existingData, error: fetchError } = await supabase.from('logistics_accidents').select('id, order_no, service_date, is_delayed').in('order_no', orderNos);
-            if (fetchError) throw fetchError;
+
+            // 🔥 1. DB 조회 청크 처리 (14,000개를 한 번에 찾지 않고 200개씩 나눠서 찾기!)
+            let existingData = [];
+            const FETCH_CHUNK = 200;
+            for (let i = 0; i < orderNos.length; i += FETCH_CHUNK) {
+              const chunkOrders = orderNos.slice(i, i + FETCH_CHUNK);
+              const { data, error } = await supabase
+                .from('logistics_accidents')
+                .select('id, order_no, service_date, is_delayed')
+                .in('order_no', chunkOrders);
+              if (!error && data) existingData = [...existingData, ...data];
+            }
+
             const toUpdate = [];
+
             existingData.forEach(row => {
-              const accTime = normalizeDate(row.service_date);
-              let delayCount = 0;
-              if (schMap[row.order_no] && accTime > 0) {
-                const uniqueSchDates = [...new Set(schMap[row.order_no].map(d => normalizeDate(d)).filter(time => time > 0))];
-                uniqueSchDates.forEach(schTime => { if (schTime >= accTime) delayCount++; });
+              // 🔥 2. 복잡한 날짜 부등호 비교는 버리고, 'R' 플래그만 확인하는 초간단 로직!
+              let isDelayedNow = false;
+              if (schMap[row.order_no]) {
+                isDelayedNow = schMap[row.order_no].some(item => item.rework === 'R');
               }
-              const newIsDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
-              if (newIsDelayed === '재일정(지연)' && row.is_delayed === '-') {
-                toUpdate.push({ id: row.id, is_delayed: '재일정(지연)', updated_at: new Date().toISOString() });
+
+              // DB에 '재일정(지연)'이라고 안 적혀있는데, 엑셀에는 'R'이 있다면? 업데이트 바구니에 담기!
+              if (isDelayedNow && row.is_delayed !== '재일정(지연)') {
+                toUpdate.push({
+                  id: row.id,
+                  is_delayed: '재일정(지연)',
+                  updated_at: new Date().toISOString()
+                });
               }
             });
-            if (toUpdate.length > 0) { await supabase.from('logistics_accidents').upsert(toUpdate, { onConflict: 'id' }); alert(`✅ 지연 업데이트 완료 (${toUpdate.length}건)`); }
-            else { alert('✅ 새롭게 지연된 건이 없습니다.'); }
+
+            // 🔥 3. 업데이트(Upsert) 청크 처리 (수만 개라도 500개씩 안전하게 쪼개서 서버에 쏘기!)
+            if (toUpdate.length > 0) {
+              const UPDATE_CHUNK = 500;
+              for (let i = 0; i < toUpdate.length; i += UPDATE_CHUNK) {
+                const chunk = toUpdate.slice(i, i + UPDATE_CHUNK);
+                const { error } = await supabase.from('logistics_accidents').upsert(chunk, { onConflict: 'id' });
+                if (error) throw error;
+              }
+              alert(`✅ 지연 업데이트 완료 (${toUpdate.length}건)`);
+            } else {
+              alert('✅ 새롭게 지연된 건이 없습니다.');
+            }
           }
           fetchAccidents();
         } catch (error) { alert('오류: ' + error.message); console.error(error); setIsLoading(false); }
