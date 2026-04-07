@@ -1417,13 +1417,13 @@
         };
 
         // --- 사이드바 (Sidebar) 메인 업데이트 (메뉴 권한 통제 적용) ---
+        // --- 사이드바 (Sidebar) 메인 업데이트 (메뉴 권한 통제 적용) ---
         const Sidebar = ({ page, setPage, userProfile, isSidebarOpen, setIsSidebarOpen, favorites }) => {
-            const [openMenu, setOpenMenu] = useState('logistics');
+            const [openMenu, setOpenMenu] = useState('home_menu'); // 🔥 여기 수정됨! (초기값)
             const [activeTab, setActiveTab] = useState('all');
             const [searchTerm, setSearchTerm] = useState('');
 
             const menuData = [
-                // 🔥 신규: 사이드바 맨 위에 홈 버튼 추가
                 {
                     id: 'home_menu', label: '나의 워크스페이스',
                     icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
@@ -1439,7 +1439,6 @@
                         { id: 'product_manager', label: 'ITEM DB 수동 업데이트' }
                     ]
                 },
-                // 🔥 신규 추가: 물류 마감 관리
                 {
                     id: 'closing_management', label: '물류 마감 관리',
                     icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
@@ -1474,7 +1473,7 @@
 
             useEffect(() => {
                 if (searchTerm) setOpenMenu('all_open');
-                else setOpenMenu('logistics');
+                else setOpenMenu('home_menu'); // 🔥 여기도 수정됨! (검색어 지웠을 때 돌아가는 기본값)
             }, [searchTerm]);
 
             const toggleMenu = (menuId) => {
@@ -1532,7 +1531,7 @@
                             const isAdmin = userProfile?.role === '관리자';
                             const userMenus = userProfile?.accessible_menus ? userProfile.accessible_menus.split(',') : [];
 
-                            // 🔥 권한 로직의 핵심: 관리자면 다 통과, 사용자면 accessible_menus에 체크된 것만 통과!
+                            // 권한 로직의 핵심: 관리자면 다 통과, 사용자면 accessible_menus에 체크된 것만 통과!
                             const allowedChildren = menu.children.filter(child => isAdmin || userMenus.includes(child.id));
 
                             if (allowedChildren.length === 0) return null;
