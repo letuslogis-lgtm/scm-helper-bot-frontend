@@ -3510,17 +3510,37 @@
             const [attendanceData, setAttendanceData] = useState([]);
             const [isLoading, setIsLoading] = useState(false);
 
-            // 🔥 DB에서 데이터 불러오기
+            // 🔥 DB에서 데이터 불러오기 (1000건 제한 우회 - 무제한 스캔 엔진 탑재)
             const fetchAttendance = async () => {
                 setIsLoading(true);
                 try {
-                    const { data, error } = await supabase
-                        .from('worker_attendance')
-                        .select('*')
-                        .order('work_date', { ascending: false });
+                    let allData = [];
+                    let hasMore = true;
+                    let page = 0;
+                    const pageSize = 1000; // 한 번에 가져올 묶음 크기
 
-                    if (error) throw error;
-                    setAttendanceData(data || []);
+                    // 데이터가 더 이상 없을 때까지 1000개씩 페이지를 넘기며 계속 긁어옵니다!
+                    while (hasMore) {
+                        const { data, error } = await supabase
+                            .from('worker_attendance')
+                            .select('*')
+                            .order('work_date', { ascending: false })
+                            .range(page * pageSize, (page + 1) * pageSize - 1);
+
+                        if (error) throw error;
+
+                        if (data && data.length > 0) {
+                            allData = [...allData, ...data];
+                            page++;
+                            // 만약 가져온 데이터가 1000개보다 적다면, 여기가 마지막 페이지라는 뜻!
+                            if (data.length < pageSize) hasMore = false;
+                        } else {
+                            hasMore = false; // 데이터가 아예 없으면 종료
+                        }
+                    }
+
+                    // 끝까지 긁어모은 전체 데이터를 화면에 쏴줍니다!
+                    setAttendanceData(allData);
                 } catch (err) {
                     console.error('근태 데이터 조회 실패:', err.message);
                 } finally {
