@@ -2033,14 +2033,13 @@
             // ... (기존 실적 데이터 불러오는 코드) ...
             setStats({ todoIssues: issueCount || 0, todoAccidents: accCount || 0, doneIssues: doneIssueCount || 0, doneAccidents: doneAccCount || 0 });
 
-            // 🔥 신규 추가: DB에서 캘린더 일정 쫙 불러오기
+            // 📅 캘린더 일정 불러오기
             const { data: eventsData, error: eventsError } = await supabase
               .from('calendar_events')
               .select('*')
               .order('start_date', { ascending: true });
 
             if (!eventsError && eventsData) {
-              // DB의 snake_case를 프론트엔드의 camelCase로 변환해서 저장
               const formattedEvents = eventsData.map(ev => ({
                 id: ev.id,
                 title: ev.title,
@@ -2055,20 +2054,80 @@
               setCalendarEvents(formattedEvents);
             }
 
+            // 🔥 2-1. TODO 리스트 불러오기 (여기에 들어갑니다!)
+            const { data: todoData, error: todoError } = await supabase
+              .from('todos')
+              .select('*')
+              .eq('creator_id', userProfile.id)
+              .order('created_at', { ascending: false });
+
+            if (!todoError && todoData) {
+              const formattedTodos = todoData.map(t => ({
+                id: t.id,
+                text: t.text,
+                priority: t.priority,
+                isDone: t.is_done,
+                repeat: t.repeat_days || []
+              }));
+              setTodos(formattedTodos);
+            }
+
           } catch (err) { console.error(err); } finally { setIsLoading(false); }
-        };
-        fetchMyData();
+        }; // fetchMyData 함수 끝
+
+        fetchMyData(); // 함수 실행
       }, [userProfile]);
 
-      const handleSaveTodo = (savedTodo) => {
-        if (editingTodo) setTodos(todos.map(t => t.id === savedTodo.id ? savedTodo : t));
-        else setTodos([savedTodo, ...todos]);
-        setIsTodoModalOpen(false);
-        setEditingTodo(null);
+      // 🔥 1. TODO 저장 및 수정 (DB 연동)
+      const handleSaveTodo = async (savedTodo) => {
+        try {
+          const todoPayload = {
+            text: savedTodo.text,
+            priority: savedTodo.priority,
+            repeat_days: savedTodo.repeat,
+            is_done: savedTodo.isDone,
+            creator_id: userProfile.id
+          };
+
+          if (editingTodo) {
+            // 수정 모드
+            const { error } = await supabase.from('todos').update(todoPayload).eq('id', savedTodo.id);
+            if (error) throw error;
+            setTodos(todos.map(t => t.id === savedTodo.id ? savedTodo : t));
+          } else {
+            // 신규 등록 모드
+            const { data, error } = await supabase.from('todos').insert([todoPayload]).select();
+            if (error) throw error;
+            if (data && data.length > 0) {
+              setTodos([{ ...savedTodo, id: data[0].id }, ...todos]);
+            }
+          }
+          setIsTodoModalOpen(false);
+          setEditingTodo(null);
+        } catch (err) { alert('TODO 저장 실패: ' + err.message); }
       };
 
-      const handleDeleteTodo = (id) => setTodos(todos.filter(t => t.id !== id));
-      const toggleTodoDone = (id) => setTodos(todos.map(t => t.id === id ? { ...t, isDone: !t.isDone } : t));
+      // 🔥 2. TODO 삭제 (DB 연동)
+      const handleDeleteTodo = async (id) => {
+        try {
+          const { error } = await supabase.from('todos').delete().eq('id', id);
+          if (error) throw error;
+          setTodos(todos.filter(t => t.id !== id));
+        } catch (err) { alert('삭제 실패: ' + err.message); }
+      };
+
+      // 🔥 3. 완료 상태 토글 (DB 연동)
+      const toggleTodoDone = async (id) => {
+        const target = todos.find(t => t.id === id);
+        if (!target) return;
+
+        const newStatus = !target.isDone;
+        try {
+          const { error } = await supabase.from('todos').update({ is_done: newStatus }).eq('id', id);
+          if (error) throw error;
+          setTodos(todos.map(t => t.id === id ? { ...t, isDone: newStatus } : t));
+        } catch (err) { alert('상태 변경 실패: ' + err.message); }
+      };
 
       const priorityWeight = { '긴급': 0, '1': 1, '2': 2, '3': 3, '4': 4 };
       const sortedTodos = [...todos].sort((a, b) => {
