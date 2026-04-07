@@ -2412,10 +2412,25 @@
                           : ''
                           }`}
                       >
-                        <span className={`text-[11px] font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-600'}`}>
+                        {/* 1. 날짜 표시 */}
+                        <span className={`text-[11px] font-bold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-600'}`}>
                           {day}
                         </span>
 
+                        {/* 🔥 2. TODO 점 표시 (날짜 바로 아래에 고정, 완료 시 초록색!) */}
+                        {dayTodos.length > 0 && (
+                          <div className="flex gap-1 mb-1 px-1 mt-0.5">
+                            {dayTodos.slice(0, 5).map((t, i) => {
+                              const isCompleted = !!todoDoneLogs[`${t.id}_${dateStr}`];
+                              return (
+                                <div key={`dot-${i}`} className={`w-1.5 h-1.5 rounded-full transition-colors ${isCompleted ? 'bg-green-500 shadow-sm' : 'bg-slate-300'}`}></div>
+                              );
+                            })}
+                            {dayTodos.length > 5 && <span className="text-[8px] font-bold text-gray-400 leading-[6px] ml-0.5">+</span>}
+                          </div>
+                        )}
+
+                        {/* 3. 캘린더 일정 바 (점 아래부터 차곡차곡 쌓임) */}
                         <div className="flex flex-col gap-0.5 overflow-hidden flex-1">
                           {dayEvents.slice(0, 2).map((ev, idx) => (
                             <div
@@ -2431,15 +2446,6 @@
                             </div>
                           ))}
 
-                          {dayTodos.length > 0 && (
-                            <div className="flex gap-0.5 mt-0.5 px-1">
-                              {dayTodos.slice(0, 5).map((t, i) => (
-                                <div key={`dot-${i}`} className="w-1 h-1 rounded-full bg-slate-300"></div>
-                              ))}
-                              {dayTodos.length > 5 && <span className="text-[7px] text-gray-400 leading-[4px] ml-0.5">+</span>}
-                            </div>
-                          )}
-
                           {/* 🔥 더보기 버튼 */}
                           {(dayEvents.length > 2) && (
                             <div
@@ -2454,6 +2460,7 @@
                           )}
                         </div>
 
+                        {/* 우측 상단 일정 추가 버튼 */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
