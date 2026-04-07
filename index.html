@@ -1079,14 +1079,13 @@
                             });
                         }
 
-                        // 🔥 0건일 경우 원인 안내 알림창 추가
+                        // 🔥 0건일 경우 안내 메시지 강화
                         if (standardData.length === 0) {
-                            alert('❌ 엑셀에서 데이터를 한 건도 찾지 못했습니다.\n\n[확인해 주세요]\n엑셀 파일의 1번 줄(첫 행)이 "사원명", "근무일자" 같은 열 제목으로 시작하나요?\n만약 표 위에 큰 제목이나 빈 줄이 있다면 삭제하고 첫 줄을 열 제목으로 맞춰주세요!');
+                            alert('❌ 엑셀 데이터를 읽을 수 없습니다.\n\n[해결 방법]\n다운로드하신 엑셀 파일을 여신 후, [다른 이름으로 저장] -> [Excel 통합 문서(*.xlsx)]로 다시 저장한 뒤 업로드해 보세요! (ERP 시스템의 가짜 확장자 문제일 수 있습니다.)');
                             setIsUploading(false);
                             return;
                         }
 
-                        // DB에 데이터 통째로 저장 (Supabase 연동)
                         const { error } = await supabase.from('worker_attendance').insert(standardData);
                         if (error) throw error;
 
@@ -1098,7 +1097,8 @@
                     } catch (err) { alert('업로드 중 오류 발생: ' + err.message); }
                     finally { setIsUploading(false); }
                 };
-                reader.readAsBinaryString(file);
+                // 🔥 BinaryString 대신 ArrayBuffer로 실행
+                reader.readAsArrayBuffer(file);
             };
 
             return (
@@ -3076,7 +3076,9 @@
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     try {
-                        const wb = XLSX.read(e.target.result, { type: 'binary' });
+                        // 🔥 [버그 수정] 가짜 엑셀 호환성을 위해 ArrayBuffer 방식으로 읽기
+                        const data = new Uint8Array(e.target.result);
+                        const wb = XLSX.read(data, { type: 'array' });
                         const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
 
                         if (rows.length === 0) throw new Error('엑셀 파일에 데이터가 없습니다.');
