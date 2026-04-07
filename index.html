@@ -1970,6 +1970,7 @@
       const [stats, setStats] = useState({
         todoIssues: 0, todoAccidents: 0, doneIssues: 0, doneAccidents: 0
       });
+      const [selectedTodoDate, setSelectedTodoDate] = useState(new Date()); // 🔥 신규: 캘린더에서 클릭한 날짜를 기억하는 상태 (기본값은 오늘!)
 
       const [widgets, setWidgets] = useState(() => {
         const saved = localStorage.getItem(`letus_widgets_${userProfile?.id}`);
@@ -2192,6 +2193,33 @@
         }
       };
 
+      // 🔥 신규: DB에서 일정 삭제하기
+      const handleDeleteEvent = async (id) => {
+        if (!confirm('📅 이 일정을 정말 삭제하시겠습니까?')) return;
+
+        try {
+          const { error } = await supabase
+            .from('calendar_events')
+            .delete()
+            .eq('id', id);
+
+          if (error) throw error;
+
+          // 삭제 성공 시 화면에서 즉시 제거
+          setCalendarEvents(calendarEvents.filter(ev => ev.id !== id));
+
+          // 만약 '더보기' 상세 모달이 열려있다면 해당 데이터도 갱신
+          setDayEventsModalData(prev => ({
+            ...prev,
+            events: prev.events.filter(ev => ev.id !== id)
+          }));
+
+          alert('일정이 삭제되었습니다.');
+        } catch (err) {
+          alert('삭제 실패: ' + err.message);
+        }
+      };
+
       const availableWidgets = [
         { id: 'issue_todo', title: '입고 이슈 (대기)', icon: '📦', color: 'blue' },
         { id: 'acc_todo', title: '상차 사고 (대기)', icon: '🚚', color: 'orange' },
@@ -2305,11 +2333,28 @@
 
           <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 flex-1 min-h-[400px]">
 
+            {/* 🔥 TO DO 구역 (선택된 날짜 기준 연동) */}
             <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col h-full relative">
               <div className="flex justify-between items-center mb-5 shrink-0">
                 <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
-                  📝 나의 TODO
-                  <span className="bg-blue-50 text-letusBlue text-[10px] px-2 py-0.5 rounded font-black">{todos.filter(t => !t.isDone).length}개 남음</span>
+                  📝 {selectedTodoDate.getDate() === new Date().getDate() && selectedTodoDate.getMonth() === new Date().getMonth() ? '오늘' : `${selectedTodoDate.getMonth() + 1}/${selectedTodoDate.getDate()}`}의 TODO
+
+                  {/* 선택된 날짜의 요일 계산해서 필터링 */}
+                  {(() => {
+                    const dayOfWeekStr = ['일', '월', '화', '수', '목', '금', '토'][selectedTodoDate.getDay()];
+                    const filteredTodosForDate = sortedTodos.filter(todo => {
+                      if (!todo.repeat || todo.repeat.length === 0) return true; // 반복 없는 일반 할 일은 매일 띄움
+                      return todo.repeat.includes(dayOfWeekStr); // 반복 일정이면 해당 요일에만 띄움
+                    });
+
+                    return (
+                      <>
+                        <span className="bg-blue-50 text-letusBlue text-[10px] px-2 py-0.5 rounded font-black">
+                          {filteredTodosForDate.filter(t => !t.isDone).length}개 남음
+                        </span>
+                      </>
+                    );
+                  })()}
                 </h3>
                 <button onClick={() => { setEditingTodo(null); setIsTodoModalOpen(true); }} className="bg-gray-100 hover:bg-letusBlue hover:text-white text-gray-500 w-7 h-7 rounded-full flex items-center justify-center transition-colors shadow-sm">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
@@ -2317,13 +2362,23 @@
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2.5">
-                {sortedTodos.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
-                    <span className="text-3xl mb-2">💡</span>
-                    <span className="text-[11px] font-bold">등록된 할 일이 없습니다.</span>
-                  </div>
-                ) : (
-                  sortedTodos.map(todo => (
+                {(() => {
+                  const dayOfWeekStr = ['일', '월', '화', '수', '목', '금', '토'][selectedTodoDate.getDay()];
+                  const filteredTodosForDate = sortedTodos.filter(todo => {
+                    if (!todo.repeat || todo.repeat.length === 0) return true;
+                    return todo.repeat.includes(dayOfWeekStr);
+                  });
+
+                  if (filteredTodosForDate.length === 0) {
+                    return (
+                      <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
+                        <span className="text-3xl mb-2">💡</span>
+                        <span className="text-[11px] font-bold">이 날짜에 등록된 할 일이 없습니다.</span>
+                      </div>
+                    );
+                  }
+
+                  return filteredTodosForDate.map(todo => (
                     <div key={todo.id} className={`flex flex-col p-3 rounded-lg border transition-all ${todo.isDone ? 'bg-gray-50 border-gray-100 opacity-70' : 'bg-white border-gray-200 hover:border-letusBlue/50 hover:shadow-sm'}`}>
                       <div className="flex items-start gap-3">
                         <input type="checkbox" checked={todo.isDone} onChange={() => toggleTodoDone(todo.id)} className="w-4 h-4 accent-letusBlue shrink-0 mt-0.5 cursor-pointer" />
@@ -2342,8 +2397,8 @@
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
+                  ));
+                })()}
               </div>
             </div>
 
@@ -2381,7 +2436,14 @@
                     ];
 
                     return (
-                      <div key={day} className="border-r border-b border-gray-100 p-1.5 flex flex-col relative group transition-colors hover:bg-blue-50/30 min-h-[60px]">
+                      <div
+                        key={day}
+                        onClick={() => setSelectedTodoDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))}
+                        className={`border-r border-b border-gray-100 p-1.5 flex flex-col relative group transition-colors hover:bg-blue-50/30 min-h-[60px] cursor-pointer ${selectedTodoDate.getDate() === day && selectedTodoDate.getMonth() === currentDate.getMonth() && selectedTodoDate.getFullYear() === currentDate.getFullYear()
+                          ? 'ring-2 ring-inset ring-letusBlue bg-blue-50/10'
+                          : ''
+                          }`}
+                      >
                         <span className={`text-[11px] font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-600'}`}>
                           {day}
                         </span>
@@ -2390,12 +2452,20 @@
                           {displayItems.slice(0, 2).map((item, idx) => {
                             if (item._type === 'event') {
                               return (
-                                <div key={`ev-${idx}`} className={`text-[9px] truncate px-1.5 py-0.5 rounded font-bold border cursor-help ${item.isImportant ? 'bg-red-50 text-red-600 border-red-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`} title={`${item.startTime} ~ ${item.endTime} | ${item.title}`}>
+                                <div
+                                  key={`ev-${idx}`}
+                                  // 🔥 추가: 이벤트 바를 눌러도 상세 모달이 뜨게 함
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDayEventsModalData({ isOpen: true, dateStr, events: dayEvents, todos: dayTodos });
+                                  }}
+                                  className={`text-[9px] truncate px-1.5 py-0.5 rounded font-bold border cursor-pointer ${item.isImportant ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'}`}
+                                  title={`${item.startTime} ~ ${item.endTime} | ${item.title}`}
+                                >
                                   {item.title}
                                 </div>
                               );
                             } else {
-                              // 🔥 TODO 아이템 디자인
                               return (
                                 <div key={`td-${idx}`} className="text-[9px] truncate px-1.5 py-0.5 rounded font-bold border bg-gray-50 text-gray-700 border-gray-200 flex items-center gap-1 cursor-help" title={`[TODO] ${item.text}`}>
                                   <span className="text-[8px]">📝</span>{item.text}
@@ -2500,14 +2570,23 @@
                     <div className="flex flex-col gap-2">
                       <h4 className="text-xs font-black text-gray-500 border-b pb-1 mb-1">📅 등록된 일정</h4>
                       {dayEventsModalData.events.map(ev => (
-                        <div key={ev.id} className={`p-3 rounded-lg border flex flex-col gap-1 ${ev.isImportant ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'}`}>
+                        <div key={ev.id} className={`p-3 rounded-lg border flex flex-col gap-1 relative group ${ev.isImportant ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'}`}>
+                          {/* 🔥 추가: 개별 일정 삭제 버튼 */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev.id); }}
+                            className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                            title="일정 삭제"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+
                           <div className="flex items-center justify-between">
                             <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${ev.isImportant ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-letusBlue'}`}>
                               {ev.startTime} ~ {ev.endTime}
                             </span>
-                            {ev.collabTeams && <span className="text-[9px] text-gray-500 font-bold truncate max-w-[120px]">협업: {ev.collabTeams}</span>}
+                            {ev.collabTeams && <span className="text-[9px] text-gray-500 font-bold truncate max-w-[100px] mr-6">협업: {ev.collabTeams}</span>}
                           </div>
-                          <span className="text-xs font-bold text-gray-800 mt-1">{ev.title}</span>
+                          <span className="text-xs font-bold text-gray-800 mt-1 pr-6">{ev.title}</span>
                           {ev.description && <span className="text-[10px] text-gray-600 mt-0.5">{ev.description}</span>}
                         </div>
                       ))}
