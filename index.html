@@ -3170,13 +3170,72 @@
         // --- 👥 근무자 근태 관리 대시보드 (신규 메뉴) ---
         const AttendanceManagement = () => {
             const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+            const [activeTab, setActiveTab] = useState('summary'); // 'detail' | 'summary'
 
-            // 임시 목업 데이터 (추후 DB 연동)
-            const mockData = [
-                { id: 1, date: '2026-04-07', type: '협력사', vendor: '한국물류', name: '김철수', start: '08:50', end: '18:10', hours: '8', remark: '정상' },
-                { id: 2, date: '2026-04-07', type: '도급사', vendor: '도급사1', name: '이영희', start: '-', end: '-', hours: '8', remark: '단가: 100,000' },
-                { id: 3, date: '2026-04-07', type: '도급사', vendor: '도급사2', name: '박지성', start: '-', end: '-', hours: '4', remark: '오전반' },
+            // 임시 목업 데이터 1: 일별 상세 내역 (기존)
+            const detailMockData = [
+                { id: 1, date: '2026-04-07', type: '사내협력사', vendor: '바로서비스', name: '김철수', start: '08:50', end: '18:10', hours: '8', remark: '정상' },
+                { id: 2, date: '2026-04-07', type: '외주도급사', vendor: 'IPC', name: '이영희', start: '-', end: '-', hours: '8', remark: '단가: 100,000' },
+                { id: 3, date: '2026-04-07', type: '외주도급사', vendor: 'JNT', name: '박지성', start: '-', end: '-', hours: '4', remark: '오전반' },
             ];
+
+            // 🔥 임시 목업 데이터 2: 기간별 집계 현황 (기훈님이 주신 이미지 데이터!)
+            const summaryMockData = [
+                { type: '사내협력사', vendor: '바로서비스', normal: 2822.5, overtime: 1580.5, total: 4403.0, weighted: 5193.3 },
+                { type: '사내협력사', vendor: '하나물류', normal: 2901.5, overtime: 1440.5, total: 4342.0, weighted: 5062.3 },
+                { type: '사내협력사', vendor: '에프스토리', normal: 2457.5, overtime: 614.0, total: 3071.5, weighted: 3378.5 },
+                { type: '외주도급사', vendor: 'IPC', normal: 8815.5, overtime: 1414.0, total: 10229.5, weighted: 10936.5 },
+                { type: '외주도급사', vendor: '승현', normal: 4334.5, overtime: 1806.0, total: 6140.5, weighted: 7043.5 },
+                { type: '외주도급사', vendor: '승현(이케아)', normal: 0, overtime: 0, total: 0, weighted: 0 },
+                { type: '외주도급사', vendor: 'JNT', normal: 564.0, overtime: 154.0, total: 718.0, weighted: 795.0 },
+            ];
+
+            // 합계 계산
+            const totalSummary = summaryMockData.reduce((acc, curr) => {
+                acc.normal += curr.normal;
+                acc.overtime += curr.overtime;
+                acc.total += curr.total;
+                acc.weighted += curr.weighted;
+                return acc;
+            }, { normal: 0, overtime: 0, total: 0, weighted: 0 });
+
+            // 🔥 집계 데이터 엑셀 추출 기능
+            const handleExportSummaryExcel = () => {
+                if (summaryMockData.length === 0) return alert('추출할 데이터가 없습니다.');
+
+                const excelData = summaryMockData.map(row => ({
+                    '구분': row.type,
+                    '업체명': row.vendor,
+                    '정상근무': row.normal,
+                    '연장근무': row.overtime,
+                    '합계': row.total,
+                    '가중시간': row.weighted
+                }));
+
+                // 합계 행 추가
+                excelData.push({
+                    '구분': '합계',
+                    '업체명': '',
+                    '정상근무': totalSummary.normal,
+                    '연장근무': totalSummary.overtime,
+                    '합계': totalSummary.total,
+                    '가중시간': totalSummary.weighted
+                });
+
+                const ws = XLSX.utils.json_to_sheet(excelData);
+                ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "근태집계현황");
+                XLSX.writeFile(wb, `근태집계리포트_${new Date().toISOString().split('T')[0]}.xlsx`);
+            };
+
+            // 테이블 셀 병합(rowSpan)을 위한 로직 (사내협력사 3칸, 외주도급사 4칸 병합)
+            const getRowSpan = (data, index, typeKey) => {
+                if (index === 0 || data[index][typeKey] !== data[index - 1][typeKey]) {
+                    return data.filter(item => item[typeKey] === data[index][typeKey]).length;
+                }
+                return 0;
+            };
 
             return (
                 <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-6 max-w-[1600px] mx-auto">
@@ -3184,9 +3243,9 @@
                     <div className="flex justify-between items-center shrink-0">
                         <div>
                             <h2 className="text-xl font-black text-gray-800 flex items-center gap-2">
-                                <span className="text-letusOrange">👥</span> 근무자 근태 관리
+                                <span className="text-letusOrange">👥</span> 근무자 근태 및 생산성 관리
                             </h2>
-                            <p className="text-sm text-gray-500 font-medium mt-1">협력사 및 도급사의 일일 근태를 통합 관리합니다.</p>
+                            <p className="text-sm text-gray-500 font-medium mt-1">협력사 및 도급사의 일일 근태를 통합 관리하고 리포트를 산출합니다.</p>
                         </div>
                         <button
                             onClick={() => setIsUploadModalOpen(true)}
@@ -3199,75 +3258,147 @@
 
                     {/* 상단 요약 위젯 */}
                     <div className="grid grid-cols-4 gap-4 shrink-0">
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center relative overflow-hidden">
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center relative overflow-hidden group">
                             <span className="text-xs font-bold text-gray-500 mb-1">오늘 총 투입 인원</span>
                             <span className="text-3xl font-black text-gray-800">128<span className="text-sm font-bold text-gray-400 ml-1">명</span></span>
                         </div>
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center">
-                            <span className="text-xs font-bold text-letusBlue mb-1">협력사 인원</span>
+                            <span className="text-xs font-bold text-letusBlue mb-1">협력사 투입</span>
                             <span className="text-3xl font-black text-blue-600">85<span className="text-sm font-bold text-blue-300 ml-1">명</span></span>
                         </div>
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center">
-                            <span className="text-xs font-bold text-orange-500 mb-1">도급사 인원</span>
+                            <span className="text-xs font-bold text-orange-500 mb-1">도급사 투입</span>
                             <span className="text-3xl font-black text-orange-600">43<span className="text-sm font-bold text-orange-300 ml-1">명</span></span>
                         </div>
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center">
-                            <span className="text-xs font-bold text-red-500 mb-1">지각 / 특이사항</span>
-                            <span className="text-3xl font-black text-red-600">3<span className="text-sm font-bold text-red-300 ml-1">건</span></span>
+                            <span className="text-xs font-bold text-red-500 mb-1">누적 총 근무시간 (이번 달)</span>
+                            <span className="text-3xl font-black text-red-600">28,904<span className="text-sm font-bold text-red-300 ml-1">H</span></span>
                         </div>
                     </div>
 
                     {/* 중앙 데이터 테이블 영역 */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20">
-                        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                            <div className="flex gap-2">
-                                <input type="date" className="border border-gray-200 rounded px-3 py-1.5 text-xs font-bold text-gray-700 outline-none" />
-                                <select className="border border-gray-200 rounded px-3 py-1.5 text-xs font-bold text-gray-700 outline-none">
-                                    <option>전체 업체</option>
-                                    <option>협력사(공통)</option>
-                                    <option>도급사1</option>
-                                    <option>도급사2</option>
-                                </select>
-                            </div>
-                            <div className="relative">
-                                <input type="text" placeholder="근무자명 검색..." className="border border-gray-200 rounded px-3 py-1.5 text-xs font-bold text-gray-700 outline-none pl-8 w-48" />
-                                <svg className="w-3.5 h-3.5 absolute left-2.5 top-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            </div>
+
+                        {/* 탭 헤더 */}
+                        <div className="flex border-b border-gray-200 bg-gray-50/50 px-4 pt-4 shrink-0">
+                            <button
+                                onClick={() => setActiveTab('summary')}
+                                className={`px-6 py-2.5 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'summary' ? 'border-letusBlue text-letusBlue bg-white' : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100/50 rounded-t-lg'}`}
+                            >
+                                📊 기간별 집계 현황
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('detail')}
+                                className={`px-6 py-2.5 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'detail' ? 'border-letusBlue text-letusBlue bg-white' : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100/50 rounded-t-lg'}`}
+                            >
+                                📋 일별 상세 내역
+                            </button>
                         </div>
 
-                        <div className="overflow-auto flex-1 custom-scrollbar">
-                            <table className="w-full text-left whitespace-nowrap">
-                                <thead className="bg-slate-50/70 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10">
-                                    <tr>
-                                        <th className="p-3 pl-6">근무 일자</th>
-                                        <th className="p-3">구분</th>
-                                        <th className="p-3">업체명</th>
-                                        <th className="p-3">근무자명</th>
-                                        <th className="p-3 text-center">출근</th>
-                                        <th className="p-3 text-center">퇴근</th>
-                                        <th className="p-3 text-center">근무시간</th>
-                                        <th className="p-3">특이사항(비고)</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
-                                    {mockData.map((row) => (
-                                        <tr key={row.id} className="hover:bg-blue-50/30 transition-colors">
-                                            <td className="p-3 pl-6 font-mono text-gray-500">{row.date}</td>
-                                            <td className="p-3">
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${row.type === '협력사' ? 'bg-blue-50 text-letusBlue border border-blue-100' : 'bg-orange-50 text-letusOrange border border-orange-100'}`}>
-                                                    {row.type}
-                                                </span>
-                                            </td>
-                                            <td className="p-3 font-bold text-gray-700">{row.vendor}</td>
-                                            <td className="p-3 font-black text-gray-900">{row.name}</td>
-                                            <td className="p-3 text-center font-bold text-gray-600">{row.start}</td>
-                                            <td className="p-3 text-center font-bold text-gray-600">{row.end}</td>
-                                            <td className="p-3 text-center font-black text-letusBlue">{row.hours}H</td>
-                                            <td className="p-3 text-gray-500 truncate max-w-[200px] text-xs">{row.remark}</td>
+                        {/* 필터 컨트롤러 영역 */}
+                        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
+                            <div className="flex gap-2 items-center">
+                                <span className="text-[11px] font-bold text-gray-500 mr-1">조회 기간</span>
+                                <input type="month" className="border border-gray-200 rounded px-3 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue" defaultValue="2026-04" />
+                                <span className="text-gray-400 mx-1">~</span>
+                                <input type="month" className="border border-gray-200 rounded px-3 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue" defaultValue="2026-04" />
+
+                                <div className="h-5 w-px bg-gray-200 mx-2"></div>
+                                <button className="bg-letusOrange text-white font-bold px-4 py-1.5 rounded text-xs shadow-sm hover:bg-orange-500 transition-colors">조회하기</button>
+                            </div>
+
+                            {activeTab === 'summary' && (
+                                <button onClick={handleExportSummaryExcel} className="text-xs font-bold text-green-700 border border-green-600 bg-green-50 px-3 py-1.5 rounded hover:bg-green-100 transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg>
+                                    리포트 추출
+                                </button>
+                            )}
+                        </div>
+
+                        {/* 데이터 그리드 영역 */}
+                        <div className="overflow-auto flex-1 custom-scrollbar bg-slate-50/30">
+
+                            {/* 📊 1. 기간별 집계 현황 탭 */}
+                            {activeTab === 'summary' && (
+                                <div className="p-6">
+                                    <table className="w-full text-center whitespace-nowrap bg-white border border-gray-200 shadow-sm">
+                                        <thead className="bg-gray-100 border-b-2 border-gray-300 text-xs font-black text-gray-700">
+                                            <tr>
+                                                <th className="p-3 border-r border-gray-200 w-32">구분</th>
+                                                <th className="p-3 border-r border-gray-200 w-40">업체명</th>
+                                                <th className="p-3 border-r border-gray-200">정상근무</th>
+                                                <th className="p-3 border-r border-gray-200">연장근무</th>
+                                                <th className="p-3 border-r border-gray-200 bg-blue-50/50">합계</th>
+                                                <th className="p-3 bg-orange-50/50">가중시간</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-[13px] text-gray-800">
+                                            {summaryMockData.map((row, index) => {
+                                                const rowSpan = getRowSpan(summaryMockData, index, 'type');
+                                                return (
+                                                    <tr key={index} className="border-b border-gray-200 hover:bg-blue-50/10 transition-colors">
+                                                        {rowSpan > 0 && (
+                                                            <td rowSpan={rowSpan} className="p-3 border-r border-gray-200 font-black text-gray-700 align-middle bg-gray-50/50">
+                                                                {row.type}
+                                                            </td>
+                                                        )}
+                                                        <td className="p-3 border-r border-gray-200 font-bold">{row.vendor}</td>
+                                                        <td className="p-3 border-r border-gray-200 text-right pr-6 font-mono text-gray-600">{row.normal === 0 ? '-' : row.normal.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                                        <td className="p-3 border-r border-gray-200 text-right pr-6 font-mono text-gray-600">{row.overtime === 0 ? '-' : row.overtime.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                                        <td className="p-3 border-r border-gray-200 text-right pr-6 font-mono font-bold text-letusBlue bg-blue-50/10">{row.total === 0 ? '-' : row.total.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                                        <td className="p-3 text-right pr-6 font-mono font-bold text-red-500 bg-orange-50/10">{row.weighted === 0 ? '-' : row.weighted.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                            {/* 합계 행 */}
+                                            <tr className="bg-gray-100 border-t-2 border-gray-300 font-black text-gray-900">
+                                                <td colSpan="2" className="p-3 border-r border-gray-300 text-center">합계</td>
+                                                <td className="p-3 border-r border-gray-300 text-right pr-6 font-mono">{totalSummary.normal.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                                <td className="p-3 border-r border-gray-300 text-right pr-6 font-mono">{totalSummary.overtime.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                                <td className="p-3 border-r border-gray-300 text-right pr-6 font-mono text-letusBlue">{totalSummary.total.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                                <td className="p-3 text-right pr-6 font-mono text-red-600">{totalSummary.weighted.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <p className="text-[11px] text-gray-400 mt-2 font-medium text-right">* 가중시간은 회사 정책에 따라 연장/심야/휴일 등 가중치를 반영한 시간입니다.</p>
+                                </div>
+                            )}
+
+                            {/* 📋 2. 일별 상세 내역 탭 (기존 UI) */}
+                            {activeTab === 'detail' && (
+                                <table className="w-full text-left whitespace-nowrap">
+                                    <thead className="bg-white border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10">
+                                        <tr>
+                                            <th className="p-3 pl-6">근무 일자</th>
+                                            <th className="p-3">구분</th>
+                                            <th className="p-3">업체명</th>
+                                            <th className="p-3">근무자명</th>
+                                            <th className="p-3 text-center">출근</th>
+                                            <th className="p-3 text-center">퇴근</th>
+                                            <th className="p-3 text-center">근무시간</th>
+                                            <th className="p-3">특이사항(비고)</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700 bg-white">
+                                        {detailMockData.map((row) => (
+                                            <tr key={row.id} className="hover:bg-blue-50/30 transition-colors">
+                                                <td className="p-3 pl-6 font-mono text-gray-500">{row.date}</td>
+                                                <td className="p-3">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${row.type === '사내협력사' ? 'bg-blue-50 text-letusBlue border border-blue-100' : 'bg-orange-50 text-letusOrange border border-orange-100'}`}>
+                                                        {row.type}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3 font-bold text-gray-700">{row.vendor}</td>
+                                                <td className="p-3 font-black text-gray-900">{row.name}</td>
+                                                <td className="p-3 text-center font-bold text-gray-600">{row.start}</td>
+                                                <td className="p-3 text-center font-bold text-gray-600">{row.end}</td>
+                                                <td className="p-3 text-center font-black text-letusBlue">{row.hours}H</td>
+                                                <td className="p-3 text-gray-500 truncate max-w-[200px] text-xs">{row.remark}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     </div>
 
