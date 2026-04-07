@@ -3377,15 +3377,27 @@
 
                                     {/* 🔥 상단 차트 (월별 트렌드) */}
                                     {window.Recharts && (
-                                        <div className="bg-white p-5 border border-gray-200 rounded-lg shadow-sm h-64">
+                                        <div className="bg-white p-5 border border-gray-200 rounded-lg shadow-sm h-72"> {/* 🔥 전체 높이 살짝 증가 (h-64 -> h-72) */}
                                             <h4 className="text-xs font-bold text-gray-500 mb-4">월별 총 근무시간 추이 (전체 누적)</h4>
                                             <window.Recharts.ResponsiveContainer width="100%" height="100%">
-                                                <window.Recharts.BarChart data={chartDataList} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                                                {/* 🔥 bottom 마진을 25로 늘려서 범례와 X축 사이 공간 확보 */}
+                                                <window.Recharts.BarChart data={chartDataList} margin={{ top: 0, right: 0, left: -20, bottom: 25 }}>
                                                     <window.Recharts.CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                                                    <window.Recharts.XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
+
+                                                    {/* 🔥 dy={10} 을 추가해 X축 글씨를 아래로 살짝 내림 */}
+                                                    <window.Recharts.XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} dy={10} />
                                                     <window.Recharts.YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
-                                                    <window.Recharts.Tooltip cursor={{ fill: '#f3f4f6' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                                                    <window.Recharts.Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#4b5563' }} />
+
+                                                    {/* 🔥 툴팁 폰트 사이즈 2pt 축소 (fontSize: '12px' 추가) 및 스타일 단정하게 정리 */}
+                                                    <window.Recharts.Tooltip
+                                                        cursor={{ fill: '#f3f4f6' }}
+                                                        contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontSize: '12px', padding: '8px 12px' }}
+                                                        itemStyle={{ fontSize: '12px', fontWeight: 'bold', padding: '2px 0' }}
+                                                        labelStyle={{ fontSize: '12px', fontWeight: '900', color: '#374151', marginBottom: '4px' }}
+                                                    />
+
+                                                    {/* 🔥 paddingTop을 추가해서 차트 막대와 범례 사이 공간 추가 확보 */}
+                                                    <window.Recharts.Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#4b5563', paddingTop: '15px' }} />
                                                     <window.Recharts.Bar dataKey="normal" name="정상근무" stackId="a" fill="#4b89ff" radius={[0, 0, 4, 4]} barSize={30} />
                                                     <window.Recharts.Bar dataKey="overtime" name="연장근무" stackId="a" fill="#f58220" radius={[4, 4, 0, 0]} />
                                                 </window.Recharts.BarChart>
