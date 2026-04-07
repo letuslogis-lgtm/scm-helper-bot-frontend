@@ -2184,6 +2184,46 @@
         } catch (err) { alert('삭제 실패: ' + err.message); }
       };
 
+      // 🔥 신규: 드래그 앤 드롭으로 일정 날짜 변경 (DB 연동)
+      const handleDropEvent = async (e, targetDateStr) => {
+        e.preventDefault();
+        const eventId = e.dataTransfer.getData('text/plain'); // 드래그한 일정 ID 가져오기
+        if (!eventId) return;
+
+        const targetEvent = calendarEvents.find(ev => ev.id.toString() === eventId);
+        if (!targetEvent) return;
+
+        // 기존 일정의 기간(며칠짜리인지) 계산
+        const oldStart = new Date(targetEvent.startDate);
+        const oldEnd = new Date(targetEvent.endDate);
+        const diffTime = Math.abs(oldEnd - oldStart);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // 새로운 시작일과 그에 맞춘 종료일 계산
+        const newStart = new Date(targetDateStr);
+        const newEnd = new Date(newStart);
+        newEnd.setDate(newEnd.getDate() + diffDays);
+
+        const pad = n => String(n).padStart(2, '0');
+        const newStartDateStr = `${newStart.getFullYear()}-${pad(newStart.getMonth() + 1)}-${pad(newStart.getDate())}`;
+        const newEndDateStr = `${newEnd.getFullYear()}-${pad(newEnd.getMonth() + 1)}-${pad(newEnd.getDate())}`;
+
+        try {
+          // DB에 변경된 날짜 업데이트
+          const { error } = await supabase
+            .from('calendar_events')
+            .update({ start_date: newStartDateStr, end_date: newEndDateStr })
+            .eq('id', targetEvent.id);
+
+          if (error) throw error;
+
+          // 화면(상태) 즉시 반영
+          setCalendarEvents(calendarEvents.map(ev => 
+            ev.id === targetEvent.id ? { ...ev, startDate: newStartDateStr, endDate: newEndDateStr } : ev
+          ));
+        } catch (err) { alert('일정 이동 실패: ' + err.message); }
+      };
+
       // --- 위젯 핸들러 ---
       const openWidgetModal = (index) => { setSelectedSlotIndex(index); setIsWidgetModalOpen(true); };
       const selectWidget = (type) => {
@@ -2418,16 +2458,24 @@
                       <div
                         key={day}
                         onClick={() => setSelectedTodoDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))}
+                        // 🔥 추가: 해당 날짜 칸을 '드롭 가능 구역'으로 만듦
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          const pad = n => String(n).padStart(2, '0');
+                          const targetDateStr = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(day)}`;
+                          handleDropEvent(e, targetDateStr);
+                        }}
                         className={`border-r border-b border-gray-100 p-1.5 flex flex-col relative group transition-colors hover:bg-blue-50/30 min-h-[60px] cursor-pointer ${selectedTodoDate.getDate() === day && selectedTodoDate.getMonth() === currentDate.getMonth() && selectedTodoDate.getFullYear() === currentDate.getFullYear()
                           ? 'ring-2 ring-inset ring-letusBlue bg-blue-50/10'
                           : ''
                           }`}
                       >
-                        {/* 🔥 날짜 숫자 크기 증가 text-[11px] -> text-[13px], 배경원 w-7 h-7 로 살짝 확대 */}
+                        {/* 1. 날짜 표시 */}
                         <span className={`text-[13px] font-bold w-7 h-7 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-600'}`}>
                           {day}
                         </span>
 
+                        {/* 2. TODO 점 표시 */}
                         {dayTodos.length > 0 && (
                           <div className="flex gap-1 mb-1 px-1 mt-0.5">
                             {dayTodos.slice(0, 5).map((t, i) => {
@@ -2436,13 +2484,12 @@
                                 <div key={`dot-${i}`} className={`w-1.5 h-1.5 rounded-full transition-colors ${isCompleted ? 'bg-green-500 shadow-sm' : 'bg-slate-300'}`}></div>
                               );
                             })}
-                            {/* 🔥 더보기 플러스 아이콘 크기 증가 */}
                             {dayTodos.length > 5 && <span className="text-[10px] font-bold text-gray-400 leading-[6px] ml-0.5">+</span>}
                           </div>
                         )}
 
+                        {/* 3. 캘린더 일정 바 */}
                         <div className="flex flex-col gap-0.5 overflow-hidden flex-1">
-                          {/* 🔥 일정 바 텍스트 크기 증가 text-[9px] -> text-[11px] */}
                           {dayEvents.slice(0, 2).map((ev, idx) => (
                             <div
                               key={`ev-${idx}`}
@@ -2450,14 +2497,20 @@
                                 e.stopPropagation();
                                 setDayEventsModalData({ isOpen: true, dateStr, events: dayEvents, todos: dayTodos });
                               }}
-                              className={`text-[11px] truncate px-1.5 py-0.5 rounded font-bold border cursor-pointer ${ev.isImportant ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'}`}
+                              // 🔥 추가: 일정을 드래그할 수 있게 만들고(draggable), 집어들 때 ID를 저장
+                              draggable
+                              onDragStart={(e) => {
+                                e.stopPropagation();
+                                e.dataTransfer.setData('text/plain', ev.id.toString());
+                              }}
+                              className={`text-[11px] truncate px-1.5 py-0.5 rounded font-bold border cursor-grab active:cursor-grabbing ${ev.isImportant ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'}`}
                               title={`${ev.startTime} ~ ${ev.endTime} | ${ev.title}`}
                             >
                               {ev.title}
                             </div>
                           ))}
 
-                          {/* 🔥 더보기 버튼 텍스트 크기 증가 text-[9px] -> text-[11px] */}
+                          {/* 더보기 버튼 */}
                           {(dayEvents.length > 2) && (
                             <div
                               onClick={(e) => {
@@ -2471,6 +2524,7 @@
                           )}
                         </div>
 
+                        {/* 우측 상단 일정 추가 버튼 */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
