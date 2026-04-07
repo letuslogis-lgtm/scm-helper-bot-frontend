@@ -2475,15 +2475,22 @@
         const targetData = selectedUserIds.length > 0 ? users.filter(u => selectedUserIds.includes(u.id)) : users;
         if (targetData.length === 0) return alert('추출할 데이터가 없습니다.');
 
-        const headers = ['사용자명', '아이디', '소속팀', '소속브랜드', '권한그룹', '상태'];
-        const csvRows = targetData.map(row => `"${row.name}","${row.login_id}","${row.team}","${row.brands}","${row.role}","${row.status}"`);
-        const csvContent = '\uFEFF' + [headers.join(','), ...csvRows].join('\n');
+        // 엑셀 시트에 들어갈 JSON 데이터 배열 생성
+        const excelData = targetData.map(row => ({
+          '사용자명': row.name || '',
+          '아이디': row.login_id || '',
+          '소속팀': row.team || '',
+          '소속브랜드': row.brands || '',
+          '권한그룹': row.role || '',
+          '상태': row.status || ''
+        }));
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `사용자목록_${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 10 }, { wch: 10 }];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "사용자목록");
+        XLSX.writeFile(wb, `사용자목록_${new Date().toISOString().split('T')[0]}.xlsx`);
       };
 
       const toggleAll = () => {
@@ -3109,14 +3116,30 @@
         return null;
       };
 
-      const handleExportExcel = () => { /* 기존 로직과 동일 */
+      const handleExportExcel = () => {
         if (sortedIssues.length === 0) return alert('데이터가 없습니다.');
-        const headers = ['접수번호', '소속 브랜드', '품목코드', '유형', '접수자', '공급업체', '처리상태', '요청내용', '처리내용', '최종 처리자', '최종 처리일시'];
-        const csvRows = sortedIssues.map(row => [
-          row.reception_no || '', row.brand || '', row.product_code || '', row.issue_type || '', row.reporter || '', row.vendor || '', row.status || '', (row.request_content || '').replace(/\n/g, ' '), (row.action_content || '').replace(/\n/g, ' '), row.final_handler || '', formatDateTime(row.resolved_at) || ''
-        ].map(value => `"${value}"`).join(','));
-        const blob = new Blob(['\uFEFF' + [headers.join(','), ...csvRows].join('\n')], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `특이사항_LIST_${new Date().toISOString().split('T')[0]}.csv`; link.click();
+
+        // 엑셀 시트에 들어갈 JSON 데이터 배열 생성
+        const excelData = sortedIssues.map(row => ({
+          '접수번호': row.reception_no || '',
+          '소속 브랜드': row.brand || '',
+          '품목코드': row.product_code || '',
+          '유형': row.issue_type || '',
+          '접수자': row.reporter || '',
+          '공급업체': row.vendor || '',
+          '처리상태': row.status || '',
+          '요청내용': row.request_content || '',
+          '처리내용': row.action_content || '',
+          '최종 처리자': row.final_handler || '',
+          '최종 처리일시': formatDateTime(row.resolved_at) || ''
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        ws['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 10 }, { wch: 40 }, { wch: 40 }, { wch: 12 }, { wch: 20 }];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "특이사항_LIST");
+        XLSX.writeFile(wb, `특이사항_LIST_${new Date().toISOString().split('T')[0]}.xlsx`);
       };
 
       return (
@@ -4312,6 +4335,7 @@
       const handleExportExcel = () => {
         if (selectedIds.length === 0) return alert('다운로드할 항목을 선택해 주세요.');
         const targetItems = sortedItems.filter(item => selectedIds.includes(item.id));
+
         const headersMap = {
           service_date: '서비스예약일', brand: '브랜드', service_center: '서비스센터', service_type: '시공/AS',
           order_no: '수주번호', order_name: '수주건명', item_code: '품목코드', issue_qty: '이슈수량',
@@ -4319,11 +4343,23 @@
           shift_type: '주/야', status: '처리상태', responsible_dept: '귀책부서', cause_detail: '발생원인 상세',
           handler_name: '최종처리자', created_at: '등록일시', updated_at: '수정일시'
         };
-        const headerKeys = Object.keys(headersMap);
-        const headerLabels = Object.values(headersMap);
-        const csvRows = targetItems.map(row => headerKeys.map(key => `"${(row[key] || '').toString().replace(/"/g, '""')}"`).join(','));
-        const blob = new Blob(['\uFEFF' + [headerLabels.join(','), ...csvRows].join('\n')], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `사고분석_데이터_${new Date().toISOString().split('T')[0]}.csv`; link.click();
+
+        // 엑셀 시트에 들어갈 JSON 데이터 배열 생성
+        const excelData = targetItems.map(row => {
+          const rowData = {};
+          Object.keys(headersMap).forEach(key => {
+            rowData[headersMap[key]] = row[key] || '';
+          });
+          return rowData;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        // 열 너비 자동 조절 (선택사항)
+        ws['!cols'] = Object.keys(headersMap).map(() => ({ wch: 15 }));
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "사고분석_데이터");
+        XLSX.writeFile(wb, `사고분석_데이터_${new Date().toISOString().split('T')[0]}.xlsx`);
       };
 
       const MultiSelect = ({ label, options, selected, onChange, width = 'w-32' }) => {
