@@ -1016,30 +1016,54 @@
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     try {
-                        const wb = XLSX.read(e.target.result, { type: 'binary' });
-                        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+                        // 🔥 1. 호환성을 위해 다시 Binary 문자열로 읽기
+                        const data = e.target.result;
+                        let wb = XLSX.read(data, { type: 'binary' });
 
-                        if (rows.length === 0) throw new Error('엑셀 파일에 데이터가 없습니다.');
+                        // 시트 탐색
+                        let rows = [];
+                        for (let i = 0; i < wb.SheetNames.length; i++) {
+                            const sheetName = wb.SheetNames[i];
+                            const tempRows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+                            if (tempRows.length > 0) {
+                                rows = tempRows;
+                                console.log(`✅ [${sheetName}] 시트 파싱 성공!`);
+                                break;
+                            }
+                        }
+
+                        // 🔥 2. [가짜 엑셀 방어 로직] 일반 파싱에 실패했는데 HTML 태그가 보인다면? 강제 추출!
+                        if (rows.length === 0 && (data.includes('<table') || data.includes('<TABLE'))) {
+                            console.log('🚨 HTML 기반 가짜 엑셀 파일 감지! 시스템이 강제 추출을 시도합니다.');
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(data, 'text/html');
+                            const table = doc.querySelector('table');
+                            if (table) {
+                                wb = XLSX.utils.table_to_book(table);
+                                rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+                            }
+                        }
+
+                        // 그래도 없으면 진짜 데이터가 없는 것
+                        if (rows.length === 0) {
+                            throw new Error('데이터를 추출할 수 없습니다. (ERP 양식 호환성 오류)');
+                        }
 
                         const standardData = [];
 
                         if (vendorType.startsWith('협력사_')) {
                             const exactVendorName = vendorType.replace('협력사_', '');
                             rows.forEach(rawRow => {
-                                // 🔥 [버그 수정] 엑셀 헤더(제목)에 숨어있는 띄어쓰기/공백 완벽 제거!
                                 const row = {};
-                                for (let key in rawRow) {
-                                    row[key.replace(/\s/g, '')] = rawRow[key];
-                                }
+                                for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
 
-                                // 공백이 제거된 키값으로 정확하게 매칭
                                 if (!row['사원명'] || !row['근무일자']) return;
 
                                 standardData.push({
-                                    work_date: row['근무일자'], company_type: '사내협력사', vendor_name: exactVendorName,
-                                    worked_vendor: exactVendorName,
+                                    work_date: row['근무일자'].replace(/\./g, '-'), // "2026.02.02" -> "2026-02-02" 형식 맞추기
+                                    company_type: '사내협력사', vendor_name: exactVendorName, worked_vendor: exactVendorName,
                                     worker_name: row['사원명'], start_time: row['출근시간'] || '', end_time: row['퇴근시간'] || '',
-                                    work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8, // 임시 계산식
+                                    work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8,
                                     remark: row['이상유무'] || row['구분'] || ''
                                 });
                             });
@@ -1050,7 +1074,8 @@
 
                                 if (!row['근로자명'] || !row['날짜']) return;
                                 standardData.push({
-                                    work_date: row['날짜'], company_type: '외주도급사', vendor_name: '도급사1', worked_vendor: '도급사1',
+                                    work_date: row['날짜'].replace(/\./g, '-'),
+                                    company_type: '외주도급사', vendor_name: '도급사1', worked_vendor: '도급사1',
                                     worker_name: row['근로자명'], start_time: '', end_time: '',
                                     work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8,
                                     remark: row['비고'] || `단가: ${row['단가']}, 식대: ${row['식대']}`
@@ -1079,13 +1104,13 @@
                             });
                         }
 
-                        // 🔥 0건일 경우 안내 메시지 강화
                         if (standardData.length === 0) {
-                            alert('❌ 엑셀 데이터를 읽을 수 없습니다.\n\n[해결 방법]\n다운로드하신 엑셀 파일을 여신 후, [다른 이름으로 저장] -> [Excel 통합 문서(*.xlsx)]로 다시 저장한 뒤 업로드해 보세요! (ERP 시스템의 가짜 확장자 문제일 수 있습니다.)');
+                            alert('❌ 엑셀 구조가 맞지 않습니다.\n\n[필수 확인]\n엑셀의 첫 줄이 "사원번호", "사원명" 등의 제목으로 시작하는지 확인해주세요.');
                             setIsUploading(false);
                             return;
                         }
 
+                        // DB에 데이터 통째로 저장 (Supabase 연동)
                         const { error } = await supabase.from('worker_attendance').insert(standardData);
                         if (error) throw error;
 
@@ -1097,8 +1122,8 @@
                     } catch (err) { alert('업로드 중 오류 발생: ' + err.message); }
                     finally { setIsUploading(false); }
                 };
-                // 🔥 BinaryString 대신 ArrayBuffer로 실행
-                reader.readAsArrayBuffer(file);
+                // 🔥 ArrayBuffer 대신 BinaryString으로 다시 원복 (HTML 파싱을 위해)
+                reader.readAsBinaryString(file);
             };
 
             return (
