@@ -3455,17 +3455,23 @@
                 {/* 1. 귀책 부서별 현황 (가로 막대형, Top 5) */}
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
                   <h3 className="font-bold text-gray-700 text-sm mb-4">🏢 귀책 부서별 현황 (Top 5) <span className="text-xs text-gray-400 font-normal ml-1">(등록 완료 기준)</span></h3>
-                  <div className="flex-1 min-h-[200px]">
+
+                  {/* 🔥 수정: min-h를 높여서 여유 공간을 주고, Recharts 대신 HTML 커스텀 막대로 변경 */}
+                  <div className="flex-1 min-h-[280px] flex flex-col justify-center space-y-5 px-2">
                     {deptData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={deptData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                          <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                          <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11, fill: '#475569', fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                          <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                          <Bar dataKey="value" fill="#3b82f6" radius={[0, 8, 8, 0]} barSize={16} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      deptData.map((item) => {
+                        const deptTotal = deptData.reduce((a, b) => a + b.value, 0);
+                        const percent = deptTotal === 0 ? 0 : ((item.value / deptTotal) * 100).toFixed(1);
+                        return (
+                          <div key={item.name} className="flex items-center text-sm group" title={`${item.name}: ${item.value}건 (${percent}%)`}>
+                            <span className="w-24 text-gray-600 font-semibold truncate text-right mr-4">{item.name}</span>
+                            <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative cursor-pointer">
+                              <div className="h-full rounded-r transition-all duration-1000 ease-out" style={{ width: `${percent}%`, backgroundColor: '#3b82f6' }}></div>
+                            </div>
+                            <span className="w-12 text-right text-xs font-bold text-gray-500 ml-3">{percent}%</span>
+                          </div>
+                        );
+                      })
                     ) : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">데이터가 없습니다.</div>}
                   </div>
                 </div>
@@ -3473,17 +3479,28 @@
                 {/* 2. 조치결과 구분별 현황 (도넛형) */}
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
                   <h3 className="font-bold text-gray-700 text-sm mb-4">🍩 조치결과 구분 비율</h3>
-                  <div className="flex-1 min-h-[200px]">
+
+                  {/* 🔥 수정: 차트 높이(min-h-[280px]) 증가 및 중앙 총 발생건 텍스트 추가 */}
+                  <div className="flex-1 min-h-[280px] relative">
                     {resultData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={resultData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={4} cornerRadius={8} dataKey="value" stroke="none">
-                            {resultData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
-                          </Pie>
-                          <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                          <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }} />
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <>
+                        <ResponsiveContainer width="100%" height="100%">
+                          {/* cy="45%"로 설정해 범례가 들어갈 하단 공간을 확보합니다 */}
+                          <PieChart>
+                            <Pie data={resultData} cx="50%" cy="45%" innerRadius={65} outerRadius={90} paddingAngle={4} cornerRadius={8} dataKey="value" stroke="none">
+                              {resultData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                            </Pie>
+                            <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                            <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+
+                        {/* 도넛 중앙 총 발생건 텍스트 (Legend 공간을 고려해 pb-[10%]로 위로 살짝 올림) */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-[10%]">
+                          <span className="text-[28px] font-black leading-tight text-gray-900">{resultData.reduce((a, b) => a + b.value, 0)}</span>
+                          <span className="text-xs font-semibold text-gray-500 mt-1">총 발생건</span>
+                        </div>
+                      </>
                     ) : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">데이터가 없습니다.</div>}
                   </div>
                 </div>
@@ -3491,17 +3508,23 @@
                 {/* 3. 브랜드별 현황 (가로 막대형으로 변경, Top 5) */}
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
                   <h3 className="font-bold text-gray-700 text-sm mb-4">🏷️ 브랜드별 사고 현황 (Top 5)</h3>
-                  <div className="flex-1 min-h-[200px]">
+
+                  {/* 🔥 수정: min-h를 높여서 여유 공간을 주고, Recharts 대신 HTML 커스텀 막대로 변경 */}
+                  <div className="flex-1 min-h-[280px] flex flex-col justify-center space-y-5 px-2">
                     {brandData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={brandData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                          <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                          <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11, fill: '#475569', fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                          <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                          <Bar dataKey="value" fill="#10b981" radius={[0, 8, 8, 0]} barSize={16} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      brandData.map((item) => {
+                        const brandTotal = brandData.reduce((a, b) => a + b.value, 0);
+                        const percent = brandTotal === 0 ? 0 : ((item.value / brandTotal) * 100).toFixed(1);
+                        return (
+                          <div key={item.name} className="flex items-center text-sm group" title={`${item.name}: ${item.value}건 (${percent}%)`}>
+                            <span className="w-24 text-gray-600 font-semibold truncate text-right mr-4">{item.name}</span>
+                            <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative cursor-pointer">
+                              <div className="h-full rounded-r transition-all duration-1000 ease-out" style={{ width: `${percent}%`, backgroundColor: '#10b981' }}></div>
+                            </div>
+                            <span className="w-12 text-right text-xs font-bold text-gray-500 ml-3">{percent}%</span>
+                          </div>
+                        );
+                      })
                     ) : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">데이터가 없습니다.</div>}
                   </div>
                 </div>
@@ -3770,7 +3793,11 @@
 
       useEffect(() => { fetchAccidents(); }, [appliedFilters]);
 
-      const handleSearchClick = () => { setAppliedFilters({ ...draftFilters }); setSelectedIds([]); };
+      const handleSearchClick = () => {
+        window.getSelection()?.removeAllRanges(); // 🔥 브라우저 텍스트 선택(드래그) 강제 해제!
+        setAppliedFilters({ ...draftFilters });
+        setSelectedIds([]);
+      };
       const handleResetClick = () => { setDraftFilters(initialFiltersMap); setAppliedFilters(initialFiltersMap); setSelectedIds([]); };
 
       const sortedItems = useMemo(() => {
@@ -4276,7 +4303,7 @@
 
                       {/* 🔥 핵심: .slice(0, 300)을 붙여서 딱 300줄까지만 렌더링합니다! */}
                       {sortedItems.slice(0, 300).map(row => (
-                        <tr key={row.id} onDoubleClick={() => setActiveRow(row)} className={`cursor-pointer transition-colors ${selectedIds.includes(row.id) ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-blue-50/30'}`}>
+                        <tr key={row.id} onDoubleClick={() => { window.getSelection()?.removeAllRanges(); setActiveRow(row); }} className={`cursor-pointer transition-colors ${selectedIds.includes(row.id) ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-blue-50/30'}`}>
                           <td className="p-4 text-center" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer accent-letusBlue" /></td>
                           <td className="p-4 text-center text-gray-700">{row.service_date}</td>
                           <td className="p-4 text-center font-semibold">{row.brand}</td>
