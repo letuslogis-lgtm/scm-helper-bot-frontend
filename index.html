@@ -1485,11 +1485,12 @@
                 <div className={`${isSidebarOpen ? 'w-64' : 'w-[72px]'} bg-letusSidebar text-white flex flex-col h-full flex-shrink-0 transition-all duration-300 relative select-none z-50`}>
                     <div className={`border-b border-gray-700/50 flex items-center min-h-[64px] ${isSidebarOpen ? 'p-5 justify-between' : 'justify-center py-5'}`}>
                         {isSidebarOpen ? (
-                            <h1 className="text-2xl cursor-pointer truncate w-full text-left" onClick={() => setPage('dashboard')}>
-                                <span className="font-extrabold tracking-tight">LETUS</span><span className="font-extrabold text-letusOrange tracking-tight ml-1">LOGIS</span>
+                            <h1 className="text-2xl cursor-pointer truncate w-full text-left" onClick={() => setPage('home')}>
+                                <span className="font-extrabold tracking-tight">LETUS</span>
+                                <span className="font-extrabold text-letusOrange tracking-tight ml-1">LOGIS</span>
                             </h1>
                         ) : (
-                            <h1 className="text-[26px] leading-none cursor-pointer font-black tracking-tighter" onClick={() => setPage('dashboard')}>
+                            <h1 className="text-[26px] leading-none cursor-pointer font-black tracking-tighter" onClick={() => setPage('home')}>
                                 <span className="text-white">L</span><span className="text-letusOrange">L</span>
                             </h1>
                         )}
