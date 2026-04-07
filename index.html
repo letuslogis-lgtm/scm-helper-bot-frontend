@@ -575,7 +575,7 @@
         // --- 🔐 메뉴 권한 설정 전용 모달 (MenuPermissionModal - 아코디언 구조) ---
         const MenuPermissionModal = ({ initialMenus, onApply, onClose }) => {
             const [selectedMenus, setSelectedMenus] = useState(initialMenus || []);
-            const [expandedMenus, setExpandedMenus] = useState([]);
+            const [expandedMenus, setExpandedMenus] = useState(['home_menu']);
 
             // 실제 사이드바 구조와 동일한 메뉴 데이터
             const MENU_DATA = [
@@ -585,11 +585,11 @@
                 },
                 {
                     id: 'logistics', label: '입고 특이사항',
-                    children: [{ id: 'dashboard', label: '대시보드' }, { id: 'list', label: '특이사항 LIST' }]
+                    children: [{ id: 'dashboard', label: '입고 대시보드' }, { id: 'list', label: '특이사항 LIST' }]
                 },
                 {
-                    id: 'loading_issues', label: '상차 특이사항',
-                    children: [{ id: 'accident_dashboard', label: '사고분석 대시보드' }, { id: 'accident_list', label: '사고분석 LIST' }]
+                    id: 'loading_issues', label: '출고 특이사항',
+                    children: [{ id: 'accident_dashboard', label: '출고 대시보드' }, { id: 'accident_list', label: '사고분석 LIST' }]
                 },
                 {
                     id: 'support_menu', label: '고객 지원',
@@ -1605,7 +1605,8 @@
                                 page === 'user_management' ? '사용자 관리' :
                                     page === 'product_manager' ? 'ITEM DB 수동 업데이트' :
                                         page === 'support' ? '지원센터' :
-                                            '특이사항 LIST';
+                                            page === 'attendance' ? '근무자 근태 관리' :
+                                                '특이사항 LIST';
 
             const isFavorite = favorites?.includes(page);
 
@@ -3578,7 +3579,7 @@
                     <div className="flex justify-between items-center shrink-0">
                         <div>
                             <h2 className="text-xl font-black text-gray-800 flex items-center gap-2">
-                                <span className="text-letusOrange">👥</span> 근무자 근태 및 생산성 관리
+                                <span className="text-letusOrange">👥</span> 근무자 근태 관리
                             </h2>
                             <p className="text-sm text-gray-500 font-medium mt-1">협력사 및 도급사의 일일 근태를 통합 관리하고 리포트를 산출합니다.</p>
                         </div>
