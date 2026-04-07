@@ -3484,10 +3484,6 @@
         if (!files.acc && !files.sch && files.wms.length === 0) {
           return alert('🚨 업로드할 파일을 선택해주세요!');
         }
-        if (!files.acc && files.wms.length > 0) {
-          return alert('🚨 WMS 파일만으로는 분석할 수 없습니다. 상차이슈 파일을 같이 올려주세요!');
-        }
-
         onFileUpload({ ...files, applyFilters });
       };
 
@@ -3918,6 +3914,98 @@
 
             alert(`🎉 업데이트 완료!\n- 신규: ${finalToInsert.length}건\n- 수정: ${finalToUpdate.length}건\n(중복 제외됨)`);
           }
+
+          // ... 상차이슈(rawAcc) 처리 로직 끝나는 부분 ...
+
+          else if (rawWms.length > 0 && rawAcc.length === 0) {
+            // 🔥 WMS 파일만 단독으로 올렸을 때: 기존 DB 데이터에 작업자/Zone 정보만 덧입히기!
+            const wmsByOrder = {};
+            rawWms.forEach(r => {
+              const oId = cleanId(findCol(r, ['오더번호', '수주번호', '출고번호']));
+              if (!oId) return;
+              if (!wmsByOrder[oId]) wmsByOrder[oId] = [];
+              wmsByOrder[oId].push({
+                item: cleanTxt(findCol(r, ['ITEM ID', '단품코드', '품목코드'])),
+                loc: findCol(r, ['LOCATION', '로케이션', '존', 'ZONE']),
+                worker: findCol(r, ['작업자', '작업자명', '피커']),
+                time: findCol(r, ['작업일시', '출고일시', '작업시간'])
+              });
+            });
+
+            const orderNos = Object.keys(wmsByOrder);
+            if (orderNos.length === 0) {
+              alert('WMS 데이터에서 유효한 오더번호를 찾지 못했습니다.');
+              setIsLoading(false); return;
+            }
+
+            // 1. DB에서 기존 사고데이터 가져오기 (URL 길이 초과 방지를 위해 200개씩 끊어서 조회)
+            let existingData = [];
+            const FETCH_CHUNK = 200;
+            for (let i = 0; i < orderNos.length; i += FETCH_CHUNK) {
+              const chunkOrders = orderNos.slice(i, i + FETCH_CHUNK);
+              const { data, error } = await supabase
+                .from('logistics_accidents')
+                .select('id, order_no, item_code, zone, worker_name, shift_type')
+                .in('order_no', chunkOrders);
+              if (!error && data) existingData = [...existingData, ...data];
+            }
+
+            if (existingData.length === 0) {
+              alert('DB에 등록된 사고 데이터 중 WMS 오더번호와 일치하는 건이 없습니다.\n(상차이슈를 먼저 업로드해 주세요!)');
+              setIsLoading(false); return;
+            }
+
+            // 2. 업데이트할 데이터 찾기
+            const toUpdateMap = new Map();
+
+            existingData.forEach(row => {
+              const wmsCandidates = wmsByOrder[row.order_no] || [];
+              if (wmsCandidates.length === 0) return;
+
+              let matchedWms = {};
+              if (wmsCandidates.length === 1) matchedWms = wmsCandidates[0];
+              else matchedWms = wmsCandidates.find(w => w.item.includes(row.item_code) || row.item_code.includes(w.item)) || wmsCandidates[0];
+
+              const loc = matchedWms.loc;
+              const newZone = loc ? String(loc)[0].toUpperCase() : '';
+              let newShift = '-';
+              if (matchedWms.time) {
+                let h;
+                if (matchedWms.time instanceof Date) h = matchedWms.time.getHours();
+                else { const d = new Date(matchedWms.time); if (!isNaN(d.getTime())) h = d.getHours(); }
+                if (h !== undefined) newShift = (h >= 9 && h < 18) ? '주간' : '야간';
+              }
+
+              // 기존 데이터와 다를 때만 업데이트 대상에 쏙 추가!
+              if (row.zone !== newZone || row.worker_name !== matchedWms.worker || row.shift_type !== newShift) {
+                toUpdateMap.set(row.id, {
+                  id: row.id,
+                  zone: newZone || row.zone,
+                  worker_name: matchedWms.worker || row.worker_name,
+                  shift_type: newShift !== '-' ? newShift : row.shift_type,
+                  updated_at: new Date().toISOString()
+                });
+              }
+            });
+
+            const finalToUpdate = Array.from(toUpdateMap.values());
+
+            if (finalToUpdate.length === 0) {
+              alert('✅ WMS 정보가 이미 최신 상태로 모두 반영되어 있습니다.');
+              setIsLoading(false); return;
+            }
+
+            // 3. 500개씩 쪼개서 DB 업데이트 (서버 보호)
+            const CHUNK_SIZE = 500;
+            for (let i = 0; i < finalToUpdate.length; i += CHUNK_SIZE) {
+              const chunk = finalToUpdate.slice(i, i + CHUNK_SIZE);
+              const { error } = await supabase.from('logistics_accidents').upsert(chunk, { onConflict: 'id' });
+              if (error) throw error;
+            }
+
+            alert(`🎉 WMS 정보 반영 완료!\n- ${finalToUpdate.length}건의 데이터에 [ZONE/작업자/주야] 정보가 업데이트 되었습니다.`);
+          }
+
           else if (rawSch.length > 0) {
             const orderNos = Object.keys(schMap);
             const { data: existingData, error: fetchError } = await supabase.from('logistics_accidents').select('id, order_no, service_date, is_delayed').in('order_no', orderNos);
