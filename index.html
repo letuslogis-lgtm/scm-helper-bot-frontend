@@ -1385,7 +1385,7 @@
           id: 'home_menu', label: '나의 워크스페이스',
           icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
           children: [
-            { id: 'home', label: '나의 홈 (My Home)' }
+            { id: 'home', label: 'MY DASHBOARD' }
           ]
         },
         {
@@ -1545,13 +1545,14 @@
 
       // 메뉴 이름 매칭 로직 업데이트
       const pageTitle =
-        page === 'dashboard' ? '특이사항 대시보드' :
-          page === 'accident_dashboard' ? '사고분석 대시보드' :
-            page === 'accident_list' ? '사고분석 LIST' :
-              page === 'user_management' ? '사용자 관리' :
-                page === 'product_manager' ? 'ITEM DB 수동 업데이트' : // 🔥 요 한 줄 추가!
-                  page === 'support' ? '지원센터' :
-                    '특이사항 LIST';
+        page === 'home' ? 'MY DASHBOARD' :
+          page === 'dashboard' ? '특이사항 대시보드' :
+            page === 'accident_dashboard' ? '사고분석 대시보드' :
+              page === 'accident_list' ? '사고분석 LIST' :
+                page === 'user_management' ? '사용자 관리' :
+                  page === 'product_manager' ? 'ITEM DB 수동 업데이트' :
+                    page === 'support' ? '지원센터' :
+                      '특이사항 LIST';
 
       const isFavorite = favorites?.includes(page);
 
@@ -1657,18 +1658,11 @@
       );
     };
 
-    // --- 🏠 나의 홈 (MyDashboard - 개인 맞춤형 화면) ---
-    const MyDashboard = ({ userProfile, setPage, favorites }) => {
+    // --- 🏠 MY DASHBOARD (개인 맞춤형 화면) ---
+    const MyDashboard = ({ userProfile, setPage }) => {
       const [todoIssues, setTodoIssues] = useState(0);
       const [todoAccidents, setTodoAccidents] = useState(0);
-      const [myResolved, setMyResolved] = useState({ issues: 0, accidents: 0 });
       const [isLoading, setIsLoading] = useState(true);
-
-      const MENU_NAMES = {
-        dashboard: '대시보드', list: '특이사항 LIST',
-        accident_dashboard: '사고분석 대시보드', accident_list: '사고분석 LIST',
-        user_management: '사용자 관리', product_manager: 'ITEM DB 수동 업데이트', support: '지원센터'
-      };
 
       useEffect(() => {
         const fetchMyData = async () => {
@@ -1696,22 +1690,6 @@
             const { count: accCount } = await accQuery;
             setTodoAccidents(accCount || 0);
 
-            // 3. 나의 처리 실적 (이번 달 내가 조치완료/등록완료 한 건수)
-            const now = new Date();
-            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-            const { count: resolvedIssues } = await supabase.from('logistics_issues')
-              .select('id', { count: 'exact' })
-              .eq('final_handler', userProfile.name)
-              .gte('resolved_at', firstDay);
-
-            const { count: resolvedAccs } = await supabase.from('logistics_accidents')
-              .select('id', { count: 'exact' })
-              .eq('handler_name', userProfile.name)
-              .gte('updated_at', firstDay);
-
-            setMyResolved({ issues: resolvedIssues || 0, accidents: resolvedAccs || 0 });
-
           } catch (err) {
             console.error('MyDashboard Fetch Error:', err);
           } finally {
@@ -1737,7 +1715,7 @@
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-6 max-w-7xl mx-auto">
 
           {/* 1. 환영 인사 및 프로필 요약 */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden shrink-0">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8 flex justify-between items-center gap-6 relative overflow-hidden shrink-0">
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-50 to-transparent rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
 
             <div className="flex flex-col z-10 w-full md:w-auto">
@@ -1748,118 +1726,68 @@
               <p className="text-gray-500 font-medium text-sm mt-2">오늘도 성공적인 물류 관리를 응원합니다.</p>
             </div>
 
-            <div className="flex flex-wrap gap-2 md:gap-4 z-10 w-full md:w-auto justify-start md:justify-end">
-              <div className="bg-orange-50 border border-orange-100 rounded-lg px-4 py-3 flex flex-col min-w-[120px]">
-                <span className="text-[10px] font-black text-orange-400 mb-1">담당 브랜드</span>
-                <span className="text-sm font-bold text-gray-800 truncate max-w-[150px]">{userProfile?.managed_brands || '전체 (권한없음)'}</span>
+            {/* 🔥 수정 포인트 1: 태그들을 세로 정렬(flex-col)하고 폰트를 text-xs로 줄였습니다. */}
+            <div className="flex flex-col gap-2.5 z-10 min-w-[180px] max-w-[250px]">
+              <div className="bg-orange-50 border border-orange-100 rounded-lg px-4 py-2 flex flex-col">
+                <span className="text-[10px] font-black text-orange-400 mb-0.5">담당 브랜드</span>
+                <span className="text-xs font-bold text-gray-800 truncate" title={userProfile?.managed_brands || '전체 (권한없음)'}>
+                  {userProfile?.managed_brands || '전체 (권한없음)'}
+                </span>
               </div>
-              <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 flex flex-col min-w-[120px]">
-                <span className="text-[10px] font-black text-blue-400 mb-1">담당 업체</span>
-                <span className="text-sm font-bold text-gray-800 truncate max-w-[150px]">{userProfile?.managed_vendors || '전체 (권한없음)'}</span>
+              <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2 flex flex-col">
+                <span className="text-[10px] font-black text-blue-400 mb-0.5">담당 업체</span>
+                <span className="text-xs font-bold text-gray-800 truncate" title={userProfile?.managed_vendors || '전체 (권한없음)'}>
+                  {userProfile?.managed_vendors || '전체 (권한없음)'}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+          {/* 2. 나의 할 일 (Action Items) */}
+          {/* 🔥 수정 포인트 2: 불필요한 메뉴를 없애고 할 일 카드를 큼직하게 1:1 비율로 배치했습니다. */}
+          <div className="flex flex-col gap-4 flex-1">
+            <h3 className="font-bold text-gray-800 text-base flex items-center gap-2 px-1">
+              🔥 나의 할 일 <span className="text-xs font-normal text-gray-400">({userProfile?.team} 기준)</span>
+            </h3>
 
-            {/* 2. 나의 할 일 (Action Items) - 2칸 차지 */}
-            <div className="lg:col-span-2 flex flex-col gap-4">
-              <h3 className="font-bold text-gray-800 text-base flex items-center gap-2 px-1">
-                🔥 나의 할 일 <span className="text-xs font-normal text-gray-400">({userProfile?.team} 기준)</span>
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
-                {/* 입고 특이사항 Action */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col hover:border-blue-300 transition-colors group">
-                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mb-4 text-letusBlue group-hover:scale-110 transition-transform">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
-                  </div>
-                  <h4 className="font-bold text-gray-700 text-sm mb-1">입고 특이사항 처리</h4>
-                  <p className="text-xs text-gray-500 mb-4 line-clamp-2">담당 업체/브랜드에서 발생한 신규 이슈 중 아직 조치되지 않은 건입니다.</p>
-
-                  <div className="mt-auto flex items-end justify-between">
-                    <div>
-                      <span className="text-4xl font-black text-gray-900">{todoIssues}</span>
-                      <span className="text-sm font-bold text-gray-400 ml-1">건 대기중</span>
-                    </div>
-                    <button onClick={() => setPage('list')} className="bg-slate-800 hover:bg-black text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1 shadow-sm">
-                      바로가기 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+              {/* 입고 특이사항 Action */}
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col hover:border-blue-300 transition-colors group">
+                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-5 text-letusBlue group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
                 </div>
+                <h4 className="font-bold text-gray-800 text-lg mb-2">입고 특이사항 처리</h4>
+                <p className="text-sm text-gray-500 mb-6">담당 업체/브랜드에서 발생한 신규 이슈 중 아직 조치되지 않은 건입니다.</p>
 
-                {/* 상차 사고분석 Action */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col hover:border-orange-300 transition-colors group">
-                  <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center mb-4 text-letusOrange group-hover:scale-110 transition-transform">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                <div className="mt-auto flex items-end justify-between border-t border-gray-100 pt-5">
+                  <div>
+                    <span className="text-5xl font-black text-gray-900">{todoIssues}</span>
+                    <span className="text-sm font-bold text-gray-400 ml-2">건 대기중</span>
                   </div>
-                  <h4 className="font-bold text-gray-700 text-sm mb-1">상차 사고 원인 파악</h4>
-                  <p className="text-xs text-gray-500 mb-4 line-clamp-2">소속 팀({userProfile?.team})이 귀책 부서로 지정되었으나 아직 마감되지 않은 건입니다.</p>
-
-                  <div className="mt-auto flex items-end justify-between">
-                    <div>
-                      <span className="text-4xl font-black text-red-500">{todoAccidents}</span>
-                      <span className="text-sm font-bold text-gray-400 ml-1">건 대기중</span>
-                    </div>
-                    <button onClick={() => setPage('accident_list')} className="bg-slate-800 hover:bg-black text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1 shadow-sm">
-                      바로가기 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. 즐겨찾기 & 나의 처리 실적 - 1칸 차지 */}
-            <div className="flex flex-col gap-6">
-
-              {/* 퀵 메뉴 (즐겨찾기) */}
-              <div className="flex flex-col gap-3">
-                <h3 className="font-bold text-gray-800 text-base flex items-center gap-2 px-1">
-                  ⭐ 빠른 메뉴 (즐겨찾기)
-                </h3>
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col gap-2 min-h-[140px]">
-                  {favorites.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center opacity-70">
-                      <span className="text-2xl mb-2">📌</span>
-                      <p className="text-xs font-bold text-gray-400">즐겨찾는 메뉴가 없습니다.</p>
-                      <p className="text-[10px] text-gray-400 mt-1">상단 별(⭐) 아이콘을 눌러 추가해보세요.</p>
-                    </div>
-                  ) : (
-                    favorites.map(favId => (
-                      <button
-                        key={favId}
-                        onClick={() => setPage(favId)}
-                        className="w-full text-left px-4 py-3 rounded-lg border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 hover:text-letusBlue transition-colors flex items-center justify-between group"
-                      >
-                        <span className="text-sm font-bold text-gray-700 group-hover:text-letusBlue">{MENU_NAMES[favId] || favId}</span>
-                        <svg className="w-4 h-4 text-gray-300 group-hover:text-letusBlue transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
-                      </button>
-                    ))
-                  )}
+                  <button onClick={() => setPage('list')} className="bg-slate-800 hover:bg-black text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+                    바로가기 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                  </button>
                 </div>
               </div>
 
-              {/* 나의 실적 요약 */}
-              <div className="flex flex-col gap-3 flex-1">
-                <h3 className="font-bold text-gray-800 text-base flex items-center gap-2 px-1">
-                  🏆 이번 달 나의 처리 실적
-                </h3>
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center flex-1">
-                  <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
-                    <span className="text-sm font-bold text-gray-600 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-400"></span> 입고 특이사항 조치
-                    </span>
-                    <span className="text-xl font-black text-gray-900">{myResolved.issues}<span className="text-xs text-gray-400 ml-1 font-medium">건</span></span>
+              {/* 상차 사고분석 Action */}
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8 flex flex-col hover:border-orange-300 transition-colors group">
+                <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mb-5 text-letusOrange group-hover:scale-110 transition-transform">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                </div>
+                <h4 className="font-bold text-gray-800 text-lg mb-2">상차 사고 원인 파악</h4>
+                <p className="text-sm text-gray-500 mb-6">소속 팀({userProfile?.team})이 귀책 부서로 지정되었으나 아직 마감되지 않은 건입니다.</p>
+
+                <div className="mt-auto flex items-end justify-between border-t border-gray-100 pt-5">
+                  <div>
+                    <span className="text-5xl font-black text-red-500">{todoAccidents}</span>
+                    <span className="text-sm font-bold text-gray-400 ml-2">건 대기중</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-gray-600 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-orange-400"></span> 상차 사고분석 마감
-                    </span>
-                    <span className="text-xl font-black text-gray-900">{myResolved.accidents}<span className="text-xs text-gray-400 ml-1 font-medium">건</span></span>
-                  </div>
+                  <button onClick={() => setPage('accident_list')} className="bg-slate-800 hover:bg-black text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+                    바로가기 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                  </button>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
