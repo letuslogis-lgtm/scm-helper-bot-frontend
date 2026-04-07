@@ -3076,14 +3076,30 @@
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     try {
-                        // 🔥 [버그 수정] 가짜 엑셀 호환성을 위해 ArrayBuffer 방식으로 읽기
                         const data = new Uint8Array(e.target.result);
                         const wb = XLSX.read(data, { type: 'array' });
-                        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
 
-                        if (rows.length === 0) throw new Error('엑셀 파일에 데이터가 없습니다.');
+                        // 🔥 [마법의 업데이트] 1번 시트만 보지 않고, 데이터가 있는 시트를 찾을 때까지 싹 다 뒤집니다!
+                        let rows = [];
+                        for (let i = 0; i < wb.SheetNames.length; i++) {
+                            const sheetName = wb.SheetNames[i];
+                            const tempRows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+
+                            if (tempRows.length > 0) {
+                                rows = tempRows;
+                                console.log(`✅ [${sheetName}] 시트에서 ${rows.length}줄의 데이터 발견!`, rows); // F12 콘솔창에서 확인 가능!
+                                break; // 데이터를 찾았으니 탐색 종료
+                            }
+                        }
+
+                        if (rows.length === 0) {
+                            console.log("👀 엑셀에 존재하는 시트 목록:", wb.SheetNames);
+                            throw new Error('엑셀 파일의 모든 시트를 뒤졌지만 데이터를 찾지 못했습니다.');
+                        }
 
                         const standardData = [];
+
+                        // ... (이 아래 if (vendorType.startsWith('협력사_')) { ... 로직은 기존과 100% 동일하게 유지!) ...
 
                         if (vendorType.startsWith('협력사_')) {
                             const exactVendorName = vendorType.replace('협력사_', '');
