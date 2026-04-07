@@ -2987,9 +2987,9 @@
     const AccidentBulkEditModal = ({ selectedIds, onClose, onReload, userProfile }) => {
       const isUser = userProfile?.role !== '관리자';
 
-      const [causeType, setCauseType] = useState(''); // 강제 세팅 안 함! 직접 선택하도록 비워둠
+      const [causeType, setCauseType] = useState('');
       const [causeDetail, setCauseDetail] = useState('');
-      const [dept, setDept] = useState(isUser ? userProfile?.team : ''); // 사용자는 자기 팀 고정, 관리자는 선택
+      const [dept, setDept] = useState(isUser ? userProfile?.team : '');
       const [actionResult, setActionResult] = useState('미확인');
       const [isSaving, setIsSaving] = useState(false);
 
@@ -3003,22 +3003,21 @@
         try {
           const finalCauseStr = causeDetail ? `[${causeType}] ${causeDetail}` : `[${causeType}]`;
 
-          // 선택된 N개의 id에 대해 한 번에 동일한 값으로 덮어쓰기! (일괄 마감)
           const { error } = await supabase
             .from('logistics_accidents')
             .update({
               responsible_dept: dept,
               cause_detail: finalCauseStr,
-              action_result: actionResult !== '미확인' ? actionResult : undefined, // 미확인이면 건드리지 않음
+              action_result: actionResult !== '미확인' ? actionResult : undefined,
               status: '등록 완료',
               handler_name: userProfile?.name || '관리자',
               updated_at: new Date().toISOString()
             })
-            .in('id', selectedIds); // 🔥 핵심: in() 을 써서 배열에 있는 id 전체 업데이트!
+            .in('id', selectedIds);
 
           if (error) throw error;
 
-          alert(`🎉 총 ${selectedIds.length}건의 데이터가 성공적으로 일괄 마감 처리되었습니다.`);
+          alert(`🎉 총 ${selectedIds.length}건의 데이터가 일괄 마감 처리되었습니다.`);
           onReload();
           onClose();
         } catch (err) {
@@ -3042,71 +3041,41 @@
 
             <div className="p-6 space-y-5 overflow-y-auto max-h-[80vh] custom-scrollbar">
               <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm font-bold text-letusBlue text-center">
-                현재 <span className="text-lg mx-1">{selectedIds.length}</span>건의 사고 데이터가 선택되었습니다.
+                현재 <span className="text-lg mx-1">{selectedIds.length}</span>건의 데이터가 선택되었습니다.
               </div>
 
               <div className="space-y-4 pt-2">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                      <span className="text-letusOrange">*</span> 발생 원인 일괄 적용
-                    </label>
+                    <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5"><span className="text-letusOrange">*</span> 발생 원인 일괄 적용</label>
                     <select value={causeType} onChange={e => setCauseType(e.target.value)} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue transition-all cursor-pointer bg-white">
                       <option value="">원인을 선택해 주세요</option>
-                      <option value="작업자 귀책">작업자 귀책</option>
-                      <option value="시공팀 귀책">시공팀 귀책</option>
-                      <option value="전산/시스템 오류">전산/시스템 오류</option>
-                      <option value="서류/정보 불일치">서류/정보 불일치</option>
-                      <option value="재고/수량 이슈">재고/수량 이슈</option>
-                      <option value="프로세스 미준수">프로세스 미준수</option>
-                      <option value="기타">기타</option>
+                      <option value="작업자 귀책">작업자 귀책</option><option value="시공팀 귀책">시공팀 귀책</option><option value="전산/시스템 오류">전산/시스템 오류</option><option value="서류/정보 불일치">서류/정보 불일치</option><option value="재고/수량 이슈">재고/수량 이슈</option><option value="프로세스 미준수">프로세스 미준수</option><option value="기타">기타</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                      <span className="text-letusOrange">*</span> 귀책 부서 일괄 적용
-                    </label>
+                    <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5"><span className="text-letusOrange">*</span> 귀책 부서 일괄 적용</label>
                     <select value={dept} onChange={e => setDept(e.target.value)} disabled={isUser} className={`w-full border rounded-lg p-2.5 text-sm font-bold outline-none transition-all ${isUser ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'border-gray-300 focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-white'}`}>
                       <option value="">부서를 선택해 주세요</option>
                       {isUser && dept && !['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타'].includes(dept) && (<option value={dept}>{dept}</option>)}
-                      <option value="물류사업1팀">물류사업1팀</option>
-                      <option value="물류사업2팀">물류사업2팀</option>
-                      <option value="운송사업팀">운송사업팀</option>
-                      <option value="컨택센터">컨택센터</option>
-                      <option value="라스트마일1팀">라스트마일1팀</option>
-                      <option value="라스트마일2팀">라스트마일2팀</option>
-                      <option value="기타">기타</option>
+                      <option value="물류사업1팀">물류사업1팀</option><option value="물류사업2팀">물류사업2팀</option><option value="운송사업팀">운송사업팀</option><option value="컨택센터">컨택센터</option><option value="라스트마일1팀">라스트마일1팀</option><option value="라스트마일2팀">라스트마일2팀</option><option value="기타">기타</option>
                     </select>
                   </div>
                 </div>
 
                 {userProfile?.role === '관리자' && (
                   <div>
-                    <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                      조치 결과 일괄 변경 (선택사항)
-                    </label>
+                    <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">조치 결과 일괄 변경 (선택사항)</label>
                     <select value={actionResult} onChange={e => setActionResult(e.target.value)} className="w-full border border-blue-300 rounded-lg p-2.5 text-sm font-bold outline-none transition-all focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-blue-50/30 text-letusBlue">
                       <option value="미확인">변경 안 함 (기존 값 유지)</option>
-                      <option value="정상출고">정상출고</option>
-                      <option value="미출고">미출고</option>
-                      <option value="오출고">오출고</option>
-                      <option value="과출고">과출고</option>
-                      <option value="물류파손">물류파손</option>
-                      <option value="시공파손">시공파손</option>
-                      <option value="현장직출">현장직출</option>
-                      <option value="센터직출">센터직출</option>
-                      <option value="납기연기(건)">납기연기(건)</option>
-                      <option value="납기연기(품목)">납기연기(품목)</option>
-                      <option value="제품분실">제품분실</option>
+                      <option value="정상출고">정상출고</option><option value="미출고">미출고</option><option value="오출고">오출고</option><option value="과출고">과출고</option><option value="물류파손">물류파손</option><option value="시공파손">시공파손</option><option value="현장직출">현장직출</option><option value="센터직출">센터직출</option><option value="납기연기(건)">납기연기(건)</option><option value="납기연기(품목)">납기연기(품목)</option><option value="제품분실">제품분실</option>
                     </select>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                    발생 원인 상세 일괄 기입
-                  </label>
+                  <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">발생 원인 상세 일괄 기입</label>
                   <textarea value={causeDetail} onChange={e => setCauseDetail(e.target.value)} rows={3} className="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue resize-none transition-all placeholder:text-gray-300" placeholder="예: 시공팀 오등록 확인, 일괄 마감 처리건"></textarea>
                 </div>
               </div>
@@ -3744,52 +3713,35 @@
       const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
       const [selectedIds, setSelectedIds] = useState([]);
       const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
-      const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false); // 일괄수정 모달 상태
-      const [isActionMenuOpen, setIsActionMenuOpen] = useState(false); // 선택실행 드롭다운 상태
+
+      // 🔥 신규: 누락되었던 모달 오픈용 상태값 추가
+      const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+      const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
 
       const today = new Date().toISOString().split('T')[0];
 
-      // 🔥 1. showNormal(포함)을 excludeNormal(제외)로 변경하고 기본값을 false(제외 안 함=포함)로 설정!
       const initialFiltersMap = {
-        brands: [],
-        centers: [],
-        serviceTypes: [],
-        statuses: [],
-        depts: [],
-        actionResults: [],
-        startDate: today,
-        endDate: today,
-        searchType: '수주건명',
-        searchValue: '',
-        excludeNormal: false, // 🔥 여기 변경됨
-        isDelayed: '전체'
+        brands: [], centers: [], serviceTypes: [], statuses: [], depts: [], actionResults: [],
+        startDate: today, endDate: today, searchType: '수주건명', searchValue: '', excludeNormal: false, isDelayed: '전체'
       };
 
       const [draftFilters, setDraftFilters] = useState(initialFiltersMap);
       const [appliedFilters, setAppliedFilters] = useState(initialFiltersMap);
       const [sortConfig, setSortConfig] = useState({ key: null, direction: 'none' });
 
-      // 🔥 드릴다운 필터 통신 처리
       useEffect(() => {
         if (initialFilter) {
           const newF = { ...initialFiltersMap, ...initialFilter };
-          setDraftFilters(newF);
-          setAppliedFilters(newF);
+          setDraftFilters(newF); setAppliedFilters(newF);
         }
       }, [initialFilter]);
 
       const fetchAccidents = async () => {
         setIsLoading(true);
         try {
-          let query = supabase.from('logistics_accidents')
-            .select('*')
-            .gte('service_date', appliedFilters.startDate)
-            .lte('service_date', appliedFilters.endDate)
-            .order('created_at', { ascending: false });
-
+          let query = supabase.from('logistics_accidents').select('*').gte('service_date', appliedFilters.startDate).lte('service_date', appliedFilters.endDate).order('created_at', { ascending: false });
           const { data, error } = await query;
           if (error) throw error;
-
           let filtered = data || [];
 
           if (appliedFilters.brands.length > 0) filtered = filtered.filter(i => appliedFilters.brands.includes(i.brand));
@@ -3806,32 +3758,26 @@
             if (appliedFilters.searchType === '품목코드') filtered = filtered.filter(i => (i.item_code || '').toLowerCase().includes(val));
           }
 
-          // 🔥 2. 체크박스가 켜져있을 때(excludeNormal === true)만 정상출고를 걸러냅니다!
-          if (appliedFilters.excludeNormal) {
-            filtered = filtered.filter(i => i.action_result !== '정상출고');
-          }
+          if (appliedFilters.excludeNormal) { filtered = filtered.filter(i => i.action_result !== '정상출고'); }
 
           if (appliedFilters.isDelayed !== '전체') {
             if (appliedFilters.isDelayed === '지연') filtered = filtered.filter(i => i.is_delayed !== '-');
             else if (appliedFilters.isDelayed === '정상') filtered = filtered.filter(i => i.is_delayed === '-');
           }
-
           setItems(filtered);
-        } catch (err) { console.error(err); }
-        finally { setIsLoading(false); }
+        } catch (err) { console.error(err); } finally { setIsLoading(false); }
       };
 
       useEffect(() => { fetchAccidents(); }, [appliedFilters]);
 
       const handleSearchClick = () => { setAppliedFilters({ ...draftFilters }); setSelectedIds([]); };
-      const handleResetClick = () => { setDraftFilters(initialFilters); setAppliedFilters(initialFilters); setSelectedIds([]); };
+      const handleResetClick = () => { setDraftFilters(initialFiltersMap); setAppliedFilters(initialFiltersMap); setSelectedIds([]); };
 
       const sortedItems = useMemo(() => {
         let sortableItems = [...items];
         if (sortConfig.key && sortConfig.direction !== 'none') {
           sortableItems.sort((a, b) => {
-            const aVal = a[sortConfig.key] || '';
-            const bVal = b[sortConfig.key] || '';
+            const aVal = a[sortConfig.key] || ''; const bVal = b[sortConfig.key] || '';
             if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
             if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
             return 0;
@@ -3857,6 +3803,28 @@
       const handleSelectAll = (e) => setSelectedIds(e.target.checked ? sortedItems.map(i => i.id) : []);
       const handleSelectOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
+      // 🔥 신규 추가: 일괄 삭제 기능 (청크 처리 완료)
+      const handleDeleteSelected = async () => {
+        if (userProfile?.role !== '관리자') return alert('🚨 삭제 권한이 없습니다. 관리자에게 문의하세요.');
+        if (selectedIds.length === 0) return alert('삭제할 항목을 체크해 주세요.');
+
+        if (!window.confirm(`선택하신 ${selectedIds.length}건의 데이터를 정말 삭제하시겠습니까?\n이 작업은 영구적이며 복구할 수 없습니다.`)) return;
+
+        try {
+          const CHUNK_SIZE = 200;
+          for (let i = 0; i < selectedIds.length; i += CHUNK_SIZE) {
+            const chunk = selectedIds.slice(i, i + CHUNK_SIZE);
+            const { error } = await supabase.from('logistics_accidents').delete().in('id', chunk);
+            if (error) throw error;
+          }
+          alert(`🗑️ ${selectedIds.length}건의 데이터가 깔끔하게 삭제되었습니다.`);
+          setSelectedIds([]);
+          fetchAccidents();
+        } catch (err) {
+          alert('삭제 중 오류 발생: ' + err.message);
+        }
+      };
+
       const handleExportExcel = () => {
         if (selectedIds.length === 0) return alert('다운로드할 항목을 선택해 주세요.');
         const targetItems = sortedItems.filter(item => selectedIds.includes(item.id));
@@ -3871,10 +3839,7 @@
         const headerLabels = Object.values(headersMap);
         const csvRows = targetItems.map(row => headerKeys.map(key => `"${(row[key] || '').toString().replace(/"/g, '""')}"`).join(','));
         const blob = new Blob(['\uFEFF' + [headerLabels.join(','), ...csvRows].join('\n')], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `사고분석_데이터_${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
+        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `사고분석_데이터_${new Date().toISOString().split('T')[0]}.csv`; link.click();
       };
 
       const MultiSelect = ({ label, options, selected, onChange, width = 'w-32' }) => {
@@ -3947,29 +3912,73 @@
               const id = cleanId(findCol(r, ['수주번호', '오더번호']));
               if (!id) return;
               if (!schMap[id]) schMap[id] = [];
-
-              const dVal = findCol(r, ['시공예정일', '서비스예약일', '예약일']); // 바뀐 헤더 완벽 대응!
-              const reworkFlag = findCol(r, ['재시공']); // '재시공' 열 값 추출
-
-              // 날짜만 담던 것에서 -> { 날짜, 재시공여부 } 객체로 담도록 업그레이드!
-              schMap[id].push({
-                date: dVal,
-                rework: reworkFlag ? String(reworkFlag).trim().toUpperCase() : ''
-              });
+              const dVal = findCol(r, ['시공예정일', '서비스예약일', '예약일']);
+              const reworkFlag = findCol(r, ['재시공']);
+              schMap[id].push({ date: dVal, rework: reworkFlag ? String(reworkFlag).trim().toUpperCase() : '' });
             });
           }
 
-          if (rawAcc.length > 0) {
+          if (rawWms.length > 0 && rawAcc.length === 0) {
             const wmsByOrder = {};
             rawWms.forEach(r => {
               const oId = cleanId(findCol(r, ['오더번호', '수주번호', '출고번호']));
               if (!oId) return;
               if (!wmsByOrder[oId]) wmsByOrder[oId] = [];
               wmsByOrder[oId].push({
-                item: cleanTxt(findCol(r, ['ITEM ID', '단품코드', '품목코드'])),
-                loc: findCol(r, ['LOCATION', '로케이션', '존', 'ZONE']),
-                worker: findCol(r, ['작업자', '작업자명', '피커']),
-                time: findCol(r, ['작업일시', '출고일시', '작업시간'])
+                item: cleanTxt(findCol(r, ['ITEM ID', '단품코드', '품목코드'])), loc: findCol(r, ['LOCATION', '로케이션', '존', 'ZONE']), worker: findCol(r, ['작업자', '작업자명', '피커']), time: findCol(r, ['작업일시', '출고일시', '작업시간'])
+              });
+            });
+
+            const orderNos = Object.keys(wmsByOrder);
+            if (orderNos.length === 0) { alert('WMS 데이터에서 유효한 오더번호를 찾지 못했습니다.'); setIsLoading(false); return; }
+
+            let existingData = []; const FETCH_CHUNK = 200;
+            for (let i = 0; i < orderNos.length; i += FETCH_CHUNK) {
+              const chunkOrders = orderNos.slice(i, i + FETCH_CHUNK);
+              const { data, error } = await supabase.from('logistics_accidents').select('id, order_no, item_code, zone, worker_name, shift_type').in('order_no', chunkOrders);
+              if (!error && data) existingData = [...existingData, ...data];
+            }
+
+            if (existingData.length === 0) { alert('DB에 등록된 사고 데이터 중 WMS 오더번호와 일치하는 건이 없습니다.\n(상차이슈를 먼저 업로드해 주세요!)'); setIsLoading(false); return; }
+
+            const toUpdateMap = new Map();
+            existingData.forEach(row => {
+              const wmsCandidates = wmsByOrder[row.order_no] || [];
+              if (wmsCandidates.length === 0) return;
+              let matchedWms = {};
+              if (wmsCandidates.length === 1) matchedWms = wmsCandidates[0];
+              else matchedWms = wmsCandidates.find(w => w.item.includes(row.item_code) || row.item_code.includes(w.item)) || wmsCandidates[0];
+              const loc = matchedWms.loc; const newZone = loc ? String(loc)[0].toUpperCase() : '';
+              let newShift = '-';
+              if (matchedWms.time) {
+                let h; if (matchedWms.time instanceof Date) h = matchedWms.time.getHours();
+                else { const d = new Date(matchedWms.time); if (!isNaN(d.getTime())) h = d.getHours(); }
+                if (h !== undefined) newShift = (h >= 9 && h < 18) ? '주간' : '야간';
+              }
+              if (row.zone !== newZone || row.worker_name !== matchedWms.worker || row.shift_type !== newShift) {
+                toUpdateMap.set(row.id, { id: row.id, zone: newZone || row.zone, worker_name: matchedWms.worker || row.worker_name, shift_type: newShift !== '-' ? newShift : row.shift_type, updated_at: new Date().toISOString() });
+              }
+            });
+
+            const finalToUpdate = Array.from(toUpdateMap.values());
+            if (finalToUpdate.length === 0) { alert('✅ WMS 정보가 이미 최신 상태로 모두 반영되어 있습니다.'); setIsLoading(false); return; }
+
+            const CHUNK_SIZE = 500;
+            for (let i = 0; i < finalToUpdate.length; i += CHUNK_SIZE) {
+              const chunk = finalToUpdate.slice(i, i + CHUNK_SIZE);
+              const { error } = await supabase.from('logistics_accidents').upsert(chunk, { onConflict: 'id' });
+              if (error) throw error;
+            }
+            alert(`🎉 WMS 정보 반영 완료!\n- ${finalToUpdate.length}건의 데이터에 [ZONE/작업자/주야] 정보가 업데이트 되었습니다.`);
+          }
+          else if (rawAcc.length > 0) {
+            const wmsByOrder = {};
+            rawWms.forEach(r => {
+              const oId = cleanId(findCol(r, ['오더번호', '수주번호', '출고번호']));
+              if (!oId) return;
+              if (!wmsByOrder[oId]) wmsByOrder[oId] = [];
+              wmsByOrder[oId].push({
+                item: cleanTxt(findCol(r, ['ITEM ID', '단품코드', '품목코드'])), loc: findCol(r, ['LOCATION', '로케이션', '존', 'ZONE']), worker: findCol(r, ['작업자', '작업자명', '피커']), time: findCol(r, ['작업일시', '출고일시', '작업시간'])
               });
             });
 
@@ -3993,17 +4002,13 @@
 
               const accDate = findCol(row, ['서비스예약일', '예약일', '시공예정일']);
 
-              let delayCount = 0; // 기존 뒤쪽 코드와 호환성을 위해 변수명은 유지
-
+              let delayCount = 0;
               if (schMap[orderId]) {
-                // 바구니에 담긴 내역 중 '재시공' 값이 'R'인 게 하나라도 있는지 확인! (초간단)
                 const hasDelay = schMap[orderId].some(item => item.rework === 'R');
-
-                if (hasDelay) {
-                  delayCount = 1; // 'R'이 있으면 무조건 연기된 건(delayCount > 0)으로 판정!
-                }
+                if (hasDelay) delayCount = 1;
               }
-              const isDelayed = delayCount >= 2 ? "재일정(지연)" : "-";
+              const isDelayed = delayCount > 0 ? "재일정(지연)" : "-";
+
               const item = cleanTxt(findCol(row, ['단품코드', '품목코드']));
               const color = cleanTxt(row['색상']);
               let finalItemCode = item;
@@ -4016,8 +4021,7 @@
               const zone = loc ? String(loc)[0].toUpperCase() : '';
               let shift = '-';
               if (matchedWms.time) {
-                let h;
-                if (matchedWms.time instanceof Date) h = matchedWms.time.getHours();
+                let h; if (matchedWms.time instanceof Date) h = matchedWms.time.getHours();
                 else { const d = new Date(matchedWms.time); if (!isNaN(d.getTime())) h = d.getHours(); }
                 if (h !== undefined) shift = (h >= 9 && h < 18) ? '주간' : '야간';
               }
@@ -4030,8 +4034,14 @@
 
             if (processed.length === 0) { alert('분석 결과 저장할 데이터가 없습니다.'); setIsLoading(false); return; }
             const orderNos = [...new Set(processed.map(p => p.order_no))];
-            const { data: existingData, error: fetchError } = await supabase.from('logistics_accidents').select('id, order_no, item_code, is_delayed, zone, worker_name, shift_type').in('order_no', orderNos);
-            if (fetchError) throw fetchError;
+
+            let existingData = []; const FETCH_CHUNK = 200;
+            for (let i = 0; i < orderNos.length; i += FETCH_CHUNK) {
+              const chunkOrders = orderNos.slice(i, i + FETCH_CHUNK);
+              const { data, error } = await supabase.from('logistics_accidents').select('id, order_no, item_code, is_delayed, zone, worker_name, shift_type').in('order_no', chunkOrders);
+              if (!error && data) existingData = [...existingData, ...data];
+            }
+
             const existingMap = new Map();
             (existingData || []).forEach(d => { existingMap.set(`${d.order_no}_${d.item_code}`, d); });
             const toInsert = []; const toUpdate = [];
@@ -4051,27 +4061,19 @@
                 });
               }
             });
-            if (toInsert.length === 0 && toUpdate.length === 0) {
-              alert(`✅ 이미 최신 상태입니다.`);
-              setIsLoading(false);
-              return;
-            }
 
-            // 🔥 신규 추가: 엑셀 자체 중복 데이터 제거 (동일한 id나 코드가 여러 줄 있으면 마지막 줄만 남김)
-            // 1. 수정(Update) 데이터 중복 제거
+            // 🔥 중복 제거 로직
             const uniqueUpdateMap = new Map();
             toUpdate.forEach(item => uniqueUpdateMap.set(item.id, item));
             const finalToUpdate = Array.from(uniqueUpdateMap.values());
 
-            // 2. 신규(Insert) 데이터 중복 제거 (수주번호_품목코드 기준)
             const uniqueInsertMap = new Map();
             toInsert.forEach(item => uniqueInsertMap.set(`${item.order_no}_${item.item_code}`, item));
             const finalToInsert = Array.from(uniqueInsertMap.values());
 
-            // 🔥 한 번에 전송할 데이터 개수 (500개)
-            const CHUNK_SIZE = 500;
+            if (finalToInsert.length === 0 && finalToUpdate.length === 0) { alert(`✅ 이미 최신 상태입니다.`); setIsLoading(false); return; }
 
-            // 1. 신규 데이터(Insert) 쪼개서 올리기
+            const CHUNK_SIZE = 500;
             if (finalToInsert.length > 0) {
               for (let i = 0; i < finalToInsert.length; i += CHUNK_SIZE) {
                 const chunk = finalToInsert.slice(i, i + CHUNK_SIZE);
@@ -4079,8 +4081,6 @@
                 if (error) throw error;
               }
             }
-
-            // 2. 수정 데이터(Upsert) 쪼개서 올리기
             if (finalToUpdate.length > 0) {
               for (let i = 0; i < finalToUpdate.length; i += CHUNK_SIZE) {
                 const chunk = finalToUpdate.slice(i, i + CHUNK_SIZE);
@@ -4088,136 +4088,26 @@
                 if (error) throw error;
               }
             }
-
             alert(`🎉 업데이트 완료!\n- 신규: ${finalToInsert.length}건\n- 수정: ${finalToUpdate.length}건\n(중복 제외됨)`);
           }
-
-          // ... 상차이슈(rawAcc) 처리 로직 끝나는 부분 ...
-
-          else if (rawWms.length > 0 && rawAcc.length === 0) {
-            // 🔥 WMS 파일만 단독으로 올렸을 때: 기존 DB 데이터에 작업자/Zone 정보만 덧입히기!
-            const wmsByOrder = {};
-            rawWms.forEach(r => {
-              const oId = cleanId(findCol(r, ['오더번호', '수주번호', '출고번호']));
-              if (!oId) return;
-              if (!wmsByOrder[oId]) wmsByOrder[oId] = [];
-              wmsByOrder[oId].push({
-                item: cleanTxt(findCol(r, ['ITEM ID', '단품코드', '품목코드'])),
-                loc: findCol(r, ['LOCATION', '로케이션', '존', 'ZONE']),
-                worker: findCol(r, ['작업자', '작업자명', '피커']),
-                time: findCol(r, ['작업일시', '출고일시', '작업시간'])
-              });
-            });
-
-            const orderNos = Object.keys(wmsByOrder);
-            if (orderNos.length === 0) {
-              alert('WMS 데이터에서 유효한 오더번호를 찾지 못했습니다.');
-              setIsLoading(false); return;
-            }
-
-            // 1. DB에서 기존 사고데이터 가져오기 (URL 길이 초과 방지를 위해 200개씩 끊어서 조회)
-            let existingData = [];
-            const FETCH_CHUNK = 200;
-            for (let i = 0; i < orderNos.length; i += FETCH_CHUNK) {
-              const chunkOrders = orderNos.slice(i, i + FETCH_CHUNK);
-              const { data, error } = await supabase
-                .from('logistics_accidents')
-                .select('id, order_no, item_code, zone, worker_name, shift_type')
-                .in('order_no', chunkOrders);
-              if (!error && data) existingData = [...existingData, ...data];
-            }
-
-            if (existingData.length === 0) {
-              alert('DB에 등록된 사고 데이터 중 WMS 오더번호와 일치하는 건이 없습니다.\n(상차이슈를 먼저 업로드해 주세요!)');
-              setIsLoading(false); return;
-            }
-
-            // 2. 업데이트할 데이터 찾기
-            const toUpdateMap = new Map();
-
-            existingData.forEach(row => {
-              const wmsCandidates = wmsByOrder[row.order_no] || [];
-              if (wmsCandidates.length === 0) return;
-
-              let matchedWms = {};
-              if (wmsCandidates.length === 1) matchedWms = wmsCandidates[0];
-              else matchedWms = wmsCandidates.find(w => w.item.includes(row.item_code) || row.item_code.includes(w.item)) || wmsCandidates[0];
-
-              const loc = matchedWms.loc;
-              const newZone = loc ? String(loc)[0].toUpperCase() : '';
-              let newShift = '-';
-              if (matchedWms.time) {
-                let h;
-                if (matchedWms.time instanceof Date) h = matchedWms.time.getHours();
-                else { const d = new Date(matchedWms.time); if (!isNaN(d.getTime())) h = d.getHours(); }
-                if (h !== undefined) newShift = (h >= 9 && h < 18) ? '주간' : '야간';
-              }
-
-              // 기존 데이터와 다를 때만 업데이트 대상에 쏙 추가!
-              if (row.zone !== newZone || row.worker_name !== matchedWms.worker || row.shift_type !== newShift) {
-                toUpdateMap.set(row.id, {
-                  id: row.id,
-                  zone: newZone || row.zone,
-                  worker_name: matchedWms.worker || row.worker_name,
-                  shift_type: newShift !== '-' ? newShift : row.shift_type,
-                  updated_at: new Date().toISOString()
-                });
-              }
-            });
-
-            const finalToUpdate = Array.from(toUpdateMap.values());
-
-            if (finalToUpdate.length === 0) {
-              alert('✅ WMS 정보가 이미 최신 상태로 모두 반영되어 있습니다.');
-              setIsLoading(false); return;
-            }
-
-            // 3. 500개씩 쪼개서 DB 업데이트 (서버 보호)
-            const CHUNK_SIZE = 500;
-            for (let i = 0; i < finalToUpdate.length; i += CHUNK_SIZE) {
-              const chunk = finalToUpdate.slice(i, i + CHUNK_SIZE);
-              const { error } = await supabase.from('logistics_accidents').upsert(chunk, { onConflict: 'id' });
-              if (error) throw error;
-            }
-
-            alert(`🎉 WMS 정보 반영 완료!\n- ${finalToUpdate.length}건의 데이터에 [ZONE/작업자/주야] 정보가 업데이트 되었습니다.`);
-          }
-
           else if (rawSch.length > 0) {
             const orderNos = Object.keys(schMap);
-
-            // 🔥 1. DB 조회 청크 처리 (14,000개를 한 번에 찾지 않고 200개씩 나눠서 찾기!)
-            let existingData = [];
-            const FETCH_CHUNK = 200;
+            let existingData = []; const FETCH_CHUNK = 200;
             for (let i = 0; i < orderNos.length; i += FETCH_CHUNK) {
               const chunkOrders = orderNos.slice(i, i + FETCH_CHUNK);
-              const { data, error } = await supabase
-                .from('logistics_accidents')
-                .select('id, order_no, service_date, is_delayed')
-                .in('order_no', chunkOrders);
+              const { data, error } = await supabase.from('logistics_accidents').select('id, order_no, service_date, is_delayed').in('order_no', chunkOrders);
               if (!error && data) existingData = [...existingData, ...data];
             }
 
             const toUpdate = [];
-
             existingData.forEach(row => {
-              // 🔥 2. 복잡한 날짜 부등호 비교는 버리고, 'R' 플래그만 확인하는 초간단 로직!
               let isDelayedNow = false;
-              if (schMap[row.order_no]) {
-                isDelayedNow = schMap[row.order_no].some(item => item.rework === 'R');
-              }
-
-              // DB에 '재일정(지연)'이라고 안 적혀있는데, 엑셀에는 'R'이 있다면? 업데이트 바구니에 담기!
+              if (schMap[row.order_no]) { isDelayedNow = schMap[row.order_no].some(item => item.rework === 'R'); }
               if (isDelayedNow && row.is_delayed !== '재일정(지연)') {
-                toUpdate.push({
-                  id: row.id,
-                  is_delayed: '재일정(지연)',
-                  updated_at: new Date().toISOString()
-                });
+                toUpdate.push({ id: row.id, is_delayed: '재일정(지연)', updated_at: new Date().toISOString() });
               }
             });
 
-            // 🔥 3. 업데이트(Upsert) 청크 처리 (수만 개라도 500개씩 안전하게 쪼개서 서버에 쏘기!)
             if (toUpdate.length > 0) {
               const UPDATE_CHUNK = 500;
               for (let i = 0; i < toUpdate.length; i += UPDATE_CHUNK) {
@@ -4226,9 +4116,7 @@
                 if (error) throw error;
               }
               alert(`✅ 지연 업데이트 완료 (${toUpdate.length}건)`);
-            } else {
-              alert('✅ 새롭게 지연된 건이 없습니다.');
-            }
+            } else { alert('✅ 새롭게 지연된 건이 없습니다.'); }
           }
           fetchAccidents();
         } catch (error) { alert('오류: ' + error.message); console.error(error); setIsLoading(false); }
@@ -4237,10 +4125,7 @@
       return (
         <div className="p-6 bg-slate-100 h-[calc(100vh-64px)] flex flex-col gap-4 slide-up">
 
-          {/* 🔍 조회구역 메인 레이아웃 (아코디언 방식) */}
           <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex flex-col gap-3 z-30 shrink-0 transition-all duration-300">
-
-            {/* 🔽 Row 1: 기본 검색 (브랜드, 날짜, 검색어, 정상출고 제외 토글) */}
             <div className="flex items-center gap-5 w-full flex-wrap">
               <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소']} selected={draftFilters.brands} onChange={(val) => setDraftFilters({ ...draftFilters, brands: val })} />
 
@@ -4265,7 +4150,6 @@
                 </div>
               </div>
 
-              {/* 🔥 3. UI 변경: '정상출고' 제외 체크박스 */}
               <div className="flex items-center shrink-0 bg-blue-50/50 px-3 py-1.5 rounded border border-blue-100">
                 <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-letusBlue">
                   <input type="checkbox" checked={draftFilters.excludeNormal} onChange={e => setDraftFilters({ ...draftFilters, excludeNormal: e.target.checked })} className="w-3.5 h-3.5 accent-letusBlue cursor-pointer" />
@@ -4284,7 +4168,6 @@
               </div>
             </div>
 
-            {/* 🔽 Row 2: 상세 검색 (6종 세트) */}
             {isAdvancedOpen && (
               <div className="flex flex-col gap-3 pt-3 mt-1 border-t border-gray-100 slide-up">
                 <div className="flex items-center gap-6 w-full flex-wrap">
@@ -4320,7 +4203,6 @@
 
               {isActionMenuOpen && (
                 <>
-                  {/* 메뉴 밖을 클릭하면 닫히게 하는 투명 방어막 */}
                   <div className="fixed inset-0" onClick={() => setIsActionMenuOpen(false)}></div>
                   <div className="absolute right-0 top-[110%] w-[130px] bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5 slide-down z-50">
                     <button
@@ -4368,18 +4250,7 @@
                   <tr>
                     <th className="p-4 w-[50px] text-center"><input type="checkbox" checked={sortedItems.length > 0 && selectedIds.length === sortedItems.length} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer accent-letusBlue" /></th>
                     {[
-                      { label: '서비스예약일', key: 'service_date', w: '110px' },
-                      { label: '브랜드', key: 'brand', w: '90px' },
-                      { label: '서비스센터', key: 'service_center', w: '90px' },
-                      { label: '시공/AS', key: 'service_type', w: '80px' },
-                      { label: '수주번호', key: 'order_no', w: '150px' },
-                      { label: '수주건명', key: 'order_name', w: 'auto' },
-                      { label: '품목코드', key: 'item_code', w: '180px' },
-                      { label: '수량', key: 'issue_qty', w: '70px' },
-                      { label: '처리상태', key: 'status', w: '120px' },
-                      { label: '귀책부서', key: 'responsible_dept', w: '120px' },
-                      { label: '조치결과구분', key: 'action_result', w: '130px' },
-                      { label: '납기지연판별', key: 'is_delayed', w: '110px' }
+                      { label: '서비스예약일', key: 'service_date', w: '110px' }, { label: '브랜드', key: 'brand', w: '90px' }, { label: '서비스센터', key: 'service_center', w: '90px' }, { label: '시공/AS', key: 'service_type', w: '80px' }, { label: '수주번호', key: 'order_no', w: '150px' }, { label: '수주건명', key: 'order_name', w: 'auto' }, { label: '품목코드', key: 'item_code', w: '180px' }, { label: '수량', key: 'issue_qty', w: '70px' }, { label: '처리상태', key: 'status', w: '120px' }, { label: '귀책부서', key: 'responsible_dept', w: '120px' }, { label: '조치결과구분', key: 'action_result', w: '130px' }, { label: '납기지연판별', key: 'is_delayed', w: '110px' }
                     ].map((col, idx) => (
                       <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
                         <div className="flex items-center justify-center">{col.label} {col.key && getSortIcon(col.key)}</div>
@@ -4430,6 +4301,8 @@
 
           {activeRow && <AccidentModal row={activeRow} onClose={() => setActiveRow(null)} onReload={fetchAccidents} userProfile={userProfile} />}
           {isUploadModalOpen && <AccidentUploadModal onClose={() => setIsUploadModalOpen(false)} onFileUpload={handleFileUpload} />}
+
+          {/* 🔥 일괄 수정 모달 컴포넌트 추가 */}
           {isBulkEditModalOpen && <AccidentBulkEditModal selectedIds={selectedIds} onClose={() => { setIsBulkEditModalOpen(false); setSelectedIds([]); }} onReload={fetchAccidents} userProfile={userProfile} />}
         </div>
       );
