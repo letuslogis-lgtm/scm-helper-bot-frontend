@@ -3070,7 +3070,7 @@
             );
         }
 
-        // --- 📥 근태 데이터 스마트 업로드 모달 (데이터 통합 업로드 UI 톤앤매너 적용) ---
+        // --- 📥 근태 데이터 통합 업로드 모달 (최종 UI/UX 적용) ---
         const AttendanceUploadModal = ({ onClose, onReload }) => {
             const [files, setFiles] = useState([]);
             const [manualVendor, setManualVendor] = useState('');
@@ -3108,8 +3108,14 @@
                 setFiles(prev => {
                     const newArray = prev.filter((_, i) => i !== indexToRemove);
                     if (newArray.length === 1) setManualVendor(detectVendor(newArray[0].name));
+                    else setManualVendor('');
                     return newArray;
                 });
+            };
+
+            const clearAllFiles = () => {
+                setFiles([]);
+                setManualVendor('');
             };
 
             const onDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
@@ -3246,10 +3252,19 @@
                 ? [manualVendor]
                 : files.map(f => detectVendor(f.name)).filter(Boolean);
 
+            const vendorList = [
+                { id: '협력사_바로서비스', label: '바로서비스' },
+                { id: '협력사_하나물류', label: '하나물류' },
+                { id: '협력사_에프스토리', label: '에프스토리' },
+                { id: '도급사1', label: 'IPC' },
+                { id: '도급사2', label: '승현' },
+                { id: '도급사3', label: '도급사3' }
+            ];
+
             return (
                 <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
                     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-                    <div className="bg-white rounded-2xl shadow-2xl z-10 w-full max-w-[560px] flex flex-col overflow-hidden slide-up">
+                    <div className="bg-white rounded-2xl shadow-2xl z-10 w-full max-w-[600px] flex flex-col overflow-hidden slide-up">
 
                         {/* Header */}
                         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
@@ -3259,44 +3274,46 @@
                             <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 transition-colors"><CloseIcon /></button>
                         </div>
 
-                        <div className="p-6 flex flex-col gap-5 overflow-y-auto custom-scrollbar max-h-[80vh]">
+                        <div className="p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar max-h-[80vh]">
 
-                            {/* 💡 업로드 가이드 (이미지와 동일한 톤앤매너) */}
-                            <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-5">
+                            {/* 💡 업로드 가이드 */}
+                            <div className="bg-[#f8faff] border border-blue-100/60 rounded-xl p-5">
                                 <p className="text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-1.5">
                                     <span className="text-yellow-500 text-base">💡</span> 파일 업로드 가이드
                                 </p>
                                 <ul className="text-xs text-gray-600 space-y-2 list-disc list-inside ml-1">
                                     <li>협력사 및 도급사 근태 데이터를 <span className="font-bold text-gray-800">다중 업로드</span> 할 수 있습니다.</li>
-                                    <li>ERP 엑셀 다운로드 파일 오류 시, <span className="font-bold text-letusBlue">CSV 또는 TXT 형식</span>을 권장합니다.</li>
-                                    <li>파일 이름에 <span className="font-bold text-letusBlue">바로서비스, 하나, IPC, 승현</span> 등 업체명이 포함되어야 자동 인식됩니다.</li>
+                                    <li>ERP 엑셀 다운로드 파일 오류 시, <span className="font-bold text-blue-600">CSV 또는 TXT 형식</span>을 권장합니다.</li>
+                                    <li>파일 이름에 <span className="font-bold text-blue-600">바로서비스, 하나, IPC, 승현</span> 등 업체명이 포함되어야 자동 인식됩니다.</li>
                                 </ul>
                             </div>
 
-                            {/* ☁️ 드래그 앤 드롭 영역 */}
+                            {/* ☁️ 드래그 앤 드롭 영역 (파일 목록 표시) */}
                             <div
                                 onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-                                className={`relative border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all min-h-[140px] ${isDragging ? 'border-letusBlue bg-blue-50/50 scale-[1.01]' : 'border-gray-300 bg-white hover:border-gray-400'}`}
+                                className={`relative border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center transition-all min-h-[160px] ${isDragging ? 'border-letusBlue bg-blue-50/50 scale-[1.01]' : 'border-gray-300 bg-white hover:border-gray-400'}`}
                             >
                                 <input type="file" multiple accept=".xlsx, .xls, .csv, .txt" onChange={(e) => processFiles(e.target.files)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
 
                                 {files.length === 0 ? (
-                                    <>
+                                    <div className="flex flex-col items-center justify-center py-4">
                                         <svg className="w-8 h-8 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                         </svg>
                                         <p className="text-[13px] font-bold text-gray-700">업로드할 파일들을 이곳으로 드래그 하세요</p>
-                                    </>
+                                    </div>
                                 ) : (
                                     <div className="w-full flex flex-col h-full z-20">
-                                        <div className="flex justify-between items-center mb-2 px-1">
-                                            <span className="text-xs font-bold text-letusBlue">총 {files.length}개 파일 선택됨</span>
-                                            <button onClick={() => setFiles([])} className="text-[11px] font-bold text-gray-400 hover:text-red-500 relative z-30 transition-colors">전체 삭제</button>
+                                        <div className="flex justify-between items-center mb-3 px-1">
+                                            <span className="text-[12px] font-bold text-letusBlue">총 {files.length}개 파일 선택됨</span>
                                         </div>
-                                        <div className="flex-1 overflow-y-auto max-h-[100px] custom-scrollbar space-y-1.5 relative z-30">
+                                        <div className="flex-1 overflow-y-auto max-h-[150px] custom-scrollbar space-y-2 relative z-30 pr-1">
                                             {files.map((f, i) => (
-                                                <div key={i} className="flex justify-between items-center bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-xs">
-                                                    <span className="truncate w-[85%] font-bold text-gray-700">{f.name}</span>
+                                                <div key={i} className="flex justify-between items-center bg-white border border-gray-200 px-4 py-2.5 rounded-lg shadow-sm text-xs group hover:border-letusBlue/50 transition-colors">
+                                                    <span className="truncate w-[90%] font-bold text-gray-700 flex items-center gap-2">
+                                                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                        {f.name}
+                                                    </span>
                                                     <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeFile(i); }} className="text-gray-400 hover:text-red-500 transition-colors"><CloseIcon /></button>
                                                 </div>
                                             ))}
@@ -3305,45 +3322,58 @@
                                 )}
                             </div>
 
-                            {/* 🎯 업체 자동 매칭 결과 (토글 버튼 스타일) */}
-                            <div className="grid grid-cols-3 gap-2">
-                                {/* 사내협력사 3곳 */}
-                                {['바로서비스', '하나물류', '에프스토리'].map(name => {
-                                    const val = `협력사_${name}`;
-                                    const isActive = activeVendors.includes(val);
+                            {/* 🎯 업체 자동 매칭 결과 (체크 아이콘 추가) */}
+                            <div className="grid grid-cols-3 gap-2.5">
+                                {vendorList.map(vendor => {
+                                    const isActive = activeVendors.includes(vendor.id);
                                     return (
-                                        <div key={val} onClick={() => { if (files.length === 1) setManualVendor(val); }}
-                                            className={`text-center py-2.5 rounded border text-[12px] font-bold transition-all ${files.length === 1 ? 'cursor-pointer' : ''} ${isActive ? 'bg-white border-letusBlue text-letusBlue shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
-                                            {name}
-                                        </div>
-                                    );
-                                })}
-                                {/* 외주도급사 3곳 */}
-                                {[{ id: '도급사1', label: 'IPC' }, { id: '도급사2', label: '승현' }, { id: '도급사3', label: '도급사3' }].map(v => {
-                                    const isActive = activeVendors.includes(v.id);
-                                    return (
-                                        <div key={v.id} onClick={() => { if (files.length === 1) setManualVendor(v.id); }}
-                                            className={`text-center py-2.5 rounded border text-[12px] font-bold transition-all ${files.length === 1 ? 'cursor-pointer' : ''} ${isActive ? 'bg-white border-letusBlue text-letusBlue shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
-                                            {v.label}
+                                        <div
+                                            key={vendor.id}
+                                            onClick={() => { if (files.length === 1) setManualVendor(vendor.id); }}
+                                            className={`relative flex items-center justify-center py-3 rounded-lg border text-[12px] font-bold transition-all ${files.length === 1 ? 'cursor-pointer hover:border-blue-300' : ''} ${isActive ? 'bg-white border-letusBlue text-letusBlue shadow-[0_0_0_1px_rgba(59,130,246,1)]' : 'bg-gray-50/50 border-gray-200 text-gray-400'}`}
+                                        >
+                                            {vendor.label}
+                                            {/* 🔥 파란색 체크 아이콘 (활성화 시 나타남) */}
+                                            {isActive && (
+                                                <svg className="w-4 h-4 text-letusBlue ml-1.5 animate-fade-in" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            )}
                                         </div>
                                     );
                                 })}
                             </div>
-                            {files.length === 1 && <p className="text-[10px] text-gray-400 font-bold text-right -mt-3">* 단일 파일 업로드 시 업체 수동 변경 가능</p>}
+                            {files.length === 1 && <p className="text-[10px] text-gray-400 font-bold text-right -mt-4">* 단일 파일 업로드 시 업체 수동 변경 가능</p>}
 
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-2 shrink-0">
-                            <button onClick={onClose} className="px-6 py-2.5 border border-gray-300 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-50 transition-colors">닫기</button>
-                            <button onClick={handleUpload} disabled={isUploading || files.length === 0} className="px-6 py-2.5 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-1.5">
-                                {isUploading ? '데이터 분석 중...' : (
+                        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
+                            {/* 🔥 왼쪽 아래: 파일 목록 비우기 버튼 */}
+                            <button
+                                onClick={clearAllFiles}
+                                disabled={files.length === 0}
+                                className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${files.length > 0 ? 'text-gray-500 hover:text-gray-800' : 'text-transparent cursor-default'}`}
+                            >
+                                {files.length > 0 && (
                                     <>
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                        분석 및 DB 저장
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        파일 목록 비우기
                                     </>
                                 )}
                             </button>
+
+                            <div className="flex gap-2">
+                                <button onClick={onClose} className="px-6 py-2.5 border border-gray-300 bg-white text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-50 transition-colors">닫기</button>
+                                <button onClick={handleUpload} disabled={isUploading || files.length === 0} className="px-6 py-2.5 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all flex items-center gap-1.5">
+                                    {isUploading ? '데이터 분석 중...' : (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                            분석 및 DB 저장
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
