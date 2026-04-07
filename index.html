@@ -1010,7 +1010,8 @@
 
             const handleUpload = async () => {
                 if (!file) return alert('업로드할 엑셀 파일을 선택해 주세요.');
-                setIsUploading(true); setUploadStats(null);
+                if (!vendorType) return alert('업체 양식을 선택해 주세요.');
+                setIsUploading(true);
 
                 const reader = new FileReader();
                 reader.onload = async (e) => {
@@ -1020,62 +1021,79 @@
 
                         if (rows.length === 0) throw new Error('엑셀 파일에 데이터가 없습니다.');
 
-                        let insertCount = 0; let updateCount = 0; let failCount = 0;
-                        const errorLogs = [];
+                        const standardData = [];
 
-                        for (const [index, row] of rows.entries()) {
-                            const rowNum = index + 2;
-                            const name = String(row['이름(필수)'] || '').trim();
-                            const loginId = String(row['아이디(필수)'] || '').trim();
-                            const password = String(row['비밀번호(필수/선택)'] || '').trim();
-                            const team = String(row['소속팀(필수)'] || '').trim();
-
-                            if (!name || !loginId || !team) {
-                                failCount++; errorLogs.push(`${rowNum}행: 필수 항목 누락`); continue;
-                            }
-
-                            try {
-                                // 🔥 DB에서 기존 계정 존재 여부 확인
-                                const { data: existingProfiles } = await adminSupabase.from('profiles').select('id').eq('login_id', loginId);
-                                const existingProfile = existingProfiles?.[0];
-
-                                const role = String(row['권한그룹'] || '사용자').trim();
-                                const status = String(row['상태'] || '정상').trim();
-                                const brand = String(row['소속브랜드'] || '전체').trim();
-                                const mBrands = String(row['담당브랜드'] || '').trim();
-                                const mVendors = String(row['담당업체'] || '').trim();
-                                let menus = String(row['허용메뉴(ID)'] || '').trim();
-                                if (!menus) menus = 'accident_dashboard,accident_list';
-
-                                if (existingProfile) {
-                                    // 🔥 기존 계정 업데이트
-                                    if (password && password.length >= 6) {
-                                        await adminSupabase.auth.admin.updateUserById(existingProfile.id, { password });
-                                    }
-                                    await adminSupabase.from('profiles').update({
-                                        name, role, status, brands: brand, team,
-                                        managed_vendors: mVendors, managed_brands: mBrands, accessible_menus: menus
-                                    }).eq('id', existingProfile.id);
-                                    updateCount++;
-                                } else {
-                                    // 🔥 신규 계정 생성
-                                    if (!password || password.length < 6) throw new Error('신규 계정은 6자리 이상의 비밀번호가 필수입니다.');
-                                    const targetEmail = loginId.includes('@') ? loginId : `${loginId}@letus.com`;
-                                    const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({ email: targetEmail, password: password, email_confirm: true });
-                                    if (authError) throw authError;
-
-                                    await adminSupabase.from('profiles').insert([{
-                                        id: authData.user.id, name, login_id: loginId, role, status, brands: brand, team,
-                                        managed_vendors: mVendors, managed_brands: mBrands, accessible_menus: menus, created_at: new Date().toISOString()
-                                    }]);
-                                    insertCount++;
+                        if (vendorType.startsWith('협력사_')) {
+                            const exactVendorName = vendorType.replace('협력사_', '');
+                            rows.forEach(rawRow => {
+                                // 🔥 [버그 수정] 엑셀 헤더(제목)에 숨어있는 띄어쓰기/공백 완벽 제거!
+                                const row = {};
+                                for (let key in rawRow) {
+                                    row[key.replace(/\s/g, '')] = rawRow[key];
                                 }
-                            } catch (err) {
-                                failCount++; errorLogs.push(`${rowNum}행 (${loginId}): ${err.message}`);
-                            }
+
+                                // 공백이 제거된 키값으로 정확하게 매칭
+                                if (!row['사원명'] || !row['근무일자']) return;
+
+                                standardData.push({
+                                    work_date: row['근무일자'], company_type: '사내협력사', vendor_name: exactVendorName,
+                                    worked_vendor: exactVendorName,
+                                    worker_name: row['사원명'], start_time: row['출근시간'] || '', end_time: row['퇴근시간'] || '',
+                                    work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8, // 임시 계산식
+                                    remark: row['이상유무'] || row['구분'] || ''
+                                });
+                            });
+                        } else if (vendorType === '도급사1') {
+                            rows.forEach(rawRow => {
+                                const row = {};
+                                for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
+
+                                if (!row['근로자명'] || !row['날짜']) return;
+                                standardData.push({
+                                    work_date: row['날짜'], company_type: '외주도급사', vendor_name: '도급사1', worked_vendor: '도급사1',
+                                    worker_name: row['근로자명'], start_time: '', end_time: '',
+                                    work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8,
+                                    remark: row['비고'] || `단가: ${row['단가']}, 식대: ${row['식대']}`
+                                });
+                            });
+                        } else if (vendorType === '도급사2') {
+                            rows.forEach(rawRow => {
+                                const row = {};
+                                for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
+
+                                const workerName = row['구분'];
+                                if (!workerName || workerName === '계') return;
+                                const dateColumns = Object.keys(row).filter(key => key.includes('월') && key.includes('일'));
+                                dateColumns.forEach(dateCol => {
+                                    const workValue = row[dateCol];
+                                    if (workValue) {
+                                        standardData.push({
+                                            work_date: dateCol,
+                                            company_type: '외주도급사', vendor_name: '도급사2', worked_vendor: '도급사2',
+                                            worker_name: workerName, start_time: '', end_time: '',
+                                            work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8,
+                                            remark: `근무기록: ${workValue}`
+                                        });
+                                    }
+                                });
+                            });
                         }
-                        setUploadStats({ insert: insertCount, update: updateCount, fail: failCount, logs: errorLogs });
-                        if (insertCount > 0 || updateCount > 0) onReload();
+
+                        // 🔥 0건일 경우 원인 안내 알림창 추가
+                        if (standardData.length === 0) {
+                            alert('❌ 엑셀에서 데이터를 한 건도 찾지 못했습니다.\n\n[확인해 주세요]\n엑셀 파일의 1번 줄(첫 행)이 "사원명", "근무일자" 같은 열 제목으로 시작하나요?\n만약 표 위에 큰 제목이나 빈 줄이 있다면 삭제하고 첫 줄을 열 제목으로 맞춰주세요!');
+                            setIsUploading(false);
+                            return;
+                        }
+
+                        // DB에 데이터 통째로 저장 (Supabase 연동)
+                        const { error } = await supabase.from('worker_attendance').insert(standardData);
+                        if (error) throw error;
+
+                        alert(`🎉 [${vendorType.replace('협력사_', '')}] 총 ${standardData.length}건의 근태 데이터가 성공적으로 DB에 등록되었습니다!`);
+
+                        if (onReload) onReload();
+                        onClose();
 
                     } catch (err) { alert('업로드 중 오류 발생: ' + err.message); }
                     finally { setIsUploading(false); }
