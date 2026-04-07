@@ -3027,20 +3027,38 @@
             );
         }
 
-        // --- 📥 근태 엑셀 업로드 모달 (스마트 파서 탑재) ---
+        // --- 📥 근태 엑셀 업로드 모달 (파일명 자동 인식 & 스마트 파서 탑재) ---
         const AttendanceUploadModal = ({ onClose, onReload }) => {
             const [file, setFile] = useState(null);
-            const [vendorType, setVendorType] = useState('협력사_공통'); // 협력사_공통, 도급사1, 도급사2
+            // 기본값을 바로서비스로 설정
+            const [vendorType, setVendorType] = useState('협력사_바로서비스');
             const [isUploading, setIsUploading] = useState(false);
 
             const handleFileChange = (e) => {
                 const selected = e.target.files[0];
-                if (selected && selected.name.includes('.xls')) setFile(selected);
-                else { alert('엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.'); e.target.value = null; }
+                if (!selected) return;
+
+                if (!selected.name.includes('.xls')) {
+                    alert('엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.');
+                    e.target.value = null;
+                    return;
+                }
+
+                setFile(selected);
+
+                // 🔥 스마트 파일명 자동 인식 마법! (파일명에 업체명이 있으면 버튼이 자동으로 탁! 눌립니다)
+                const fileName = selected.name.replace(/\s/g, '').toLowerCase(); // 공백 제거 후 소문자로
+
+                if (fileName.includes('바로')) setVendorType('협력사_바로서비스');
+                else if (fileName.includes('하나')) setVendorType('협력사_하나물류');
+                else if (fileName.includes('에프스토리') || fileName.includes('fstory')) setVendorType('협력사_에프스토리');
+                else if (fileName.includes('도급사1') || fileName.includes('ipc')) setVendorType('도급사1');
+                else if (fileName.includes('도급사2') || fileName.includes('승현')) setVendorType('도급사2');
             };
 
             const handleUpload = async () => {
                 if (!file) return alert('업로드할 엑셀 파일을 선택해 주세요.');
+                if (!vendorType) return alert('업체 양식을 선택해 주세요.');
                 setIsUploading(true);
 
                 const reader = new FileReader();
@@ -3051,16 +3069,20 @@
 
                         if (rows.length === 0) throw new Error('엑셀 파일에 데이터가 없습니다.');
 
-                        const standardData = []; // DB에 넣을 표준화된 데이터 배열
+                        const standardData = [];
 
                         // 🧠 1. 업체별 스마트 파싱 로직
-                        if (vendorType === '협력사_공통') {
+                        if (vendorType.startsWith('협력사_')) {
+                            // '협력사_바로서비스' -> '바로서비스'만 쏙 빼냄
+                            const exactVendorName = vendorType.replace('협력사_', '');
+
                             rows.forEach(row => {
                                 if (!row['사원명'] || !row['근무일자']) return;
                                 standardData.push({
                                     work_date: row['근무일자'],
-                                    company_type: '협력사',
-                                    vendor_name: row['구분'] || '협력사(공통)',
+                                    company_type: '사내협력사',
+                                    // 🔥 엑셀 내용과 상관없이 선택된(또는 인식된) 업체명으로 강제 주입!
+                                    vendor_name: exactVendorName,
                                     worker_name: row['사원명'],
                                     start_time: row['출근시간'] || '',
                                     end_time: row['퇴근시간'] || '',
@@ -3073,32 +3095,28 @@
                                 if (!row['근로자명'] || !row['날짜']) return;
                                 standardData.push({
                                     work_date: row['날짜'],
-                                    company_type: '도급사',
+                                    company_type: '외주도급사',
                                     vendor_name: '도급사1',
                                     worker_name: row['근로자명'],
-                                    start_time: '', // 양식에 출퇴근 시간이 없음
+                                    start_time: '',
                                     end_time: '',
                                     remark: row['비 고'] || `단가: ${row['단가']}, 식대: ${row['식대']}`
                                 });
                             });
                         }
                         else if (vendorType === '도급사2') {
-                            // 🔥 가로형(피벗) 데이터를 세로형 표준 데이터로 쪼개기 (Unpivot)
                             rows.forEach(row => {
-                                const workerName = row['구분']; // 구분이 이름이라고 가정 (실제 엑셀에 맞게 수정 필요)
+                                const workerName = row['구분'];
                                 if (!workerName || workerName === '계') return;
 
-                                // '월'과 '일'이 포함된 컬럼만 찾아서 반복
                                 const dateColumns = Object.keys(row).filter(key => key.includes('월') && key.includes('일'));
 
                                 dateColumns.forEach(dateCol => {
-                                    const workValue = row[dateCol]; // 해당 날짜의 근태 값 (예: 'O', '1', 근무시간 등)
+                                    const workValue = row[dateCol];
                                     if (workValue) {
-                                        // 올해 연도를 붙여서 표준 날짜 형태로 포맷팅 (예: "n월 1일" -> "YYYY-MM-DD")
-                                        // (임시로 컬럼명 그대로 넣음. 추후 정교한 변환 로직 추가)
                                         standardData.push({
                                             work_date: dateCol,
-                                            company_type: '도급사',
+                                            company_type: '외주도급사',
                                             vendor_name: '도급사2',
                                             worker_name: workerName,
                                             start_time: '',
@@ -3110,11 +3128,10 @@
                             });
                         }
 
-                        // 💾 2. DB에 데이터 통째로 저장 (임시로 콘솔에만 출력, 추후 DB 연동)
                         console.log('표준화된 근태 데이터:', standardData);
-                        alert(`총 ${standardData.length}건의 근태 데이터가 성공적으로 변환 및 저장되었습니다!\n(현재는 콘솔창에서 변환 결과 확인 가능)`);
+                        alert(`🎉 [${vendorType.replace('협력사_', '')}] 총 ${standardData.length}건의 근태 데이터가 성공적으로 파싱되었습니다!\n(현재는 F12 콘솔창에서 변환된 배열 확인 가능)`);
 
-                        // onReload(); // DB 생성 후 주석 해제
+                        // onReload(); // DB 연결 후 주석 해제
                         onClose();
 
                     } catch (err) { alert('업로드 중 오류 발생: ' + err.message); }
@@ -3134,32 +3151,64 @@
                         </div>
 
                         <div className="p-6 bg-slate-50 flex-1 space-y-5">
+
+                            {/* 파일 업로드 구역을 위로 올림 (먼저 넣으면 알아서 선택되니까!) */}
                             <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold text-gray-700">1. 대상 업체 양식 선택</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {['협력사_공통', '도급사1', '도급사2'].map(type => (
-                                        <label key={type} className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${vendorType === type ? 'border-letusBlue bg-blue-50/50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
-                                            <input type="radio" name="vendorType" value={type} checked={vendorType === type} onChange={() => setVendorType(type)} className="w-4 h-4 accent-letusBlue" />
-                                            <span className={`text-xs font-bold ${vendorType === type ? 'text-letusBlue' : 'text-gray-600'}`}>{type.replace('_', ' ')}</span>
-                                        </label>
-                                    ))}
+                                <label className="text-xs font-bold text-gray-700 flex justify-between items-end">
+                                    <span>1. 엑셀 파일 선택</span>
+                                    {file && <span className="text-[10px] text-green-600 font-black animate-pulse">자동 인식 완료 ✨</span>}
+                                </label>
+                                <input
+                                    type="file" accept=".xlsx, .xls" onChange={handleFileChange}
+                                    className="block w-full text-xs text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded file:border-0 file:font-bold file:bg-green-50 file:text-green-600 hover:file:bg-green-100 border border-gray-300 rounded-lg bg-white cursor-pointer transition-all focus:ring-2 focus:ring-green-500"
+                                />
+                            </div>
+
+                            {/* 업체 선택 UI를 예쁘게 버튼 그룹으로 분리 */}
+                            <div className="flex flex-col gap-2 pt-2 border-t border-gray-200">
+                                <label className="text-xs font-bold text-gray-700 mb-1">2. 대상 업체 확인 (수동 변경 가능)</label>
+
+                                <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-3 shadow-sm">
+                                    {/* 사내협력사 구역 */}
+                                    <div>
+                                        <span className="text-[10px] font-black text-letusBlue bg-blue-50 px-2 py-0.5 rounded mb-2 inline-block">사내협력사 (공통 양식 적용)</span>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {['바로서비스', '하나물류', '에프스토리'].map(name => {
+                                                const val = `협력사_${name}`;
+                                                return (
+                                                    <label key={val} className={`flex items-center justify-center py-2 rounded-[4px] border cursor-pointer transition-colors ${vendorType === val ? 'border-letusBlue bg-blue-50 text-letusBlue font-bold shadow-sm ring-1 ring-letusBlue/20' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium'}`}>
+                                                        <input type="radio" name="vendorType" value={val} checked={vendorType === val} onChange={() => setVendorType(val)} className="hidden" />
+                                                        <span className="text-xs">{name}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* 외주도급사 구역 */}
+                                    <div className="pt-3 border-t border-gray-100">
+                                        <span className="text-[10px] font-black text-letusOrange bg-orange-50 px-2 py-0.5 rounded mb-2 inline-block">외주도급사 (개별 양식 적용)</span>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[
+                                                { id: '도급사1', label: '도급사1 (IPC)' },
+                                                { id: '도급사2', label: '도급사2 (승현)' },
+                                                { id: '도급사3', label: '도급사3 (미정)' }
+                                            ].map(vendor => (
+                                                <label key={vendor.id} className={`flex items-center justify-center py-2 rounded-[4px] border cursor-pointer transition-colors ${vendorType === vendor.id ? 'border-letusOrange bg-orange-50 text-letusOrange font-bold shadow-sm ring-1 ring-letusOrange/20' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium'}`}>
+                                                    <input type="radio" name="vendorType" value={vendor.id} checked={vendorType === vendor.id} onChange={() => setVendorType(vendor.id)} className="hidden" />
+                                                    <span className="text-xs">{vendor.label}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold text-gray-700">2. 파일 업로드</label>
-                                <input type="file" accept=".xlsx, .xls" onChange={handleFileChange} className="block w-full text-xs text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded file:border-0 file:font-bold file:bg-green-50 file:text-green-600 hover:file:bg-green-100 border border-gray-300 rounded-lg bg-white cursor-pointer" />
-                            </div>
-
-                            <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 text-xs font-medium text-orange-800">
-                                💡 선택하신 업체의 엑셀 양식 구조에 맞춰 데이터를 자동으로 분석하고 표준화하여 저장합니다.
                             </div>
                         </div>
 
                         <div className="p-4 border-t bg-white flex justify-end gap-2">
-                            <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 text-[11px] font-bold rounded hover:bg-gray-50">취소</button>
-                            <button onClick={handleUpload} disabled={isUploading || !file} className="px-5 py-2 bg-green-600 text-white text-[11px] font-bold rounded hover:bg-green-700 flex items-center gap-1.5 disabled:opacity-50">
-                                {isUploading ? '데이터 파싱 중...' : '엑셀 업로드 및 처리'}
+                            <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 text-[11px] font-bold rounded hover:bg-gray-50 transition-colors">취소</button>
+                            <button onClick={handleUpload} disabled={isUploading || !file} className="px-5 py-2 bg-green-600 text-white text-[11px] font-bold rounded hover:bg-green-700 flex items-center gap-1.5 disabled:opacity-50 shadow-sm transition-colors">
+                                {isUploading ? '데이터 분석 중...' : '엑셀 파싱 및 적용'}
                             </button>
                         </div>
                     </div>
