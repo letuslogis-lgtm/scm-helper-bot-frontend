@@ -3561,6 +3561,15 @@
             const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
             const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
 
+            // 🔥 글로벌 기간 조회 (일별 상세 내역용)
+            const [tempStartDate, setTempStartDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`);
+            const [tempEndDate, setTempEndDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}`);
+            const [startDate, setStartDate] = useState(tempStartDate);
+            const [endDate, setEndDate] = useState(tempEndDate);
+
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedVendor, setSelectedVendor] = useState('전체');
+
             const [filterDetail, setFilterDetail] = useState({
                 date: new Date().toISOString().split('T')[0], type: '전체', vendor: '전체', workedVendor: '전체', keyword: ''
             });
@@ -3613,19 +3622,27 @@
             }, []);
 
             // 🧠 상세 탭: 필터링 로직 (DB Data 기반)
+            // 🔥 수동으로 누른 startDate와 endDate 사이에 있는 데이터만 걸러냄!
             const filteredDetailData = attendanceData.filter(row => {
-                if (filterDetail.date && row.work_date !== filterDetail.date) return false;
-                if (filterDetail.type !== '전체' && row.company_type !== filterDetail.type) return false;
-                if (filterDetail.vendor !== '전체' && row.vendor_name !== filterDetail.vendor) return false;
-                if (filterDetail.keyword && !row.worker_name.includes(filterDetail.keyword)) return false;
-                return true;
+                const matchDate = row.work_date && row.work_date >= startDate && row.work_date <= endDate;
+                const matchVendor = selectedVendor === '전체' || row.company_type === selectedVendor;
+                const matchSearch = (row.worker_name && row.worker_name.includes(searchTerm)) || (row.vendor_name && row.vendor_name.includes(searchTerm));
+
+                return matchDate && matchVendor && matchSearch;
             });
 
             // 🧠 요약 탭: 월별, 업체별 자동 집계 로직 (DB Data 기반)
             const vendorSummaryMap = {};
             const chartDataMap = {};
 
-            attendanceData.forEach(row => {
+            // 🔥 1. 방금 만든 '차트용 조회 기간' 필터를 통과한 데이터만 뽑아냅니다!
+            const filteredChartData = attendanceData.filter(row => {
+                if (!row.work_date) return false;
+                return row.work_date >= chartStartDate && row.work_date <= chartEndDate;
+            });
+
+            // 🔥 2. 전체 데이터(attendanceData)가 아닌 걸러진 데이터(filteredChartData)로 집계를 시작합니다!
+            filteredChartData.forEach(row => {
                 // 날짜에서 월(YYYY-MM) 추출
                 const monthStr = row.work_date ? row.work_date.substring(0, 7) : '미상';
 
@@ -3754,7 +3771,15 @@
                                         className="border border-gray-200 rounded px-3 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue"
                                         defaultValue={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`}
                                     />
-                                    <div className="h-5 w-px bg-gray-200 mx-2 hidden sm:block"></div>
+                                    {/* 🔥 일 단위 기간 조회 및 수동 조회 버튼 */}
+                                    <div className="flex gap-2 items-center w-full md:w-auto">
+                                        <span className="text-[11px] font-bold text-gray-500 mr-1">조회 기간</span>
+                                        <input type="date" value={tempStartDate} onChange={(e) => setTempStartDate(e.target.value)} className="border border-gray-200 rounded px-2.5 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue" />
+                                        <span className="text-gray-400 mx-0.5">~</span>
+                                        <input type="date" value={tempEndDate} onChange={(e) => setTempEndDate(e.target.value)} className="border border-gray-200 rounded px-2.5 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue" />
+                                        <div className="h-5 w-px bg-gray-200 mx-2 hidden sm:block"></div>
+                                        <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-letusBlue text-white font-bold px-4 py-1.5 rounded text-xs shadow-sm hover:bg-blue-600 transition-colors">조회</button>
+                                    </div>
                                     <button className="bg-letusOrange text-white font-bold px-4 py-1.5 rounded text-xs shadow-sm hover:bg-orange-500 transition-colors">조회하기</button>
                                 </div>
                             ) : (
@@ -3904,19 +3929,21 @@
                                                     <th className="p-3 bg-blue-50/50 text-letusBlue">실 투입 (생산성 기준)</th>
                                                     <th className="p-3">근무자명</th>
                                                     <th className="p-3 text-center">출근</th>
-                                                    <th className="p-3 text-center">퇴근</th>
-                                                    <th className="p-3 text-center border-r border-gray-100">총 시간</th>
+                                                    <th className="p-3 text-center border-r border-gray-100">퇴근</th>
+                                                    {/* 🔥 추가된 [정상근무], [연장근무] 칼럼 헤더 */}
+                                                    <th className="p-3 text-center font-black text-green-600 bg-green-50/40">정상근무</th>
+                                                    <th className="p-3 text-center font-black text-orange-500 bg-orange-50/40">연장근무</th>
+                                                    <th className="p-3 text-center border-r border-gray-100 bg-blue-50/40 text-letusBlue">총 시간</th>
                                                     <th className="p-3">특이사항(비고)</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700 bg-white">
                                                 {filteredDetailData.length === 0 ? (
-                                                    <tr><td colSpan="10" className="text-center py-10 text-gray-400 font-bold">조건에 맞는 데이터가 없습니다.</td></tr>
+                                                    <tr><td colSpan="12" className="text-center py-10 text-gray-400 font-bold">조건에 맞는 데이터가 없습니다.</td></tr>
                                                 ) : (
                                                     filteredDetailData.map((row) => {
                                                         const isSelected = selectedIds.includes(row.id);
                                                         const isDispatched = row.vendor_name !== row.worked_vendor;
-
                                                         return (
                                                             <tr key={row.id} onClick={() => handleSelectOne(row.id)} className={`transition-colors cursor-pointer ${isSelected ? 'bg-blue-50' : 'hover:bg-blue-50/30'}`}>
                                                                 <td className="p-3 text-center border-r border-gray-50" onClick={e => e.stopPropagation()}>
@@ -3929,16 +3956,17 @@
                                                                     </span>
                                                                 </td>
                                                                 <td className="p-3 font-bold text-gray-500 border-r border-gray-50">{row.vendor_name}</td>
-
                                                                 <td className={`p-3 font-black flex items-center gap-1.5 ${isDispatched ? 'text-red-500 bg-red-50/30' : 'text-gray-800'}`}>
                                                                     {isDispatched && <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded border border-red-200 shrink-0 tracking-tighter">지원 파견</span>}
                                                                     {row.worked_vendor}
                                                                 </td>
-
                                                                 <td className="p-3 font-black text-gray-900">{row.worker_name}</td>
                                                                 <td className="p-3 text-center font-bold text-gray-600">{row.start_time || '-'}</td>
-                                                                <td className="p-3 text-center font-bold text-gray-600">{row.end_time || '-'}</td>
-                                                                <td className="p-3 text-center font-black text-letusBlue border-r border-gray-50">{row.work_hours}H</td>
+                                                                <td className="p-3 text-center font-bold text-gray-600 border-r border-gray-50">{row.end_time || '-'}</td>
+                                                                {/* 🔥 추가된 [정상근무], [연장근무] 데이터 (소수점 1자리 맞춤) */}
+                                                                <td className="p-3 text-center font-bold text-green-600 bg-green-50/20">{Number(row.normal_hours).toFixed(1)}H</td>
+                                                                <td className="p-3 text-center font-bold text-orange-500 bg-orange-50/20">{Number(row.overtime_hours).toFixed(1)}H</td>
+                                                                <td className="p-3 text-center font-black text-letusBlue border-r border-gray-50 bg-blue-50/20">{Number(row.work_hours).toFixed(1)}H</td>
                                                                 <td className={`p-3 truncate max-w-[200px] text-xs ${isDispatched ? 'text-red-500 font-bold' : 'text-gray-500'}`}>{row.remark}</td>
                                                             </tr>
                                                         );
