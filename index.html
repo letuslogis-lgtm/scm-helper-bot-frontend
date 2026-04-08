@@ -3246,17 +3246,17 @@
                                 // 🔥 기훈님 요청: 사내협력사 시간 감가 및 가중시간 완벽 수식 적용!
                                 if (companyType === '사내협력사') {
                                     const gubun = row['구분'] || '정상';
-                                    // 비고란에 '정상'이나 '휴일' 등을 같이 찍어주면 나중에 확인하기 편함
                                     remarkStr = remarkStr ? `${gubun} / ${remarkStr}` : gubun;
 
-                                    // 문자열을 숫자로 안전하게 바꾸는 마법
                                     const parseNum = (v) => {
                                         if (!v) return 0;
                                         const n = parseFloat(v);
                                         return isNaN(n) ? 0 : n;
                                     };
 
-                                    // 08:30 등 시간과 퇴근시간의 차이를 '시간 단위(예: 1.5시간)'로 계산
+                                    // 🔥 [핵심 수정] 분(Minute) 단위를 시간(Hour) 단위로 자동 변환! (60으로 나누기)
+                                    const parseMinToHour = (v) => parseNum(v) / 60;
+
                                     const calcDiff = (start, end) => {
                                         if (!start || !end) return 0;
                                         const [sH, sM] = start.split(':').map(Number);
@@ -3265,32 +3265,32 @@
                                         return Math.max(0, ((eH * 60 + (eM || 0)) - (sH * 60 + (sM || 0))) / 60);
                                     };
 
-                                    const p_over = parseNum(row['평일연장근무'] || row['평일연장시간'] || row['평일연장']);
-                                    const h_over = parseNum(row['휴일연장근무'] || row['휴일연장시간'] || row['휴일연장']);
-                                    const early = parseNum(row['조기출근시간'] || row['조기출근']);
-                                    const lunch = parseNum(row['점심근무시간'] || row['점심근무']);
-                                    const late = parseNum(row['지각시간'] || row['지각']);
-                                    const leave = parseNum(row['조퇴시간'] || row['조퇴']);
-                                    const out = parseNum(row['외출시간'] || row['외출']);
+                                    // 🔥 모든 추가/공제 항목에 parseMinToHour 함수를 적용!
+                                    const p_over = parseMinToHour(row['평일연장근무'] || row['평일연장시간'] || row['평일연장']);
+                                    const h_over = parseMinToHour(row['휴일연장근무'] || row['휴일연장시간'] || row['휴일연장']);
+                                    const early = parseMinToHour(row['조기출근시간'] || row['조기출근']);
+                                    const lunch = parseMinToHour(row['점심근무시간'] || row['점심근무']);
+                                    const late = parseMinToHour(row['지각시간'] || row['지각']);
+                                    const leave = parseMinToHour(row['조퇴시간'] || row['조퇴']);
+                                    const out = parseMinToHour(row['외출시간'] || row['외출']);
 
-                                    // 출퇴근 시간이 없으면 전부 0시간 처리
                                     if (!startTime && !endTime) {
                                         w_hours = 0; n_hours = 0; o_hours = 0; weight_hours = 0;
                                     } else {
                                         if (gubun === '정상') {
-                                            // 기본 8 + 더할거 더하고 뺄거 빼기
                                             n_hours = 8 + early + lunch - late - leave - out;
                                             o_hours = p_over + h_over;
                                             w_hours = n_hours + o_hours;
                                         } else {
-                                            // 구분 정상 외 (전체 연장/휴일 처리)
+                                            // 기준시간 (퇴근시간 - 08:30)
+                                            // 💡 만약 휴일/연장에도 점심시간 1시간을 무조건 공제해야 한다면 calcDiff(...) - 1 로 수정하세요!
                                             const baseTime = calcDiff('08:30', endTime);
                                             w_hours = baseTime + early + lunch - late - leave - out;
                                             n_hours = 0;
-                                            o_hours = w_hours; // 전체가 연장 처리
+                                            o_hours = w_hours;
                                         }
 
-                                        // 가중시간 공식: 합계(w_hours) + 연장(o_hours) * 1.5
+                                        // 가중시간: 합계 + (연장 * 1.5)
                                         weight_hours = w_hours + (o_hours * 1.5);
                                     }
                                 }
