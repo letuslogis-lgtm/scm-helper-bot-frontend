@@ -3561,24 +3561,27 @@
             const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
             const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
 
-            // 🔥 글로벌 기간 조회 (일별 상세 내역용)
+            // 🔥 1. 글로벌 기간 조회 (일별 상세 내역용)
             const [tempStartDate, setTempStartDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`);
             const [tempEndDate, setTempEndDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}`);
             const [startDate, setStartDate] = useState(tempStartDate);
             const [endDate, setEndDate] = useState(tempEndDate);
 
+            // 🔥 2. 차트/피벗 조회 기간 (집계 현황용 - 아까 지워져서 에러 났던 녀석!)
+            const [tempChartStartDate, setTempChartStartDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`);
+            const [tempChartEndDate, setTempChartEndDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}`);
+            const [chartStartDate, setChartStartDate] = useState(tempChartStartDate);
+            const [chartEndDate, setChartEndDate] = useState(tempChartEndDate);
+
+            // 🔥 3. 검색 및 필터용
             const [searchTerm, setSearchTerm] = useState('');
             const [selectedVendor, setSelectedVendor] = useState('전체');
 
-            const [filterDetail, setFilterDetail] = useState({
-                date: new Date().toISOString().split('T')[0], type: '전체', vendor: '전체', workedVendor: '전체', keyword: ''
-            });
-
-            // 🔥 DB 데이터를 담을 상태! (목업 데이터 삭제 완료)
+            // 🔥 4. DB 데이터 보관용
             const [attendanceData, setAttendanceData] = useState([]);
             const [isLoading, setIsLoading] = useState(false);
 
-            // 🔥 DB에서 데이터 불러오기 (1000건 제한 우회 - 무제한 스캔 엔진 탑재)
+            // 🔥 DB에서 데이터 불러오기 (여기서부터는 기존 코드 그대로 유지!)
             const fetchAttendance = async () => {
                 setIsLoading(true);
                 try {
