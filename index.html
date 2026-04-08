@@ -3216,6 +3216,7 @@
 
                         rows.forEach(rawRow => {
                             const row = {};
+                            // 공백 제거된 키로 복사 (헤더 이름 띄어쓰기 방어)
                             for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
 
                             const dateVal = row['근무일자'] || row['날짜'] || '';
@@ -3236,11 +3237,69 @@
                                     }
                                 });
                             } else if (dateVal) {
+                                let startTime = row['출근시간'] || row['출근'] || '';
+                                let endTime = row['퇴근시간'] || row['퇴근'] || '';
+                                let remarkStr = row['이상유무'] || row['비고'] || '';
+
+                                let w_hours = 8, n_hours = 8, o_hours = 0, weight_hours = 8;
+
+                                // 🔥 기훈님 요청: 사내협력사 시간 감가 및 가중시간 완벽 수식 적용!
+                                if (companyType === '사내협력사') {
+                                    const gubun = row['구분'] || '정상';
+                                    // 비고란에 '정상'이나 '휴일' 등을 같이 찍어주면 나중에 확인하기 편함
+                                    remarkStr = remarkStr ? `${gubun} / ${remarkStr}` : gubun;
+
+                                    // 문자열을 숫자로 안전하게 바꾸는 마법
+                                    const parseNum = (v) => {
+                                        if (!v) return 0;
+                                        const n = parseFloat(v);
+                                        return isNaN(n) ? 0 : n;
+                                    };
+
+                                    // 08:30 등 시간과 퇴근시간의 차이를 '시간 단위(예: 1.5시간)'로 계산
+                                    const calcDiff = (start, end) => {
+                                        if (!start || !end) return 0;
+                                        const [sH, sM] = start.split(':').map(Number);
+                                        const [eH, eM] = end.split(':').map(Number);
+                                        if (isNaN(sH) || isNaN(eH)) return 0;
+                                        return Math.max(0, ((eH * 60 + (eM || 0)) - (sH * 60 + (sM || 0))) / 60);
+                                    };
+
+                                    const p_over = parseNum(row['평일연장근무'] || row['평일연장시간'] || row['평일연장']);
+                                    const h_over = parseNum(row['휴일연장근무'] || row['휴일연장시간'] || row['휴일연장']);
+                                    const early = parseNum(row['조기출근시간'] || row['조기출근']);
+                                    const lunch = parseNum(row['점심근무시간'] || row['점심근무']);
+                                    const late = parseNum(row['지각시간'] || row['지각']);
+                                    const leave = parseNum(row['조퇴시간'] || row['조퇴']);
+                                    const out = parseNum(row['외출시간'] || row['외출']);
+
+                                    // 출퇴근 시간이 없으면 전부 0시간 처리
+                                    if (!startTime && !endTime) {
+                                        w_hours = 0; n_hours = 0; o_hours = 0; weight_hours = 0;
+                                    } else {
+                                        if (gubun === '정상') {
+                                            // 기본 8 + 더할거 더하고 뺄거 빼기
+                                            n_hours = 8 + early + lunch - late - leave - out;
+                                            o_hours = p_over + h_over;
+                                            w_hours = n_hours + o_hours;
+                                        } else {
+                                            // 구분 정상 외 (전체 연장/휴일 처리)
+                                            const baseTime = calcDiff('08:30', endTime);
+                                            w_hours = baseTime + early + lunch - late - leave - out;
+                                            n_hours = 0;
+                                            o_hours = w_hours; // 전체가 연장 처리
+                                        }
+
+                                        // 가중시간 공식: 합계(w_hours) + 연장(o_hours) * 1.5
+                                        weight_hours = w_hours + (o_hours * 1.5);
+                                    }
+                                }
+
                                 allStandardData.push({
                                     work_date: dateVal.replace(/\./g, '-'), company_type: companyType, vendor_name: exactVendor, worked_vendor: exactVendor,
-                                    worker_name: nameVal, start_time: row['출근시간'] || '', end_time: row['퇴근시간'] || '',
-                                    work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8,
-                                    remark: row['이상유무'] || row['비고'] || ''
+                                    worker_name: nameVal, start_time: startTime, end_time: endTime,
+                                    work_hours: w_hours, normal_hours: n_hours, overtime_hours: o_hours, weighted_hours: weight_hours,
+                                    remark: remarkStr
                                 });
                                 parsedCount++;
                             }
