@@ -1417,7 +1417,6 @@
         };
 
         // --- 사이드바 (Sidebar) 메인 업데이트 (메뉴 권한 통제 적용) ---
-        // --- 사이드바 (Sidebar) 메인 업데이트 (메뉴 권한 통제 적용) ---
         const Sidebar = ({ page, setPage, userProfile, isSidebarOpen, setIsSidebarOpen, favorites }) => {
             const [openMenu, setOpenMenu] = useState('home_menu'); // 🔥 여기 수정됨! (초기값)
             const [activeTab, setActiveTab] = useState('all');
@@ -3580,6 +3579,8 @@
             // 🔥 4. DB 데이터 보관용
             const [attendanceData, setAttendanceData] = useState([]);
             const [isLoading, setIsLoading] = useState(false);
+
+            const [filterType, setFilterType] = useState('CUSTOM');
 
             // 🔥 DB에서 데이터 불러오기 (여기서부터는 기존 코드 그대로 유지!)
             const fetchAttendance = async () => {
