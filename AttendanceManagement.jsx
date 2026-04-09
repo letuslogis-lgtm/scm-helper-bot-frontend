@@ -1,7 +1,6 @@
 const { useState, useEffect, useMemo } = React;
 
 // 🔥 Supabase 클라이언트 초기화 (외부 JSX 파일이므로 독립적으로 생성)
-// ⚠️ 변수명을 'supabase'로 하면 Babel이 var로 변환 시 window.supabase를 덮어씌워 에러 발생!
 const _supabaseUrl = 'https://kbbkodmighrrgwtwrgdp.supabase.co';
 const _supabaseAnonKey = 'sb_publishable_2yOkLjobrM_oMlncJFqL3A_gbuU9eAr';
 const supabaseClient = window.supabase.createClient(_supabaseUrl, _supabaseAnonKey);
@@ -139,7 +138,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
 
                 rows.forEach(rawRow => {
                     const row = {};
-                    // 공백 제거된 키로 복사 (헤더 이름 띄어쓰기 방어)
                     for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
 
                     const dateVal = row['근무일자'] || row['날짜'] || '';
@@ -166,7 +164,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
 
                         let w_hours = 8, n_hours = 8, o_hours = 0, weight_hours = 8;
 
-                        // 🔥 기훈님 요청: 사내협력사 시간 감가 및 가중시간 완벽 수식 적용!
                         if (companyType === '사내협력사') {
                             const gubun = row['구분'] || '정상';
                             remarkStr = remarkStr ? `${gubun} / ${remarkStr}` : gubun;
@@ -177,7 +174,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                 return isNaN(n) ? 0 : n;
                             };
 
-                            // 🔥 [핵심 수정] 분(Minute) 단위를 시간(Hour) 단위로 자동 변환! (60으로 나누기)
                             const parseMinToHour = (v) => parseNum(v) / 60;
 
                             const calcDiff = (start, end) => {
@@ -188,7 +184,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                 return Math.max(0, ((eH * 60 + (eM || 0)) - (sH * 60 + (sM || 0))) / 60);
                             };
 
-                            // 🔥 모든 추가/공제 항목에 parseMinToHour 함수를 적용!
                             const p_over = parseMinToHour(row['평일연장근무'] || row['평일연장시간'] || row['평일연장']);
                             const p_night = parseMinToHour(row['평일심야근무'] || row['평일심야시간'] || row['평일심야']);
                             const h_work = parseMinToHour(row['휴일근무'] || row['휴일근무시간']);
@@ -208,19 +203,15 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                     o_hours = p_over + p_night + h_work + h_over + h_night + early;
                                     w_hours = n_hours + o_hours;
                                 } else {
-                                    // 기준시간 (퇴근시간 - 08:30)
                                     const baseTime = calcDiff('08:30', endTime);
                                     w_hours = baseTime + early + lunch - late - leave - out;
                                     n_hours = 0;
                                     o_hours = w_hours;
                                 }
-
-                                // 가중시간: 합계 + (연장 * 1.5)
                                 weight_hours = w_hours + (o_hours * 1.5);
                             }
                         }
 
-                        // 🔥 무의미한 휴무 찌꺼기 데이터 원천 차단
                         if (startTime || endTime || w_hours > 0) {
                             allStandardData.push({
                                 work_date: dateVal.replace(/\./g, '-'), company_type: companyType, vendor_name: exactVendor, worked_vendor: exactVendor,
@@ -239,7 +230,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
 
             if (allStandardData.length === 0) throw new Error('추출된 데이터가 0건입니다.');
 
-            // DB에 일괄 Insert
             const { error } = await supabaseClient.from('worker_attendance').insert(allStandardData);
             if (error) throw error;
 
@@ -273,7 +263,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
             <div className="bg-white rounded-2xl shadow-2xl z-10 w-full max-w-[600px] flex flex-col overflow-hidden slide-up">
 
-                {/* Header */}
                 <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
                     <h2 className="text-[15px] font-bold text-gray-800 flex items-center gap-2">
                         <span className="w-1.5 h-4 bg-green-500 rounded-full"></span>근태 데이터 통합 업로드
@@ -282,8 +271,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 </div>
 
                 <div className="p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar max-h-[80vh]">
-
-                    {/* 💡 업로드 가이드 */}
                     <div className="bg-[#f8faff] border border-blue-100/60 rounded-xl p-5">
                         <p className="text-sm font-bold text-gray-800 mb-2.5 flex items-center gap-1.5">
                             <span className="text-yellow-500 text-base">💡</span> 파일 업로드 가이드
@@ -295,7 +282,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                         </ul>
                     </div>
 
-                    {/* ☁️ 드래그 앤 드롭 영역 (파일 목록 표시) */}
                     <div
                         onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
                         className={`relative border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center transition-all min-h-[160px] ${isDragging ? 'border-letusBlue bg-blue-50/50 scale-[1.01]' : 'border-gray-300 bg-white hover:border-gray-400'}`}
@@ -329,7 +315,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                         )}
                     </div>
 
-                    {/* 🎯 업체 자동 매칭 결과 (체크 아이콘 추가) */}
                     <div className="grid grid-cols-3 gap-2.5">
                         {vendorList.map(vendor => {
                             const isActive = activeVendors.includes(vendor.id);
@@ -340,7 +325,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                     className={`relative flex items-center justify-center py-3 rounded-lg border text-[12px] font-bold transition-all ${files.length === 1 ? 'cursor-pointer hover:border-blue-300' : ''} ${isActive ? 'bg-white border-letusBlue text-letusBlue shadow-[0_0_0_1px_rgba(59,130,246,1)]' : 'bg-gray-50/50 border-gray-200 text-gray-400'}`}
                                 >
                                     {vendor.label}
-                                    {/* 🔥 파란색 체크 아이콘 (활성화 시 나타남) */}
                                     {isActive && (
                                         <svg className="w-4 h-4 text-letusBlue ml-1.5 animate-fade-in" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -351,12 +335,9 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                         })}
                     </div>
                     {files.length === 1 && <p className="text-[10px] text-gray-400 font-bold text-right -mt-4">* 단일 파일 업로드 시 업체 수동 변경 가능</p>}
-
                 </div>
 
-                {/* Footer */}
                 <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
-                    {/* 🔥 왼쪽 아래: 파일 목록 비우기 버튼 */}
                     <button
                         onClick={clearAllFiles}
                         disabled={files.length === 0}
@@ -479,30 +460,25 @@ const AttendanceManagement = () => {
     // 🔥 정렬 관련 상태값
     const [sortConfig, setSortConfig] = useState(null);
 
-    // 🔥 1. 글로벌 기간 조회 (일별 상세 내역용)
     const [tempStartDate, setTempStartDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`);
     const [tempEndDate, setTempEndDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}`);
     const [startDate, setStartDate] = useState(tempStartDate);
     const [endDate, setEndDate] = useState(tempEndDate);
 
-    // 🔥 2. 차트/피벗 조회 기간 (집계 현황용 - 아까 지워져서 에러 났던 녀석!)
     const [tempChartStartDate, setTempChartStartDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`);
     const [tempChartEndDate, setTempChartEndDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}`);
     const [chartStartDate, setChartStartDate] = useState(tempChartStartDate);
     const [chartEndDate, setChartEndDate] = useState(tempChartEndDate);
 
-    // 🔥 3. 검색 및 필터용
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedVendor, setSelectedVendor] = useState('전체');
 
-    // 🔥 4. DB 데이터 보관용
     const [attendanceData, setAttendanceData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const [filterType, setFilterType] = useState('D');
-    const [chartFilterType, setChartFilterType] = useState('M'); // 요약 탭용 독립 필터 타입 (디폴트 월간)
+    const [chartFilterType, setChartFilterType] = useState('M');
 
-    // 🔥 '당일/주간/월간/직접' 날짜 계산 헬퍼 함수
     const getFilterDates = (type) => {
         const now = new Date();
         const pad = n => n.toString().padStart(2, '0');
@@ -527,21 +503,19 @@ const AttendanceManagement = () => {
         return { start: tempStartDate, end: tempEndDate };
     };
 
-    // 🔥 필터 타입(세그먼트)이 변경될 때 자동으로 상세내역 날짜(startDate, endDate)를 최신화!
     React.useEffect(() => {
         if (filterType !== 'CUSTOM') {
             const { start, end } = getFilterDates(filterType);
             setStartDate(start);
             setEndDate(end);
-            setTempStartDate(start); // 달력 UI 씽크 맞추기용
-            setTempEndDate(end);     // 달력 UI 씽크 맞추기용
+            setTempStartDate(start);
+            setTempEndDate(end);
         } else {
             setStartDate(tempStartDate);
             setEndDate(tempEndDate);
         }
     }, [filterType]);
 
-    // 🔥 요약 탭 필터 타입 변경 리스너
     React.useEffect(() => {
         if (chartFilterType !== 'CUSTOM') {
             const { start, end } = getFilterDates(chartFilterType);
@@ -555,16 +529,14 @@ const AttendanceManagement = () => {
         }
     }, [chartFilterType]);
 
-    // 🔥 DB에서 데이터 불러오기 (여기서부터는 기존 코드 그대로 유지!)
     const fetchAttendance = async () => {
         setIsLoading(true);
         try {
             let allData = [];
             let hasMore = true;
             let page = 0;
-            const pageSize = 1000; // 한 번에 가져올 묶음 크기
+            const pageSize = 1000;
 
-            // 데이터가 더 이상 없을 때까지 1000개씩 페이지를 넘기며 계속 긁어옵니다!
             while (hasMore) {
                 const { data, error } = await supabaseClient
                     .from('worker_attendance')
@@ -577,17 +549,14 @@ const AttendanceManagement = () => {
                 if (data && data.length > 0) {
                     allData = [...allData, ...data];
                     page++;
-                    // 만약 가져온 데이터가 1000개보다 적다면, 여기가 마지막 페이지라는 뜻!
                     if (data.length < pageSize) hasMore = false;
                 } else {
-                    hasMore = false; // 데이터가 아예 없으면 종료
+                    hasMore = false;
                 }
             }
 
             // 🔥 출근/퇴근 시간이 없으면서 총 근무시간도 0인 "엑셀 공란 찌꺼기 데이터" 원천 차단
             const cleanData = allData.filter(row => row.start_time || row.end_time || Number(row.work_hours) > 0);
-
-            // 끝까지 긁어모은 전체 데이터를 화면에 쏴줍니다!
             setAttendanceData(cleanData);
         } catch (err) {
             console.error('근태 데이터 조회 실패:', err.message);
@@ -596,13 +565,10 @@ const AttendanceManagement = () => {
         }
     };
 
-    // 컴포넌트 마운트 시 1회 실행
     React.useEffect(() => {
         fetchAttendance();
     }, []);
 
-    // 🧠 상세 탭: 필터링 로직 (DB Data 기반)
-    // 🔥 수동으로 누른 startDate와 endDate 사이에 있는 데이터만 걸러냄!
     const filteredDetailData = attendanceData.filter(row => {
         const matchDate = row.work_date && row.work_date >= startDate && row.work_date <= endDate;
         const matchVendor = selectedVendor === '전체' || row.company_type === selectedVendor;
@@ -611,7 +577,6 @@ const AttendanceManagement = () => {
         return matchDate && matchVendor && matchSearch;
     });
 
-    // 🔥 테이블 데이터 정렬 로직
     const sortedDetailData = React.useMemo(() => {
         let sortableItems = [...filteredDetailData];
         if (sortConfig !== null) {
@@ -650,22 +615,17 @@ const AttendanceManagement = () => {
         setSortConfig({ key, direction });
     };
 
-    // 🧠 요약 탭: 월별, 업체별 자동 집계 로직 (DB Data 기반)
     const vendorSummaryMap = {};
     const chartDataMap = {};
 
-    // 🔥 1. 방금 만든 '차트용 조회 기간' 필터를 통과한 데이터만 뽑아냅니다!
     const filteredChartData = attendanceData.filter(row => {
         if (!row.work_date) return false;
         return row.work_date >= chartStartDate && row.work_date <= chartEndDate;
     });
 
-    // 🔥 2. 전체 데이터(attendanceData)가 아닌 걸러진 데이터(filteredChartData)로 집계를 시작합니다!
     filteredChartData.forEach(row => {
-        // 날짜에서 월(YYYY-MM) 추출
         const monthStr = row.work_date ? row.work_date.substring(0, 7) : '미상';
 
-        // 1. 아코디언 테이블 집계용
         if (!vendorSummaryMap[row.worked_vendor]) {
             vendorSummaryMap[row.worked_vendor] = { type: row.company_type, vendor: row.worked_vendor, normal: 0, overtime: 0, total: 0, weighted: 0, monthsMap: {} };
         }
@@ -682,7 +642,6 @@ const AttendanceManagement = () => {
         vMap.monthsMap[monthStr].normal += normalH; vMap.monthsMap[monthStr].overtime += overH;
         vMap.monthsMap[monthStr].total += totalH; vMap.monthsMap[monthStr].weighted += weightedH;
 
-        // 2. 상단 차트 집계용
         if (!chartDataMap[monthStr]) chartDataMap[monthStr] = { name: monthStr, normal: 0, overtime: 0, total: 0 };
         chartDataMap[monthStr].normal += normalH; chartDataMap[monthStr].overtime += overH; chartDataMap[monthStr].total += totalH;
     });
@@ -699,17 +658,11 @@ const AttendanceManagement = () => {
     }, { normal: 0, overtime: 0, total: 0, weighted: 0 });
 
     const toggleVendor = (vendor) => setExpandedVendors(prev => prev.includes(vendor) ? prev.filter(v => v !== vendor) : [...prev, vendor]);
-
     const handleSelectAll = (e) => setSelectedIds(e.target.checked ? filteredDetailData.map(i => i.id) : []);
     const handleSelectOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
-    // 엑셀 추출 기능은 변경 없음
-    const handleExportDetailExcel = () => { /* ... 생략 ... */ };
-    const handleExportSummaryExcel = () => { /* ... 생략 ... */ };
-
     return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-6 max-w-[1600px] mx-auto">
-
             <div className="flex justify-between items-center shrink-0">
                 <div>
                     <h2 className="text-xl font-black text-gray-800 flex items-center gap-2">
@@ -727,13 +680,10 @@ const AttendanceManagement = () => {
             </div>
 
             <div className="grid grid-cols-4 gap-4 shrink-0">
-                {/* 1. 총 스캔 데이터 */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center relative overflow-hidden group">
                     <span className="text-xs font-bold text-gray-500 mb-1">총 스캔 데이터 (DB 연동)</span>
                     <span className="text-3xl font-black text-gray-800">{attendanceData.length.toLocaleString()}<span className="text-sm font-bold text-gray-400 ml-1">건</span></span>
                 </div>
-
-                {/* 2. 협력사 투입 자동 집계 */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center">
                     <span className="text-xs font-bold text-letusBlue mb-1">협력사 투입</span>
                     <span className="text-3xl font-black text-blue-600">
@@ -741,8 +691,6 @@ const AttendanceManagement = () => {
                         <span className="text-sm font-bold text-blue-300 ml-1">명</span>
                     </span>
                 </div>
-
-                {/* 3. 도급사 투입 자동 집계 */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center">
                     <span className="text-xs font-bold text-orange-500 mb-1">도급사 투입</span>
                     <span className="text-3xl font-black text-orange-600">
@@ -750,8 +698,6 @@ const AttendanceManagement = () => {
                         <span className="text-sm font-bold text-orange-300 ml-1">명</span>
                     </span>
                 </div>
-
-                {/* 4. 총 근무시간 */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center">
                     <span className="text-xs font-bold text-red-500 mb-1">누적 총 근무시간 (전체)</span>
                     <span className="text-3xl font-black text-red-600">{totalSummary.total.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}<span className="text-sm font-bold text-red-300 ml-1">H</span></span>
@@ -775,11 +721,9 @@ const AttendanceManagement = () => {
                 </div>
 
                 <div className="p-4 border-b border-gray-100 flex flex-wrap items-center justify-between bg-white shrink-0 gap-y-3 min-h-[70px]">
-                    {/* 좌측: 각 탭에 맞는 컨트롤러 */}
                     <div className="flex flex-wrap items-center w-full min-w-0 md:w-auto md:flex-1">
                         {activeTab === 'summary' ? (
                             <div className="flex items-center justify-end w-full gap-2">
-                                {/* 🔥 요약 탭: CUSTOM 달력 (세그먼트 왼쪽) */}
                                 {chartFilterType === 'CUSTOM' && (
                                     <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
                                         <input type="date" value={tempChartStartDate} onChange={(e) => setTempChartStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
@@ -788,7 +732,6 @@ const AttendanceManagement = () => {
                                         <button onClick={() => { setChartStartDate(tempChartStartDate); setChartEndDate(tempChartEndDate); }} className="bg-orange-500 text-white font-bold px-3 h-full rounded text-[11px] shadow hover:bg-orange-600 transition-colors ml-1 tracking-tight">조회</button>
                                     </div>
                                 )}
-                                {/* 요약 탭: 날짜 세그먼트 */}
                                 <div className="flex items-center gap-3">
                                     <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
                                         {[{ id: 'D', name: '당일' }, { id: 'W', name: '주간' }, { id: 'M', name: '월간' }, { id: 'CUSTOM', name: '직접지정' }].map(btn => (
@@ -800,7 +743,6 @@ const AttendanceManagement = () => {
                                 </div>
                             </div>
                         ) : (
-                            // 🔥 상세 탭 좌측: 구분 세그먼트 & 사원명 검색
                             <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
                                 <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-1">
                                     {['전체', '사내협력사', '외주도급사'].map(type => (
@@ -818,21 +760,18 @@ const AttendanceManagement = () => {
                         )}
                     </div>
 
-                    {/* 우측: 상세 탭 날짜 세그먼트 + 선택실행 컨트롤 */}
                     <div className="flex items-center gap-2 ml-auto shrink-0">
                         {activeTab === 'detail' && (
                             <div className="flex items-center gap-3">
-                                {/* 🔥 상세 탭 우측: CUSTOM 달력 */}
                                 {filterType === 'CUSTOM' && (
                                     <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
                                         <input type="date" value={tempStartDate} onChange={(e) => setTempStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
                                         <span className="text-gray-400 text-xs mx-0.5">~</span>
                                         <input type="date" value={tempEndDate} onChange={(e) => setTempEndDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
-                                        <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-letusBlue text-white font-bold px-3 h-full rounded text-[11px] shadow-sm hover:bg-blue-600 transition-colors ml-1">조회</button>
+                                        <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-letusBlue text-white font-bold px-3 py-1.5 h-full rounded text-[11px] shadow-sm hover:bg-blue-600 transition-colors ml-1">조회</button>
                                     </div>
                                 )}
                                 
-                                {/* 🔥 상세 탭 우측: 날짜 세그먼트 ('선택실행' 왼쪽) */}
                                 <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
                                     {[{ id: 'D', name: '당일' }, { id: 'W', name: '주간' }, { id: 'M', name: '월간' }, { id: 'CUSTOM', name: '직접지정' }].map(btn => (
                                         <button key={btn.id} onClick={() => setFilterType(btn.id)} className={`px-3 h-full text-xs font-bold rounded-md transition-all ${filterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}>
@@ -843,7 +782,6 @@ const AttendanceManagement = () => {
 
                                 <div className="h-6 w-px bg-gray-200 hidden md:block mx-1"></div>
 
-                                {/* 선택실행 버튼 */}
                                 <div className="relative z-50">
                                     <button onClick={() => setIsActionMenuOpen(!isActionMenuOpen)} className="flex items-center text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded px-3 py-1.5 h-[38px] hover:bg-slate-50 min-w-[100px] justify-between shadow-sm transition-all">
                                         <span>선택실행 {selectedIds.length > 0 && `(${selectedIds.length})`}</span>
@@ -945,7 +883,9 @@ const AttendanceManagement = () => {
                                 </div>
                             )}
 
-                                    {/* 🔥 2. 일별 상세 내역 테이블 (헤더 배경색 빵꾸 이슈 해결!) */}
+                            {activeTab === 'detail' && (
+                                <div className="flex flex-col gap-4 mt-2 p-4">
+                                    {/* 🔥 기존 중복 필터 덩어리 싹 날림! 바로 테이블만 렌더링되게 수정 완료 */}
                                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-left whitespace-nowrap">
