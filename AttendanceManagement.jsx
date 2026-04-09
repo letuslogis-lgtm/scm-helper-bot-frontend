@@ -793,7 +793,6 @@ const AttendanceManagement = () => {
 
                                 {/* 요약 탭용 날짜 세그먼트 (우측 정렬됨) */}
                                 <div className="flex items-center gap-3">
-                                    <span className="text-[11px] font-bold text-gray-500 mr-1">조회 방식</span>
                                     <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
                                         {[
                                             { id: 'D', name: '당일' },
