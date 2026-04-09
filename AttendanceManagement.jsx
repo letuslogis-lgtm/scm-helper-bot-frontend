@@ -184,7 +184,10 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
 
                             // 🔥 모든 추가/공제 항목에 parseMinToHour 함수를 적용!
                             const p_over = parseMinToHour(row['평일연장근무'] || row['평일연장시간'] || row['평일연장']);
+                            const p_night = parseMinToHour(row['평일심야근무'] || row['평일심야시간'] || row['평일심야']);
+                            const h_work = parseMinToHour(row['휴일근무'] || row['휴일근무시간']);
                             const h_over = parseMinToHour(row['휴일연장근무'] || row['휴일연장시간'] || row['휴일연장']);
+                            const h_night = parseMinToHour(row['휴일심야근무'] || row['휴일심야시간'] || row['휴일심야']);
                             const early = parseMinToHour(row['조기출근시간'] || row['조기출근']);
                             const lunch = parseMinToHour(row['점심근무시간'] || row['점심근무']);
                             const late = parseMinToHour(row['지각시간'] || row['지각']);
@@ -195,12 +198,11 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                 w_hours = 0; n_hours = 0; o_hours = 0; weight_hours = 0;
                             } else {
                                 if (gubun === '정상') {
-                                    n_hours = 8 + early + lunch - late - leave - out;
-                                    o_hours = p_over + h_over;
+                                    n_hours = Math.max(0, 8 - late - leave - out);
+                                    o_hours = p_over + p_night + h_work + h_over + h_night + early;
                                     w_hours = n_hours + o_hours;
                                 } else {
                                     // 기준시간 (퇴근시간 - 08:30)
-                                    // 💡 만약 휴일/연장에도 점심시간 1시간을 무조건 공제해야 한다면 calcDiff(...) - 1 로 수정하세요!
                                     const baseTime = calcDiff('08:30', endTime);
                                     w_hours = baseTime + early + lunch - late - leave - out;
                                     n_hours = 0;
@@ -212,12 +214,15 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                             }
                         }
 
-                        allStandardData.push({
-                            work_date: dateVal.replace(/\./g, '-'), company_type: companyType, vendor_name: exactVendor, worked_vendor: exactVendor,
-                            worker_name: nameVal, start_time: startTime, end_time: endTime,
-                            work_hours: w_hours, normal_hours: n_hours, overtime_hours: o_hours, weighted_hours: weight_hours,
-                            remark: remarkStr
-                        });
+                        // 🔥 무의미한 휴무 찌꺼기 데이터 원천 차단
+                        if (startTime || endTime || w_hours > 0) {
+                            allStandardData.push({
+                                work_date: dateVal.replace(/\./g, '-'), company_type: companyType, vendor_name: exactVendor, worked_vendor: exactVendor,
+                                worker_name: nameVal, start_time: startTime, end_time: endTime,
+                                work_hours: w_hours, normal_hours: n_hours, overtime_hours: o_hours, weighted_hours: weight_hours,
+                                remark: remarkStr
+                            });
+                        }
                         parsedCount++;
                     }
                 });
@@ -388,29 +393,16 @@ const AttendanceBulkEditModal = ({ selectedIds, onClose, onReload }) => {
 
         setIsSaving(true);
         try {
-            const handleSave = async () => {
-                if (!workedVendor && !remark) return alert('변경할 투입 업체나 비고 내용을 입력해 주세요.');
-                if (!window.confirm(`선택하신 ${selectedIds.length}명의 근무 데이터를 일괄 수정하시겠습니까?\n(지원/파견 처리)`)) return;
+            const updateData = {};
+            if (workedVendor) updateData.worked_vendor = workedVendor;
+            if (remark) updateData.remark = remark;
 
-                setIsSaving(true);
-                try {
-                    // 🔥 주석 해제 및 DB 연동 완료!
-                    const updateData = {};
-                    if (workedVendor) updateData.worked_vendor = workedVendor;
-                    if (remark) updateData.remark = remark;
+            const { error } = await supabase.from('worker_attendance').update(updateData).in('id', selectedIds);
+            if (error) throw error;
 
-                    const { error } = await supabase.from('worker_attendance').update(updateData).in('id', selectedIds);
-                    if (error) throw error;
-
-                    alert(`🎉 총 ${selectedIds.length}명의 데이터가 일괄 수정되었습니다.`);
-                    onReload(); // 부모 컴포넌트 새로고침 호출
-                    onClose();
-                } catch (err) {
-                    alert('일괄 저장 중 오류 발생: ' + err.message);
-                } finally {
-                    setIsSaving(false);
-                }
-            };
+            alert(`🎉 총 ${selectedIds.length}명의 데이터가 일괄 수정되었습니다.`);
+            onReload();
+            onClose();
         } catch (err) {
             alert('일괄 저장 중 오류 발생: ' + err.message);
         } finally {
@@ -478,6 +470,9 @@ const AttendanceManagement = () => {
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
     const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
 
+    // 🔥 정렬 관련 상태값
+    const [sortConfig, setSortConfig] = useState(null);
+
     // 🔥 1. 글로벌 기간 조회 (일별 상세 내역용)
     const [tempStartDate, setTempStartDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`);
     const [tempEndDate, setTempEndDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}`);
@@ -499,6 +494,7 @@ const AttendanceManagement = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const [filterType, setFilterType] = useState('D');
+    const [chartFilterType, setChartFilterType] = useState('M'); // 요약 탭용 독립 필터 타입 (디폴트 월간)
 
     // 🔥 '당일/주간/월간/직접' 날짜 계산 헬퍼 함수
     const getFilterDates = (type) => {
@@ -539,6 +535,20 @@ const AttendanceManagement = () => {
         }
     }, [filterType]);
 
+    // 🔥 요약 탭 필터 타입 변경 리스너
+    React.useEffect(() => {
+        if (chartFilterType !== 'CUSTOM') {
+            const { start, end } = getFilterDates(chartFilterType);
+            setChartStartDate(start);
+            setChartEndDate(end);
+            setTempChartStartDate(start);
+            setTempChartEndDate(end);
+        } else {
+            setChartStartDate(tempChartStartDate);
+            setChartEndDate(tempChartEndDate);
+        }
+    }, [chartFilterType]);
+
     // 🔥 DB에서 데이터 불러오기 (여기서부터는 기존 코드 그대로 유지!)
     const fetchAttendance = async () => {
         setIsLoading(true);
@@ -568,8 +578,11 @@ const AttendanceManagement = () => {
                 }
             }
 
+            // 🔥 출근/퇴근 시간이 없으면서 총 근무시간도 0인 "엑셀 공란 찌꺼기 데이터" 원천 차단
+            const cleanData = allData.filter(row => row.start_time || row.end_time || Number(row.work_hours) > 0);
+
             // 끝까지 긁어모은 전체 데이터를 화면에 쏴줍니다!
-            setAttendanceData(allData);
+            setAttendanceData(cleanData);
         } catch (err) {
             console.error('근태 데이터 조회 실패:', err.message);
         } finally {
@@ -591,6 +604,45 @@ const AttendanceManagement = () => {
 
         return matchDate && matchVendor && matchSearch;
     });
+
+    // 🔥 테이블 데이터 정렬 로직
+    const sortedDetailData = React.useMemo(() => {
+        let sortableItems = [...filteredDetailData];
+        if (sortConfig !== null) {
+            sortableItems.sort((a, b) => {
+                let aValue = a[sortConfig.key];
+                let bValue = b[sortConfig.key];
+
+                if (sortConfig.key === 'work_date' || sortConfig.key === 'go_work_time' || sortConfig.key === 'leave_work_time') {
+                    aValue = new Date(aValue || 0).getTime() || 0;
+                    bValue = new Date(bValue || 0).getTime() || 0;
+                } else if (sortConfig.key === 'normal_hours' || sortConfig.key === 'overtime_hours' || sortConfig.key === 'work_hours') {
+                    aValue = Number(aValue) || 0;
+                    bValue = Number(bValue) || 0;
+                } else {
+                    aValue = (aValue || '').toString().toLowerCase();
+                    bValue = (bValue || '').toString().toLowerCase();
+                }
+
+                if (aValue < bValue) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortableItems;
+    }, [filteredDetailData, sortConfig]);
+
+    const requestSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
 
     // 🧠 요약 탭: 월별, 업체별 자동 집계 로직 (DB Data 기반)
     const vendorSummaryMap = {};
@@ -725,13 +777,33 @@ const AttendanceManagement = () => {
                                 <input type="month" className="border border-gray-200 rounded px-3 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue" defaultValue={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`} />
                                 <span className="text-gray-400 mx-1">~</span>
                                 <input type="month" className="border border-gray-200 rounded px-3 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue" defaultValue={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`} />
-                                <div className="flex gap-2 items-center ml-2">
-                                    <span className="text-[11px] font-bold text-gray-500 mr-1">조회 기간</span>
-                                    <input type="date" value={tempStartDate} onChange={(e) => setTempStartDate(e.target.value)} className="border border-gray-200 rounded px-2.5 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue" />
-                                    <span className="text-gray-400 mx-0.5">~</span>
-                                    <input type="date" value={tempEndDate} onChange={(e) => setTempEndDate(e.target.value)} className="border border-gray-200 rounded px-2.5 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue" />
-                                    <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-letusBlue text-white font-bold px-4 py-1.5 rounded text-xs shadow-sm hover:bg-blue-600 transition-colors ml-2">조회</button>
+                                <div className="h-6 w-px bg-gray-200 hidden md:block mx-1"></div>
+                                {/* 요약 탭용 날짜 세그먼트 */}
+                                <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
+                                    {[
+                                        { id: 'D', name: '당일' },
+                                        { id: 'W', name: '주간' },
+                                        { id: 'M', name: '월간' },
+                                        { id: 'CUSTOM', name: '직접지정' }
+                                    ].map(btn => (
+                                        <button
+                                            key={btn.id}
+                                            onClick={() => setChartFilterType(btn.id)}
+                                            className={`px-3 h-full text-xs font-bold rounded-md transition-all ${chartFilterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}
+                                        >
+                                            {btn.name}
+                                        </button>
+                                    ))}
                                 </div>
+                                {/* 요약 탭용 CUSTOM 달력 */}
+                                {chartFilterType === 'CUSTOM' && (
+                                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
+                                        <input type="date" value={tempChartStartDate} onChange={(e) => setTempChartStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                                        <span className="text-gray-400 text-xs mx-1">~</span>
+                                        <input type="date" value={tempChartEndDate} onChange={(e) => setTempChartEndDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                                        <button onClick={() => { setChartStartDate(tempChartStartDate); setChartEndDate(tempChartEndDate); }} className="bg-orange-500 text-white font-bold px-3 h-full rounded text-[11px] shadow hover:bg-orange-600 transition-colors ml-1 tracking-tight">조회</button>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="flex items-center gap-3">
@@ -890,27 +962,41 @@ const AttendanceManagement = () => {
                                                 <thead className="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 font-bold sticky top-0 z-10">
                                                     <tr>
                                                         <th className="p-3 w-12 text-center border-r border-slate-100">
-                                                            <input type="checkbox" checked={selectedIds.length === filteredDetailData.length && filteredDetailData.length > 0} onChange={handleSelectAll} className="w-4 h-4 accent-blue-500 cursor-pointer" />
+                                                            <input type="checkbox" checked={selectedIds.length === sortedDetailData.length && sortedDetailData.length > 0} onChange={handleSelectAll} className="w-4 h-4 accent-letusBlue cursor-pointer" />
                                                         </th>
-                                                        <th className="p-3 text-center">근무 일자</th>
-                                                        <th className="p-3 text-center">구분</th>
-                                                        <th className="p-3 border-r border-slate-100 text-center">원 소속 업체</th>
-                                                        <th className="p-3 text-blue-600 text-center">실 투입 (생산성 기준)</th>
-                                                        <th className="p-3 text-center">근무자명</th>
-                                                        <th className="p-3 text-center">출근</th>
-                                                        <th className="p-3 text-center border-r border-slate-100">퇴근</th>
-                                                        {/* 배경색을 지우고 텍스트 컬러만 살려서 깔끔하게 정렬! */}
-                                                        <th className="p-3 text-center font-black text-emerald-600">정상근무</th>
-                                                        <th className="p-3 text-center font-black text-orange-500">연장근무</th>
-                                                        <th className="p-3 text-center border-r border-slate-100 font-black text-blue-600">총 시간</th>
-                                                        <th className="p-3">특이사항(비고)</th>
+                                                        {[
+                                                            { key: 'work_date', label: '근무 일자' },
+                                                            { key: 'company_type', label: '구분' },
+                                                            { key: 'vendor_name', label: '원 소속 업체', isBorder: true },
+                                                            { key: 'worked_vendor', label: '실 투입 (생산성 기준)', color: 'text-blue-600' },
+                                                            { key: 'worker_name', label: '근무자명' },
+                                                            { key: 'go_work_time', label: '출근' },
+                                                            { key: 'leave_work_time', label: '퇴근', isBorder: true },
+                                                            { key: 'normal_hours', label: '정상근무', color: 'text-emerald-600', isBold: true },
+                                                            { key: 'overtime_hours', label: '연장근무', color: 'text-orange-500', isBold: true },
+                                                            { key: 'work_hours', label: '총 시간', color: 'text-blue-600', isBorder: true, isBold: true },
+                                                            { key: 'remark', label: '특이사항(비고)', align: 'left' }
+                                                        ].map(col => (
+                                                            <th
+                                                                key={col.key}
+                                                                onClick={() => requestSort(col.key)}
+                                                                className={`p-3 ${col.align === 'left' ? 'text-left' : 'text-center'} cursor-pointer hover:bg-slate-100 transition-colors select-none ${col.isBorder ? 'border-r border-slate-100' : ''} ${col.color || ''} ${col.isBold ? 'font-black' : ''}`}
+                                                            >
+                                                                <div className={`flex items-center gap-1 ${col.align === 'left' ? 'justify-start' : 'justify-center'}`}>
+                                                                    {col.label}
+                                                                    {sortConfig && sortConfig.key === col.key && (
+                                                                        <span className="text-blue-500 text-[14px] font-black">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                                                                    )}
+                                                                </div>
+                                                            </th>
+                                                        ))}
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700 bg-white">
-                                                    {filteredDetailData.length === 0 ? (
+                                                    {sortedDetailData.length === 0 ? (
                                                         <tr><td colSpan="12" className="text-center py-10 text-gray-400 font-bold">조건에 맞는 데이터가 없습니다.</td></tr>
                                                     ) : (
-                                                        filteredDetailData.map((row) => {
+                                                        sortedDetailData.map((row) => {
                                                             const isSelected = selectedIds.includes(row.id);
                                                             const isDispatched = row.vendor_name !== row.worked_vendor;
                                                             return (
