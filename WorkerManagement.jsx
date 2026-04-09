@@ -252,13 +252,16 @@ const WorkerEditModal = ({ worker, onClose, onReload }) => {
     const [phone, setPhone] = useState(worker.phone || '');
     const [companyType, setCompanyType] = useState(worker.company_type || '사내협력사');
     const [vendorName, setVendorName] = useState(worker.vendor_name || '');
-    const [empType, setEmpType] = useState(worker.employment_type || '일용직');
+
+    // 🔥 기본값 세팅 (일용직 -> 현장직으로 변경)
+    const [empType, setEmpType] = useState(worker.employment_type || '현장직');
     const [workplace, setWorkplace] = useState(worker.workplace || '');
+
     const [managedBrand, setManagedBrand] = useState(worker.managed_brand || '');
     const [task, setTask] = useState(worker.task || '');
     const [status, setStatus] = useState(worker.status || '재직');
 
-    const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false); // 🔥 모달 토글 상태
+    const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
@@ -330,28 +333,29 @@ const WorkerEditModal = ({ worker, onClose, onReload }) => {
                             </div>
                         </div>
 
+                        {/* 🔥 기훈님이 채팅으로 주신 항목 완벽 적용! */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-bold text-gray-700">근무지</label>
                                 <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
                                     <option value="">선택 안함</option>
-                                    <option value="용인 1센터">용인 1센터</option>
-                                    <option value="용인 2센터">용인 2센터</option>
-                                    <option value="이천 센터">이천 센터</option>
-                                    <option value="안성 센터">안성 센터</option>
+                                    <option value="양지1센터">양지1센터</option>
+                                    <option value="양지2센터">양지2센터</option>
+                                    <option value="양지3센터">양지3센터</option>
+                                    <option value="안성센터">안성센터</option>
+                                    <option value="평택센터">평택센터</option>
+                                    <option value="음성센터">음성센터</option>
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-bold text-gray-700">근로 형태</label>
                                 <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
-                                    <option value="정규직">정규직</option>
-                                    <option value="계약직">계약직</option>
-                                    <option value="일용직">일용직</option>
+                                    <option value="현장직">현장직</option>
+                                    <option value="사무직">사무직</option>
                                 </select>
                             </div>
                         </div>
 
-                        {/* 🔥 신규 UI: 브랜드 및 업무 선택 (버튼 & 뱃지 영역) */}
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-bold text-gray-700">담당 브랜드 및 업무 관리</label>
                             <div className="min-h-[64px] border border-gray-300 rounded bg-white px-3 py-2.5 flex flex-col gap-2.5">
