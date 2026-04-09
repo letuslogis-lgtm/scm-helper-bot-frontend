@@ -775,13 +775,11 @@ const AttendanceManagement = () => {
                 </div>
 
                 <div className="p-4 border-b border-gray-100 flex flex-wrap items-center justify-between bg-white shrink-0 gap-y-3 min-h-[70px]">
-                    {/* 각 탭에 맞는 날짜 조회 컨트롤러 */}
+                    {/* 좌측: 각 탭에 맞는 컨트롤러 */}
                     <div className="flex flex-wrap items-center w-full min-w-0 md:w-auto md:flex-1">
                         {activeTab === 'summary' ? (
-                            // 🔥 요약 탭: 월간 선택기 제거, 우측 정렬(justify-end), CUSTOM 달력을 왼쪽으로 배치!
                             <div className="flex items-center justify-end w-full gap-2">
-
-                                {/* 🔥 요약 탭용 CUSTOM 달력 (세그먼트 왼쪽에서 나타남!) */}
+                                {/* 🔥 요약 탭: CUSTOM 달력 (세그먼트 왼쪽) */}
                                 {chartFilterType === 'CUSTOM' && (
                                     <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
                                         <input type="date" value={tempChartStartDate} onChange={(e) => setTempChartStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
@@ -790,21 +788,11 @@ const AttendanceManagement = () => {
                                         <button onClick={() => { setChartStartDate(tempChartStartDate); setChartEndDate(tempChartEndDate); }} className="bg-orange-500 text-white font-bold px-3 h-full rounded text-[11px] shadow hover:bg-orange-600 transition-colors ml-1 tracking-tight">조회</button>
                                     </div>
                                 )}
-
-                                {/* 요약 탭용 날짜 세그먼트 (우측 정렬됨) */}
+                                {/* 요약 탭: 날짜 세그먼트 */}
                                 <div className="flex items-center gap-3">
                                     <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
-                                        {[
-                                            { id: 'D', name: '당일' },
-                                            { id: 'W', name: '주간' },
-                                            { id: 'M', name: '월간' },
-                                            { id: 'CUSTOM', name: '직접지정' }
-                                        ].map(btn => (
-                                            <button
-                                                key={btn.id}
-                                                onClick={() => setChartFilterType(btn.id)}
-                                                className={`px-3 h-full text-xs font-bold rounded-md transition-all ${chartFilterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}
-                                            >
+                                        {[{ id: 'D', name: '당일' }, { id: 'W', name: '주간' }, { id: 'M', name: '월간' }, { id: 'CUSTOM', name: '직접지정' }].map(btn => (
+                                            <button key={btn.id} onClick={() => setChartFilterType(btn.id)} className={`px-3 h-full text-xs font-bold rounded-md transition-all ${chartFilterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}>
                                                 {btn.name}
                                             </button>
                                         ))}
@@ -812,45 +800,66 @@ const AttendanceManagement = () => {
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-3">
-                                <span className="text-[11px] font-bold text-gray-500 mr-1">조회 방식</span>
-                                <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner">
-                                    {[{ id: 'D', name: '당일' }, { id: 'W', name: '주간' }, { id: 'M', name: '월간' }, { id: 'CUSTOM', name: '직접지정' }].map(btn => (
-                                        <button key={btn.id} onClick={() => setFilterType(btn.id)} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}>
-                                            {btn.name}
+                            // 🔥 상세 탭 좌측: 구분 세그먼트 & 사원명 검색
+                            <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+                                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-1">
+                                    {['전체', '사내협력사', '외주도급사'].map(type => (
+                                        <button key={type} onClick={() => setSelectedVendor(type)} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${selectedVendor === type ? 'bg-white text-letusBlue shadow-sm ring-1 ring-letusBlue/20' : 'text-gray-500 hover:bg-gray-100'}`}>
+                                            {type}
                                         </button>
                                     ))}
                                 </div>
-                                {filterType === 'CUSTOM' && (
-                                    <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm ml-1">
-                                        <input type="date" value={tempStartDate} onChange={(e) => setTempStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
-                                        <span className="text-gray-400 text-xs mx-0.5">~</span>
-                                        <input type="date" value={tempEndDate} onChange={(e) => setTempEndDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
-                                        <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-letusBlue text-white font-bold px-3 py-1.5 rounded text-[11px] shadow-sm hover:bg-blue-600 transition-colors ml-1">조회</button>
-                                    </div>
-                                )}
+                                <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
+                                <div className="flex items-center gap-2 relative">
+                                    <input type="text" placeholder="사원명 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="border border-gray-200 rounded-lg pl-8 pr-3 py-[7px] text-xs font-bold text-gray-700 outline-none focus:border-letusBlue w-40" />
+                                    <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                </div>
                             </div>
                         )}
                     </div>
 
-                    {/* 우측: 선택실행 전역 액션 컨트롤 */}
+                    {/* 우측: 상세 탭 날짜 세그먼트 + 선택실행 컨트롤 */}
                     <div className="flex items-center gap-2 ml-auto shrink-0">
                         {activeTab === 'detail' && (
-                            <div className="relative z-50">
-                                <button onClick={() => setIsActionMenuOpen(!isActionMenuOpen)} className="flex items-center text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded px-3 py-1.5 hover:bg-slate-50 min-w-[100px] justify-between shadow-sm transition-all">
-                                    <span>선택실행 {selectedIds.length > 0 && `(${selectedIds.length})`}</span>
-                                    <svg className={`w-3.5 h-3.5 ml-2 text-slate-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                </button>
-                                {isActionMenuOpen && (
-                                    <>
-                                        <div className="fixed inset-0" onClick={() => setIsActionMenuOpen(false)}></div>
-                                        <div className="absolute right-0 top-[110%] w-[140px] bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5 slide-down z-50">
-                                            <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) return alert('항목을 체크해 주세요.'); setIsBulkEditModalOpen(true); }} className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] transition-colors ${selectedIds.length > 0 ? 'text-letusBlue hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}>
-                                                일괄 수정 (지원/파견)
-                                            </button>
-                                        </div>
-                                    </>
+                            <div className="flex items-center gap-3">
+                                {/* 🔥 상세 탭 우측: CUSTOM 달력 */}
+                                {filterType === 'CUSTOM' && (
+                                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
+                                        <input type="date" value={tempStartDate} onChange={(e) => setTempStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                                        <span className="text-gray-400 text-xs mx-0.5">~</span>
+                                        <input type="date" value={tempEndDate} onChange={(e) => setTempEndDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                                        <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-letusBlue text-white font-bold px-3 h-full rounded text-[11px] shadow-sm hover:bg-blue-600 transition-colors ml-1">조회</button>
+                                    </div>
                                 )}
+                                
+                                {/* 🔥 상세 탭 우측: 날짜 세그먼트 ('선택실행' 왼쪽) */}
+                                <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
+                                    {[{ id: 'D', name: '당일' }, { id: 'W', name: '주간' }, { id: 'M', name: '월간' }, { id: 'CUSTOM', name: '직접지정' }].map(btn => (
+                                        <button key={btn.id} onClick={() => setFilterType(btn.id)} className={`px-3 h-full text-xs font-bold rounded-md transition-all ${filterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}>
+                                            {btn.name}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="h-6 w-px bg-gray-200 hidden md:block mx-1"></div>
+
+                                {/* 선택실행 버튼 */}
+                                <div className="relative z-50">
+                                    <button onClick={() => setIsActionMenuOpen(!isActionMenuOpen)} className="flex items-center text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded px-3 py-1.5 h-[38px] hover:bg-slate-50 min-w-[100px] justify-between shadow-sm transition-all">
+                                        <span>선택실행 {selectedIds.length > 0 && `(${selectedIds.length})`}</span>
+                                        <svg className={`w-3.5 h-3.5 ml-2 text-slate-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                    {isActionMenuOpen && (
+                                        <>
+                                            <div className="fixed inset-0" onClick={() => setIsActionMenuOpen(false)}></div>
+                                            <div className="absolute right-0 top-[110%] w-[140px] bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5 slide-down z-50">
+                                                <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) return alert('항목을 체크해 주세요.'); setIsBulkEditModalOpen(true); }} className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] transition-colors ${selectedIds.length > 0 ? 'text-letusBlue hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}>
+                                                    일괄 수정 (지원/파견)
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -935,57 +944,6 @@ const AttendanceManagement = () => {
                                     )}
                                 </div>
                             )}
-
-                            {activeTab === 'detail' && (
-                                <div className="flex flex-col gap-4 mt-2">
-
-                                    {/* 🔥 1. 상단 글로벌 필터 (구분 세그먼트 + 사원명 검색 + 날짜 세그먼트 통합) */}
-                                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200 shrink-0">
-
-                                        {/* 왼쪽: 구분 탭 & 사원명 검색창 */}
-                                        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
-                                            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-1">
-                                                {['전체', '사내협력사', '외주도급사'].map(type => (
-                                                    <button key={type} onClick={() => setSelectedVendor(type)} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${selectedVendor === type ? 'bg-white text-letusBlue shadow-sm ring-1 ring-letusBlue/20' : 'text-gray-500 hover:bg-gray-100'}`}>
-                                                        {type}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
-                                            <div className="flex items-center gap-2 relative">
-                                                <input type="text" placeholder="사원명 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="border border-gray-200 rounded-lg pl-8 pr-3 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue w-40" />
-                                                <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                            </div>
-                                        </div>
-
-                                        {/* 오른쪽: 날짜 세그먼트 + CUSTOM 달력 */}
-                                        <div className="flex flex-wrap items-center gap-2 shrink-0">
-                                            <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
-                                                {[
-                                                    { id: 'D', name: '당일' },
-                                                    { id: 'W', name: '주간' },
-                                                    { id: 'M', name: '월간' },
-                                                    { id: 'CUSTOM', name: '직접지정' }
-                                                ].map(btn => (
-                                                    <button
-                                                        key={btn.id}
-                                                        onClick={() => setFilterType(btn.id)}
-                                                        className={`px-3 h-full text-xs font-bold rounded-md transition-all ${filterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}
-                                                    >
-                                                        {btn.name}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            {filterType === 'CUSTOM' && (
-                                                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
-                                                    <input type="date" value={tempStartDate} onChange={(e) => setTempStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
-                                                    <span className="text-gray-400 text-xs mx-1">~</span>
-                                                    <input type="date" value={tempEndDate} onChange={(e) => setTempEndDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
-                                                    <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-letusBlue text-white font-bold px-3 h-full rounded text-[11px] shadow hover:bg-blue-600 transition-colors ml-1 tracking-tight">조회</button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
 
                                     {/* 🔥 2. 일별 상세 내역 테이블 (헤더 배경색 빵꾸 이슈 해결!) */}
                                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
