@@ -12,8 +12,8 @@ const WorkerAddModal = ({ onClose, onReload }) => {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [companyType, setCompanyType] = useState('사내협력사');
-    const [vendorName, setVendorName] = useState('바로서비스');
-    const [empType, setEmpType] = useState('일용직');
+    const [vendorName, setVendorName] = useState('');
+    const [empType, setEmpType] = useState('정규직');
     const [workplace, setWorkplace] = useState(''); // 🔥 기본시급 대신 '근무지'로 변경!
     const [status, setStatus] = useState('재직');
     const [isSaving, setIsSaving] = useState(false);
@@ -28,10 +28,10 @@ const WorkerAddModal = ({ onClose, onReload }) => {
         setIsSaving(true);
         try {
             const { error } = await supabaseClient.from('workers').insert([{
-                name, phone, company_type: companyType, vendor_name: vendorName, 
+                name, phone, company_type: companyType, vendor_name: vendorName,
                 employment_type: empType, workplace, status // 🔥 DB에 workplace 저장
             }]);
-            
+
             if (error) throw error;
 
             alert('신규 근무자가 성공적으로 등록되었습니다.');
@@ -92,8 +92,8 @@ const WorkerAddModal = ({ onClose, onReload }) => {
                                 <label className="text-xs font-bold text-gray-700">근로 형태</label>
                                 <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
                                     <option value="정규직">정규직</option>
-                                    <option value="계약직">계약직</option>
                                     <option value="일용직">일용직</option>
+                                    <option value="사무직">사무직</option>
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
@@ -146,10 +146,10 @@ const WorkerEditModal = ({ worker, onClose, onReload }) => {
         setIsSaving(true);
         try {
             const { error } = await supabaseClient.from('workers').update({
-                name, phone, company_type: companyType, vendor_name: vendorName, 
+                name, phone, company_type: companyType, vendor_name: vendorName,
                 employment_type: empType, workplace, status
             }).eq('id', worker.id);
-            
+
             if (error) throw error;
 
             alert('근무자 정보가 수정되었습니다.');
@@ -440,11 +440,11 @@ const WorkerManagement = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [editTarget, setEditTarget] = useState(null);
-    
+
     // 필터
     const [filterCompany, setFilterCompany] = useState('');
     const [filterKeyword, setFilterKeyword] = useState('');
-    
+
     const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
     const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
@@ -455,10 +455,10 @@ const WorkerManagement = () => {
         setIsLoading(true);
         try {
             let query = supabaseClient.from('workers').select('*');
-            
+
             if (filterCompany && filterCompany !== '전체') query = query.eq('company_type', filterCompany);
             if (filterKeyword) query = query.or(`name.ilike.%${filterKeyword}%,vendor_name.ilike.%${filterKeyword}%`);
-            
+
             const { data, error } = await query.order('created_at', { ascending: false });
             if (error) throw error;
             setWorkers(data || []);
@@ -522,7 +522,7 @@ const WorkerManagement = () => {
         <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in pb-20 w-full min-h-[calc(100vh-64px)]">
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex items-center z-30 shrink-0">
                 <div className="flex items-center gap-5 w-full flex-wrap">
-                    
+
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">소속 구분</label>
                         <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-28 cursor-pointer text-gray-700">
