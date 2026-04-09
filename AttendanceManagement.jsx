@@ -939,7 +939,7 @@ const AttendanceManagement = () => {
                             {activeTab === 'detail' && (
                                 <div className="flex flex-col gap-4 mt-2">
 
-                                    {/* 🔥 1. 상단 글로벌 필터 (기훈님 오리지널 세그먼트 코드 완벽 이식 & 가로 정렬) */}
+                                    {/* 🔥 1. 상단 글로벌 필터 (구분 세그먼트 + 사원명 검색 + 날짜 세그먼트 통합) */}
                                     <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200 shrink-0">
 
                                         {/* 왼쪽: 구분 탭 & 사원명 검색창 */}
@@ -958,7 +958,33 @@ const AttendanceManagement = () => {
                                             </div>
                                         </div>
 
-                                        {/* 글로벌 제어 영역 컨트롤러들을 메인 그룹 상단으로 이관 완료 */}
+                                        {/* 오른쪽: 날짜 세그먼트 + CUSTOM 달력 */}
+                                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                            <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
+                                                {[
+                                                    { id: 'D', name: '당일' },
+                                                    { id: 'W', name: '주간' },
+                                                    { id: 'M', name: '월간' },
+                                                    { id: 'CUSTOM', name: '직접지정' }
+                                                ].map(btn => (
+                                                    <button
+                                                        key={btn.id}
+                                                        onClick={() => setFilterType(btn.id)}
+                                                        className={`px-3 h-full text-xs font-bold rounded-md transition-all ${filterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}
+                                                    >
+                                                        {btn.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {filterType === 'CUSTOM' && (
+                                                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
+                                                    <input type="date" value={tempStartDate} onChange={(e) => setTempStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                                                    <span className="text-gray-400 text-xs mx-1">~</span>
+                                                    <input type="date" value={tempEndDate} onChange={(e) => setTempEndDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                                                    <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-letusBlue text-white font-bold px-3 h-full rounded text-[11px] shadow hover:bg-blue-600 transition-colors ml-1 tracking-tight">조회</button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* 🔥 2. 일별 상세 내역 테이블 (헤더 배경색 빵꾸 이슈 해결!) */}
