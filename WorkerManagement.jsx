@@ -173,7 +173,7 @@ const WorkerAddModal = ({ onClose, onReload }) => {
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-bold text-gray-700">근무지</label>
                                 <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
-                                    <option value="">전체</option>
+                                    <option value="">선택 안함</option>
                                     <option value="양지1센터">양지1센터</option>
                                     <option value="양지2센터">양지2센터</option>
                                     <option value="양지3센터">양지3센터</option>
@@ -184,6 +184,7 @@ const WorkerAddModal = ({ onClose, onReload }) => {
                             </div>
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-bold text-gray-700">근로 형태</label>
+                                {/* 🔥 여기 변수명이 filterEmpType이 아니라 empType 이어야 합니다! */}
                                 <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
                                     <option value="현장직">현장직</option>
                                     <option value="사무직">사무직</option>
@@ -333,22 +334,19 @@ const WorkerEditModal = ({ worker, onClose, onReload }) => {
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-bold text-gray-700">근무지</label>
                                 <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
-                                    <option value="">전체</option>
-                                    <option value="양지1센터">양지1센터</option>
-                                    <option value="양지2센터">양지2센터</option>
-                                    <option value="양지3센터">양지3센터</option>
-                                    <option value="안성센터">안성센터</option>
-                                    <option value="평택센터">평택센터</option>
-                                    <option value="음성센터">음성센터</option>
+                                    <option value="">선택 안함</option>
+                                    <option value="용인 1센터">용인 1센터</option>
+                                    <option value="용인 2센터">용인 2센터</option>
+                                    <option value="이천 센터">이천 센터</option>
+                                    <option value="안성 센터">안성 센터</option>
                                 </select>
                             </div>
-
-                            <div className="flex items-center shrink-0">
-                                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근로 형태</label>
-                                <select value={filterEmpType} onChange={e => setFilterEmpType(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-24 cursor-pointer text-gray-700">
-                                    <option value="">전체</option>
-                                    <option value="현장직">현장직</option>
-                                    <option value="사무직">사무직</option>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-gray-700">근로 형태</label>
+                                <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
+                                    <option value="정규직">정규직</option>
+                                    <option value="계약직">계약직</option>
+                                    <option value="일용직">일용직</option>
                                 </select>
                             </div>
                         </div>
