@@ -13,8 +13,10 @@ const WorkerAddModal = ({ onClose, onReload }) => {
     const [phone, setPhone] = useState('');
     const [companyType, setCompanyType] = useState('사내협력사');
     const [vendorName, setVendorName] = useState('');
-    const [empType, setEmpType] = useState('정규직');
-    const [workplace, setWorkplace] = useState(''); // 🔥 기본시급 대신 '근무지'로 변경!
+    const [empType, setEmpType] = useState('일용직');
+    const [workplace, setWorkplace] = useState(''); 
+    const [managedBrand, setManagedBrand] = useState(''); // 🔥 신규: 담당 브랜드
+    const [task, setTask] = useState(''); // 🔥 신규: 업무
     const [status, setStatus] = useState('재직');
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
@@ -28,10 +30,10 @@ const WorkerAddModal = ({ onClose, onReload }) => {
         setIsSaving(true);
         try {
             const { error } = await supabaseClient.from('workers').insert([{
-                name, phone, company_type: companyType, vendor_name: vendorName,
-                employment_type: empType, workplace, status // 🔥 DB에 workplace 저장
+                name, phone, company_type: companyType, vendor_name: vendorName, 
+                employment_type: empType, workplace, managed_brand: managedBrand, task, status
             }]);
-
+            
             if (error) throw error;
 
             alert('신규 근무자가 성공적으로 등록되었습니다.');
@@ -89,17 +91,34 @@ const WorkerAddModal = ({ onClose, onReload }) => {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">근로 형태</label>
-                                <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
-                                    <option value="정규직">정규직</option>
-                                    <option value="일용직">일용직</option>
-                                    <option value="사무직">사무직</option>
+                                <label className="text-xs font-bold text-gray-700">근무지</label>
+                                <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
+                                    <option value="">선택 안함</option>
+                                    <option value="용인 1센터">용인 1센터</option>
+                                    <option value="용인 2센터">용인 2센터</option>
+                                    <option value="이천 센터">이천 센터</option>
+                                    <option value="안성 센터">안성 센터</option>
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                {/* 🔥 시급 대신 근무지 입력 */}
-                                <label className="text-xs font-bold text-gray-700">근무지</label>
-                                <input type="text" value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" placeholder="예: 용인 1센터" />
+                                <label className="text-xs font-bold text-gray-700">근로 형태</label>
+                                <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
+                                    <option value="정규직">정규직</option>
+                                    <option value="계약직">계약직</option>
+                                    <option value="일용직">일용직</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* 🔥 신규: 담당 브랜드 및 업무 */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-gray-700">담당 브랜드</label>
+                                <input type="text" value={managedBrand} onChange={(e) => setManagedBrand(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" placeholder="예: 일룸, 퍼시스" />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-gray-700">업무 (역할)</label>
+                                <input type="text" value={task} onChange={(e) => setTask(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" placeholder="예: 상차, 피킹, 반품" />
                             </div>
                         </div>
 
@@ -132,7 +151,9 @@ const WorkerEditModal = ({ worker, onClose, onReload }) => {
     const [companyType, setCompanyType] = useState(worker.company_type || '사내협력사');
     const [vendorName, setVendorName] = useState(worker.vendor_name || '');
     const [empType, setEmpType] = useState(worker.employment_type || '일용직');
-    const [workplace, setWorkplace] = useState(worker.workplace || ''); // 🔥 DB에서 불러오기
+    const [workplace, setWorkplace] = useState(worker.workplace || ''); 
+    const [managedBrand, setManagedBrand] = useState(worker.managed_brand || ''); // 🔥 신규
+    const [task, setTask] = useState(worker.task || ''); // 🔥 신규
     const [status, setStatus] = useState(worker.status || '재직');
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
@@ -146,10 +167,10 @@ const WorkerEditModal = ({ worker, onClose, onReload }) => {
         setIsSaving(true);
         try {
             const { error } = await supabaseClient.from('workers').update({
-                name, phone, company_type: companyType, vendor_name: vendorName,
-                employment_type: empType, workplace, status
+                name, phone, company_type: companyType, vendor_name: vendorName, 
+                employment_type: empType, workplace, managed_brand: managedBrand, task, status
             }).eq('id', worker.id);
-
+            
             if (error) throw error;
 
             alert('근무자 정보가 수정되었습니다.');
@@ -207,6 +228,16 @@ const WorkerEditModal = ({ worker, onClose, onReload }) => {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-gray-700">근무지</label>
+                                <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
+                                    <option value="">선택 안함</option>
+                                    <option value="용인 1센터">용인 1센터</option>
+                                    <option value="용인 2센터">용인 2센터</option>
+                                    <option value="이천 센터">이천 센터</option>
+                                    <option value="안성 센터">안성 센터</option>
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-bold text-gray-700">근로 형태</label>
                                 <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
                                     <option value="정규직">정규직</option>
@@ -214,9 +245,17 @@ const WorkerEditModal = ({ worker, onClose, onReload }) => {
                                     <option value="일용직">일용직</option>
                                 </select>
                             </div>
+                        </div>
+
+                        {/* 🔥 신규: 담당 브랜드 및 업무 */}
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">근무지</label>
-                                <input type="text" value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" />
+                                <label className="text-xs font-bold text-gray-700">담당 브랜드</label>
+                                <input type="text" value={managedBrand} onChange={(e) => setManagedBrand(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-gray-700">업무 (역할)</label>
+                                <input type="text" value={task} onChange={(e) => setTask(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" />
                             </div>
                         </div>
 
@@ -249,10 +288,10 @@ const WorkerBulkUploadModal = ({ onClose, onReload }) => {
 
     const handleDownloadTemplate = () => {
         const templateData = [
-            { '이름(필수)': '김철수', '연락처': '010-1234-5678', '소속구분(필수)': '사내협력사', '업체명(필수)': '바로서비스', '근무지': '용인 1센터', '근로형태': '일용직', '상태': '재직' }
+            { '이름(필수)': '김철수', '연락처': '010-1234-5678', '소속구분(필수)': '사내협력사', '업체명(필수)': '바로서비스', '근무지': '용인 1센터', '담당브랜드': '일룸, 퍼시스', '업무': '상차', '근로형태': '일용직', '상태': '재직' }
         ];
         const ws = XLSX.utils.json_to_sheet(templateData);
-        ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }];
+        ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 10 }];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "근무자업로드양식");
         XLSX.writeFile(wb, `근무자_일괄등록양식_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -282,7 +321,6 @@ const WorkerBulkUploadModal = ({ onClose, onReload }) => {
                     const cleanRow = {};
                     for (let key in row) cleanRow[key.replace(/\s/g, '')] = row[key];
 
-                    // 필수 항목 체크 (업체명으로 수정됨)
                     if (!cleanRow['이름(필수)'] || !cleanRow['소속구분(필수)'] || !cleanRow['업체명(필수)']) return;
 
                     standardData.push({
@@ -291,6 +329,8 @@ const WorkerBulkUploadModal = ({ onClose, onReload }) => {
                         company_type: cleanRow['소속구분(필수)'],
                         vendor_name: cleanRow['업체명(필수)'],
                         workplace: cleanRow['근무지'] || '',
+                        managed_brand: cleanRow['담당브랜드'] || '', // 🔥 신규
+                        task: cleanRow['업무'] || '',                 // 🔥 신규
                         employment_type: cleanRow['근로형태'] || '일용직',
                         status: cleanRow['상태'] || '재직'
                     });
@@ -440,11 +480,13 @@ const WorkerManagement = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [editTarget, setEditTarget] = useState(null);
-
-    // 필터
+    
+    // 🔥 조회 필터
     const [filterCompany, setFilterCompany] = useState('');
+    const [filterWorkplace, setFilterWorkplace] = useState(''); // 신규: 근무지 필터
+    const [filterEmpType, setFilterEmpType] = useState('');     // 신규: 근로형태 필터
     const [filterKeyword, setFilterKeyword] = useState('');
-
+    
     const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
     const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
@@ -455,10 +497,13 @@ const WorkerManagement = () => {
         setIsLoading(true);
         try {
             let query = supabaseClient.from('workers').select('*');
-
+            
+            // 🔥 추가된 필터 적용
             if (filterCompany && filterCompany !== '전체') query = query.eq('company_type', filterCompany);
+            if (filterWorkplace && filterWorkplace !== '전체') query = query.eq('workplace', filterWorkplace);
+            if (filterEmpType && filterEmpType !== '전체') query = query.eq('employment_type', filterEmpType);
             if (filterKeyword) query = query.or(`name.ilike.%${filterKeyword}%,vendor_name.ilike.%${filterKeyword}%`);
-
+            
             const { data, error } = await query.order('created_at', { ascending: false });
             if (error) throw error;
             setWorkers(data || []);
@@ -471,7 +516,7 @@ const WorkerManagement = () => {
 
     useEffect(() => {
         fetchWorkers();
-    }, [filterCompany]);
+    }, [filterCompany, filterWorkplace, filterEmpType]); // 필터 변경 시 자동 조회
 
     const handleSearch = () => fetchWorkers();
 
@@ -479,12 +524,13 @@ const WorkerManagement = () => {
         const targetData = selectedIds.length > 0 ? workers.filter(w => selectedIds.includes(w.id)) : workers;
         if (targetData.length === 0) return alert('추출할 데이터가 없습니다.');
 
-        // 🔥 엑셀 추출 항목도 새로운 컬럼 기준에 맞춰 변경!
         const excelData = targetData.map(row => ({
             '이름': row.name || '',
             '소속구분': row.company_type || '',
             '업체명': row.vendor_name || '',
             '근무지': row.workplace || '',
+            '담당브랜드': row.managed_brand || '',
+            '업무': row.task || '',
             '근로형태': row.employment_type || '',
             '연락처': row.phone || '',
             '상태': row.status || '',
@@ -492,7 +538,7 @@ const WorkerManagement = () => {
         }));
 
         const ws = XLSX.utils.json_to_sheet(excelData);
-        ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 20 }, { wch: 10 }, { wch: 15 }, { wch: 8 }, { wch: 20 }];
+        ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 8 }, { wch: 20 }];
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "근무자목록");
@@ -522,13 +568,36 @@ const WorkerManagement = () => {
         <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in pb-20 w-full min-h-[calc(100vh-64px)]">
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex items-center z-30 shrink-0">
                 <div className="flex items-center gap-5 w-full flex-wrap">
-
+                    
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">소속 구분</label>
                         <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-28 cursor-pointer text-gray-700">
                             <option value="">전체</option>
                             <option value="사내협력사">사내협력사</option>
                             <option value="외주도급사">외주도급사</option>
+                        </select>
+                    </div>
+
+                    {/* 🔥 신규: 근무지 필터 */}
+                    <div className="flex items-center shrink-0">
+                        <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근무지</label>
+                        <select value={filterWorkplace} onChange={e => setFilterWorkplace(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-32 cursor-pointer text-gray-700">
+                            <option value="">전체</option>
+                            <option value="용인 1센터">용인 1센터</option>
+                            <option value="용인 2센터">용인 2센터</option>
+                            <option value="이천 센터">이천 센터</option>
+                            <option value="안성 센터">안성 센터</option>
+                        </select>
+                    </div>
+
+                    {/* 🔥 신규: 근로 형태 필터 */}
+                    <div className="flex items-center shrink-0">
+                        <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근로 형태</label>
+                        <select value={filterEmpType} onChange={e => setFilterEmpType(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-24 cursor-pointer text-gray-700">
+                            <option value="">전체</option>
+                            <option value="정규직">정규직</option>
+                            <option value="계약직">계약직</option>
+                            <option value="일용직">일용직</option>
                         </select>
                     </div>
 
@@ -543,7 +612,7 @@ const WorkerManagement = () => {
                     </div>
 
                     <div className="ml-auto shrink-0 flex items-center gap-2">
-                        <button onClick={() => { setFilterCompany(''); setFilterKeyword(''); }} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] transition-colors text-xs">초기화</button>
+                        <button onClick={() => { setFilterCompany(''); setFilterWorkplace(''); setFilterEmpType(''); setFilterKeyword(''); }} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] transition-colors text-xs">초기화</button>
                         <button onClick={handleSearch} className="border border-letusOrange text-letusOrange hover:bg-orange-50 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center">조회하기</button>
                     </div>
                 </div>
@@ -584,7 +653,7 @@ const WorkerManagement = () => {
                 <div className="p-0 overflow-auto flex-1 h-[600px] custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap">
                         <thead className="bg-slate-50/70 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10">
-                            {/* 🔥 테이블 컬럼명 및 순서 100% 반영 */}
+                            {/* 🔥 테이블 컬럼 순서 및 구성 완벽 세팅 */}
                             <tr>
                                 <th className="p-4 pl-6 w-10 text-center"><input type="checkbox" checked={isAllSelected} onChange={toggleAll} className="w-4 h-4 accent-letusBlue cursor-pointer" /></th>
                                 <th className="p-4 w-10 text-center">No</th>
@@ -592,17 +661,19 @@ const WorkerManagement = () => {
                                 <th className="p-4 text-center">소속 구분</th>
                                 <th className="p-4">업체명</th>
                                 <th className="p-4">근무지</th>
+                                <th className="p-4">담당 브랜드</th>
+                                <th className="p-4">업무</th>
                                 <th className="p-4 text-center">근로 형태</th>
                                 <th className="p-4 text-center">연락처</th>
                                 <th className="p-4 text-center">상태</th>
                             </tr>
                         </thead>
                         {isLoading ? (
-                            <tbody><tr><td colSpan="9" className="text-center py-10 text-gray-400 font-bold">데이터를 불러오는 중입니다...</td></tr></tbody>
+                            <tbody><tr><td colSpan="11" className="text-center py-10 text-gray-400 font-bold">데이터를 불러오는 중입니다...</td></tr></tbody>
                         ) : workers.length === 0 ? (
                             <tbody>
                                 <tr>
-                                    <td colSpan="9" className="p-10 text-center text-gray-400">
+                                    <td colSpan="11" className="p-10 text-center text-gray-400">
                                         <svg className="w-16 h-16 mx-auto mb-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                                         <p className="font-semibold text-gray-500 mb-1">등록된 근무자가 없습니다.</p>
                                     </td>
@@ -622,6 +693,8 @@ const WorkerManagement = () => {
                                         </td>
                                         <td className="p-4 font-bold text-gray-600">{worker.vendor_name}</td>
                                         <td className="p-4 font-bold text-gray-600">{worker.workplace || '-'}</td>
+                                        <td className="p-4 text-gray-600 font-medium">{worker.managed_brand || '-'}</td>
+                                        <td className="p-4 text-gray-600">{worker.task || '-'}</td>
                                         <td className="p-4 text-center text-gray-600">{worker.employment_type}</td>
                                         <td className="p-4 text-center font-mono text-gray-500">{worker.phone || '-'}</td>
                                         <td className="p-4 text-center">
