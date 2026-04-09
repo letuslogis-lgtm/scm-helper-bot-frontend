@@ -775,33 +775,13 @@ const AttendanceManagement = () => {
                 </div>
 
                 <div className="p-4 border-b border-gray-100 flex flex-wrap items-center justify-between bg-white shrink-0 gap-y-3 min-h-[70px]">
-                    {/* 좌측: 각 탭에 맞는 날짜 조회 컨트롤러 */}
+                    {/* 각 탭에 맞는 날짜 조회 컨트롤러 */}
                     <div className="flex flex-wrap items-center w-full min-w-0 md:w-auto md:flex-1">
                         {activeTab === 'summary' ? (
-                            <div className="flex gap-2 items-center">
-                                <span className="text-[11px] font-bold text-gray-500 mr-1">조회 기간 (월)</span>
-                                <input type="month" className="border border-gray-200 rounded px-3 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue" defaultValue={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`} />
-                                <span className="text-gray-400 mx-1">~</span>
-                                <input type="month" className="border border-gray-200 rounded px-3 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-letusBlue" defaultValue={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`} />
-                                <div className="h-6 w-px bg-gray-200 hidden md:block mx-1"></div>
-                                {/* 요약 탭용 날짜 세그먼트 */}
-                                <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
-                                    {[
-                                        { id: 'D', name: '당일' },
-                                        { id: 'W', name: '주간' },
-                                        { id: 'M', name: '월간' },
-                                        { id: 'CUSTOM', name: '직접지정' }
-                                    ].map(btn => (
-                                        <button
-                                            key={btn.id}
-                                            onClick={() => setChartFilterType(btn.id)}
-                                            className={`px-3 h-full text-xs font-bold rounded-md transition-all ${chartFilterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}
-                                        >
-                                            {btn.name}
-                                        </button>
-                                    ))}
-                                </div>
-                                {/* 요약 탭용 CUSTOM 달력 */}
+                            // 🔥 요약 탭: 월간 선택기 제거, 우측 정렬(justify-end), CUSTOM 달력을 왼쪽으로 배치!
+                            <div className="flex items-center justify-end w-full gap-2">
+
+                                {/* 🔥 요약 탭용 CUSTOM 달력 (세그먼트 왼쪽에서 나타남!) */}
                                 {chartFilterType === 'CUSTOM' && (
                                     <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
                                         <input type="date" value={tempChartStartDate} onChange={(e) => setTempChartStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
@@ -810,6 +790,27 @@ const AttendanceManagement = () => {
                                         <button onClick={() => { setChartStartDate(tempChartStartDate); setChartEndDate(tempChartEndDate); }} className="bg-orange-500 text-white font-bold px-3 h-full rounded text-[11px] shadow hover:bg-orange-600 transition-colors ml-1 tracking-tight">조회</button>
                                     </div>
                                 )}
+
+                                {/* 요약 탭용 날짜 세그먼트 (우측 정렬됨) */}
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[11px] font-bold text-gray-500 mr-1">조회 방식</span>
+                                    <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
+                                        {[
+                                            { id: 'D', name: '당일' },
+                                            { id: 'W', name: '주간' },
+                                            { id: 'M', name: '월간' },
+                                            { id: 'CUSTOM', name: '직접지정' }
+                                        ].map(btn => (
+                                            <button
+                                                key={btn.id}
+                                                onClick={() => setChartFilterType(btn.id)}
+                                                className={`px-3 h-full text-xs font-bold rounded-md transition-all ${chartFilterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}
+                                            >
+                                                {btn.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         ) : (
                             <div className="flex items-center gap-3">
