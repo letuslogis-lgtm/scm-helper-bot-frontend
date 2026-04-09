@@ -1,9 +1,10 @@
 const { useState, useEffect, useMemo } = React;
 
 // 🔥 Supabase 클라이언트 초기화 (외부 JSX 파일이므로 독립적으로 생성)
-const supabaseUrl = 'https://kbbkodmighrrgwtwrgdp.supabase.co';
-const supabaseAnonKey = 'sb_publishable_2yOkLjobrM_oMlncJFqL3A_gbuU9eAr';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+// ⚠️ 변수명을 'supabase'로 하면 Babel이 var로 변환 시 window.supabase를 덮어씌워 에러 발생!
+const _supabaseUrl = 'https://kbbkodmighrrgwtwrgdp.supabase.co';
+const _supabaseAnonKey = 'sb_publishable_2yOkLjobrM_oMlncJFqL3A_gbuU9eAr';
+const supabaseClient = window.supabase.createClient(_supabaseUrl, _supabaseAnonKey);
 
 // ✖️ 공통으로 사용할 닫기 아이콘 컴포넌트
 const CloseIcon = () => (
@@ -239,7 +240,7 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
             if (allStandardData.length === 0) throw new Error('추출된 데이터가 0건입니다.');
 
             // DB에 일괄 Insert
-            const { error } = await supabase.from('worker_attendance').insert(allStandardData);
+            const { error } = await supabaseClient.from('worker_attendance').insert(allStandardData);
             if (error) throw error;
 
             let resultMsg = `🎉 총 ${allStandardData.length}건의 데이터가 일괄 등록되었습니다!\n\n`;
@@ -402,7 +403,7 @@ const AttendanceBulkEditModal = ({ selectedIds, onClose, onReload }) => {
             if (workedVendor) updateData.worked_vendor = workedVendor;
             if (remark) updateData.remark = remark;
 
-            const { error } = await supabase.from('worker_attendance').update(updateData).in('id', selectedIds);
+            const { error } = await supabaseClient.from('worker_attendance').update(updateData).in('id', selectedIds);
             if (error) throw error;
 
             alert(`🎉 총 ${selectedIds.length}명의 데이터가 일괄 수정되었습니다.`);
@@ -565,7 +566,7 @@ const AttendanceManagement = () => {
 
             // 데이터가 더 이상 없을 때까지 1000개씩 페이지를 넘기며 계속 긁어옵니다!
             while (hasMore) {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('worker_attendance')
                     .select('*')
                     .order('work_date', { ascending: false })
