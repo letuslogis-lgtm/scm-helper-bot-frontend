@@ -439,9 +439,8 @@ const WorkerManagement = () => {
     const [selectedIds, setSelectedIds] = useState([]);
     const [editTarget, setEditTarget] = useState(null);
 
-    // 필터
+    // 필터 (상태 조회 조건 제거됨!)
     const [filterCompany, setFilterCompany] = useState('');
-    const [filterStatus, setFilterStatus] = useState('재직');
     const [filterKeyword, setFilterKeyword] = useState('');
 
     const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
@@ -456,7 +455,6 @@ const WorkerManagement = () => {
             let query = supabaseClient.from('workers').select('*');
 
             if (filterCompany && filterCompany !== '전체') query = query.eq('company_type', filterCompany);
-            if (filterStatus && filterStatus !== '전체') query = query.eq('status', filterStatus);
             if (filterKeyword) query = query.or(`name.ilike.%${filterKeyword}%,vendor_name.ilike.%${filterKeyword}%`);
 
             const { data, error } = await query.order('created_at', { ascending: false });
@@ -471,7 +469,7 @@ const WorkerManagement = () => {
 
     useEffect(() => {
         fetchWorkers();
-    }, [filterCompany, filterStatus]);
+    }, [filterCompany]); // 상태 필터 의존성 제거됨
 
     const handleSearch = () => fetchWorkers();
 
@@ -531,15 +529,7 @@ const WorkerManagement = () => {
                         </select>
                     </div>
 
-                    <div className="flex items-center shrink-0">
-                        <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">상태</label>
-                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-24 cursor-pointer text-gray-700">
-                            <option value="">전체</option>
-                            <option value="재직">재직</option>
-                            <option value="휴직">휴직</option>
-                            <option value="퇴사">퇴사</option>
-                        </select>
-                    </div>
+                    {/* 🔥 상태 검색 드롭다운이 있던 자리가 깔끔하게 사라졌습니다! */}
 
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">검색어</label>
@@ -552,7 +542,8 @@ const WorkerManagement = () => {
                     </div>
 
                     <div className="ml-auto shrink-0 flex items-center gap-2">
-                        <button onClick={() => { setFilterCompany(''); setFilterStatus('재직'); setFilterKeyword(''); }} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] transition-colors text-xs">초기화</button>
+                        {/* 초기화 버튼에서도 상태 리셋 로직 제거 */}
+                        <button onClick={() => { setFilterCompany(''); setFilterKeyword(''); }} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] transition-colors text-xs">초기화</button>
                         <button onClick={handleSearch} className="border border-letusOrange text-letusOrange hover:bg-orange-50 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center">조회하기</button>
                     </div>
                 </div>
