@@ -659,6 +659,20 @@ const AttendanceManagement = () => {
     const handleSelectAll = (e) => setSelectedIds(e.target.checked ? filteredDetailData.map(i => i.id) : []);
     const handleSelectOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
+    const currentViewCount = useMemo(() => {
+        return activeTab === 'summary' ? filteredChartData.length : filteredDetailData.length;
+    }, [activeTab, filteredChartData.length, filteredDetailData.length]);
+
+    const currentStats = useMemo(() => {
+        const targetData = activeTab === 'summary' ? filteredChartData : filteredDetailData;
+        return targetData.reduce((acc, curr) => {
+            if (curr.company_type === '사내협력사') acc.partnerCount++;
+            else if (curr.company_type === '외주도급사') acc.contractorCount++;
+            acc.totalHours += (Number(curr.work_hours) || 0);
+            return acc;
+        }, { partnerCount: 0, contractorCount: 0, totalHours: 0 });
+    }, [activeTab, filteredChartData, filteredDetailData]);
+
     return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-6 max-w-[1600px] mx-auto">
             <div className="flex justify-between items-center shrink-0">
@@ -677,29 +691,52 @@ const AttendanceManagement = () => {
                 </button>
             </div>
 
+            {/* 상단 통합 지표 영역 */}
             <div className="grid grid-cols-4 gap-4 shrink-0">
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center relative overflow-hidden group">
-                    <span className="text-xs font-bold text-gray-500 mb-1">총 스캔 데이터 (DB 연동)</span>
-                    <span className="text-3xl font-black text-gray-800">{attendanceData.length.toLocaleString()}<span className="text-sm font-bold text-gray-400 ml-1">건</span></span>
+
+                {/* 1번 카드: 조회 기간 데이터 개수 */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center relative overflow-hidden group transition-all hover:shadow-md">
+                    <span className="text-xs font-bold text-gray-500 mb-1">
+                        {activeTab === 'summary' ? '조회 기간 집계 데이터' : '조회 기간 상세 데이터'}
+                    </span>
+                    <span className="text-3xl font-black text-gray-800">
+                        {currentViewCount.toLocaleString()}
+                        <span className="text-sm font-bold text-gray-400 ml-1">건</span>
+                    </span>
+                    {/* 전체 데이터 대비 비중 표시바 */}
+                    <div
+                        className="absolute bottom-0 left-0 h-1 bg-letusOrange/30 transition-all duration-700 ease-out"
+                        style={{ width: `${(currentViewCount / (attendanceData.length || 1)) * 100}%` }}
+                    ></div>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center">
-                    <span className="text-xs font-bold text-letusBlue mb-1">협력사 투입</span>
+
+                {/* 2번 카드: 협력사 투입 인원 */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center transition-all hover:shadow-md">
+                    <span className="text-xs font-bold text-letusBlue mb-1">조회 기간 협력사 투입</span>
                     <span className="text-3xl font-black text-blue-600">
-                        {attendanceData.filter(row => row.company_type === '사내협력사').length.toLocaleString()}
+                        {currentStats.partnerCount.toLocaleString()}
                         <span className="text-sm font-bold text-blue-300 ml-1">명</span>
                     </span>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center">
-                    <span className="text-xs font-bold text-orange-500 mb-1">도급사 투입</span>
+
+                {/* 3번 카드: 도급사 투입 인원 */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center transition-all hover:shadow-md">
+                    <span className="text-xs font-bold text-orange-500 mb-1">조회 기간 도급사 투입</span>
                     <span className="text-3xl font-black text-orange-600">
-                        {attendanceData.filter(row => row.company_type === '외주도급사').length.toLocaleString()}
+                        {currentStats.contractorCount.toLocaleString()}
                         <span className="text-sm font-bold text-orange-300 ml-1">명</span>
                     </span>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center">
-                    <span className="text-xs font-bold text-red-500 mb-1">누적 총 근무시간 (전체)</span>
-                    <span className="text-3xl font-black text-red-600">{totalSummary.total.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}<span className="text-sm font-bold text-red-300 ml-1">H</span></span>
+
+                {/* 4번 카드: 총 근무 시간 */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center transition-all hover:shadow-md">
+                    <span className="text-xs font-bold text-red-500 mb-1">조회 기간 총 근무시간</span>
+                    <span className="text-3xl font-black text-red-600">
+                        {currentStats.totalHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                        <span className="text-sm font-bold text-red-300 ml-1">H</span>
+                    </span>
                 </div>
+
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20">
