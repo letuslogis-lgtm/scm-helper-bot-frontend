@@ -1,359 +1,349 @@
 
 const { useState, useEffect, useRef } = React;
 const supabase = window.supabase;
-const adminSupabase = window.adminSupabase; // 사용자 관리는 이게 필수입니다!
-const { StatusBadge, CategoryBadge, VendorSearchModal } = window;
+const adminSupabase = window.adminSupabase;
+const { StatusBadge, CategoryBadge, VendorSearchModal, CloseIcon, TableSkeleton, formatDateTime } = window; // (혹시 빠진 부품 있을까 봐 넉넉히 챙겼습니다)
 
+// 🔥 껍데기를 없애고 바로 진짜 로직 시작!
 const UserManagement = () => {
-    // 1. 사용자 관리 메인 로직 (기존에 index에 있던 UserManagement 내용)
-    const UserManagement = () => {
-        const [isModalOpen, setIsModalOpen] = useState(false);
-        const [users, setUsers] = useState([]);
-        const [isLoading, setIsLoading] = useState(false);
-        const [selectedUsers, setSelectedUsers] = useState([]);
-        const [editTarget, setEditTarget] = useState(null);
-        const [vendorListTarget, setVendorListTarget] = useState(null);
-        const [filterRole, setFilterRole] = useState('');
-        const [filterStatus, setFilterStatus] = useState('');
-        const [filterKeyword, setFilterKeyword] = useState('');
-        const [filterVendor, setFilterVendor] = useState('');
-        const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
-        const [selectedUserIds, setSelectedUserIds] = useState([]);
-        const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
-        const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [users, setUsers] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [selectedUsers, setSelectedUsers] = useState([]);
+    const [editTarget, setEditTarget] = useState(null);
+    const [vendorListTarget, setVendorListTarget] = useState(null);
+    const [filterRole, setFilterRole] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
+    const [filterKeyword, setFilterKeyword] = useState('');
+    const [filterVendor, setFilterVendor] = useState('');
+    const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+    const [selectedUserIds, setSelectedUserIds] = useState([]);
+    const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+    const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
 
-        const isAllSelected = users.length > 0 && selectedUsers.length === users.length;
+    const isAllSelected = users.length > 0 && selectedUsers.length === users.length;
 
-        const handleExportExcel = () => {
-            const targetData = selectedUserIds.length > 0 ? users.filter(u => selectedUserIds.includes(u.id)) : users;
-            if (targetData.length === 0) return alert('추출할 데이터가 없습니다.');
+    const handleExportExcel = () => {
+        const targetData = selectedUserIds.length > 0 ? users.filter(u => selectedUserIds.includes(u.id)) : users;
+        if (targetData.length === 0) return alert('추출할 데이터가 없습니다.');
 
-            // 엑셀 시트에 들어갈 JSON 데이터 배열 생성
-            const excelData = targetData.map(row => ({
-                '사용자명': row.name || '',
-                '아이디': row.login_id || '',
-                '소속팀': row.team || '',
-                '소속브랜드': row.brands || '',
-                '권한그룹': row.role || '',
-                '상태': row.status || ''
-            }));
+        // 엑셀 시트에 들어갈 JSON 데이터 배열 생성
+        const excelData = targetData.map(row => ({
+            '사용자명': row.name || '',
+            '아이디': row.login_id || '',
+            '소속팀': row.team || '',
+            '소속브랜드': row.brands || '',
+            '권한그룹': row.role || '',
+            '상태': row.status || ''
+        }));
 
-            const ws = XLSX.utils.json_to_sheet(excelData);
-            ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 10 }, { wch: 10 }];
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 10 }, { wch: 10 }];
 
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "사용자목록");
-            XLSX.writeFile(wb, `사용자목록_${new Date().toISOString().split('T')[0]}.xlsx`);
-        };
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "사용자목록");
+        XLSX.writeFile(wb, `사용자목록_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
 
-        const toggleAll = () => {
-            if (isAllSelected) {
-                setSelectedUsers([]);
-            } else {
-                setSelectedUsers(users.map(u => u.id));
-            }
-        };
+    const toggleAll = () => {
+        if (isAllSelected) {
+            setSelectedUsers([]);
+        } else {
+            setSelectedUsers(users.map(u => u.id));
+        }
+    };
 
-        const toggleOne = (id) => {
-            setSelectedUsers(prev =>
-                prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-            );
-        };
-
-        // 🔥 선택 항목 일괄 삭제 기능 (관리자 전용 & 대용량 청크 처리)
-        const handleDeleteSelected = async () => {
-            if (userProfile?.role !== '관리자') return alert('🚨 삭제 권한이 없습니다. 관리자에게 문의하세요.');
-            if (selectedIds.length === 0) return alert('삭제할 항목을 체크해 주세요.');
-
-            if (!window.confirm(`선택하신 ${selectedIds.length}건의 데이터를 정말 삭제하시겠습니까?\n이 작업은 영구적이며 복구할 수 없습니다.`)) return;
-
-            try {
-                // 🔥 URL 길이 초과 방지를 위해 200개씩 쪼개서 지우기!
-                const CHUNK_SIZE = 200;
-                for (let i = 0; i < selectedIds.length; i += CHUNK_SIZE) {
-                    const chunk = selectedIds.slice(i, i + CHUNK_SIZE);
-                    const { error } = await supabase.from('logistics_accidents').delete().in('id', chunk);
-                    if (error) throw error;
-                }
-
-                alert(`🗑️ ${selectedIds.length}건의 데이터가 깔끔하게 삭제되었습니다.`);
-                setSelectedIds([]);
-                fetchAccidents();
-            } catch (err) {
-                alert('삭제 중 오류 발생: ' + err.message);
-            }
-        };
-
-        const fetchUsers = async (params = {}) => {
-            setIsLoading(true);
-            try {
-                let query = supabase.from('profiles').select('*');
-                const role = params.role !== undefined ? params.role : filterRole;
-                const status = params.status !== undefined ? params.status : filterStatus;
-                const keyword = params.keyword !== undefined ? params.keyword : filterKeyword;
-                const vendor = params.vendor !== undefined ? params.vendor : filterVendor;
-                if (role) query = query.eq('role', role);
-                if (status) query = query.eq('status', status);
-                if (keyword) query = query.ilike('name', `%${keyword}%`);
-                if (vendor) query = query.ilike('managed_vendors', `%${vendor}%`);
-                const { data, error } = await query.order('created_at', { ascending: false });
-                if (error) throw error;
-                setUsers(data || []);
-            } catch (error) {
-                console.error("fetchUsers error:", error.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        const handleSearch = () => fetchUsers();
-
-        useEffect(() => {
-            window.addEventListener('trigger-refresh', handleSearch);
-            return () => window.removeEventListener('trigger-refresh', handleSearch);
-        }, [filterRole, filterStatus, filterKeyword, filterVendor]);
-
-        useEffect(() => {
-            fetchUsers();
-        }, []);
-
-        return (
-            <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-140px)] overflow-hidden min-h-[600px]">
-                <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex items-center z-30 shrink-0">
-                    <div className="flex items-center gap-5 w-full flex-wrap">
-
-                        <div className="flex items-center shrink-0">
-                            <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">권한 그룹</label>
-                            <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-24 cursor-pointer text-gray-700">
-                                <option value="">전체</option>
-                                <option value="관리자">관리자</option>
-                                <option value="사용자">사용자</option>
-                            </select>
-                        </div>
-
-                        <div className="flex items-center shrink-0">
-                            <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">계정 상태</label>
-                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-24 cursor-pointer text-gray-700">
-                                <option value="">전체</option>
-                                <option value="정상">정상 승인</option>
-                                <option value="정지">이용 정지</option>
-                            </select>
-                        </div>
-
-                        <div className="flex items-center shrink-0">
-                            <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">이름</label>
-                            <input
-                                type="text"
-                                value={filterKeyword}
-                                onChange={e => setFilterKeyword(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                                placeholder="이름 검색..."
-                                className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-32 text-gray-700"
-                            />
-                        </div>
-
-                        <div className="flex items-center shrink-0">
-                            <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 업체</label>
-                            <input
-                                type="text"
-                                value={filterVendor}
-                                onChange={e => setFilterVendor(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                                placeholder="업체명 검색..."
-                                className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-32 text-gray-700"
-                            />
-                        </div>
-
-                        <div className="ml-auto shrink-0 flex items-center gap-2">
-                            <button
-                                onClick={() => { setFilterRole(''); setFilterStatus(''); setFilterKeyword(''); setFilterVendor(''); fetchUsers({ role: '', status: '', keyword: '', vendor: '' }); }}
-                                className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] transition-colors text-xs"
-                            >
-                                초기화
-                            </button>
-                            <button onClick={handleSearch} className="border border-letusOrange text-letusOrange hover:bg-orange-50 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center">
-                                조회하기
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex justify-end w-full px-2 z-30 -mt-1 mb-1">
-                    <div className="flex items-center gap-3">
-                        {/* 🔥 3단계: 지저분한 버튼들 싹 지우고 '선택실행' 드롭다운으로 통합! */}
-                        <div className="relative">
-                            <button
-                                onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
-                                className="flex items-center justify-between text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded shadow-sm px-3 py-[7px] hover:bg-gray-50 transition-all w-[90px]"
-                            >
-                                선택실행
-                                <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                            </button>
-
-                            {isActionMenuOpen && (
-                                <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setIsActionMenuOpen(false)}></div>
-                                    <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 py-1.5 slide-down">
-
-                                        <button onClick={() => { setIsActionMenuOpen(false); setIsModalOpen(true); }} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                                            사용자 추가
-                                        </button>
-
-                                        <button onClick={() => { setIsActionMenuOpen(false); setIsBulkUploadModalOpen(true); }} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                                            일괄 등록
-                                        </button>
-
-                                        <button
-                                            onClick={() => {
-                                                setIsActionMenuOpen(false);
-                                                // 기훈님 코드의 selectedUsers 또는 selectedUserIds 배열 길이 확인
-                                                if (selectedUsers.length === 0 && selectedUserIds.length === 0) alert('일괄 변경할 사용자를 먼저 체크박스로 선택해 주세요.');
-                                                else setIsBulkEditModalOpen(true);
-                                            }}
-                                            className={`w-full text-left px-4 py-2 text-xs font-medium ${(selectedUsers.length > 0 || selectedUserIds.length > 0) ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}
-                                        >
-                                            일괄 변경 {(selectedUsers.length > 0 || selectedUserIds.length > 0) && `(${Math.max(selectedUsers.length, selectedUserIds.length)})`}
-                                        </button>
-
-                                        {/* 첫 번째 구분선 */}
-                                        <div className="h-px bg-gray-100 my-1"></div>
-
-                                        <button onClick={() => { setIsActionMenuOpen(false); handleExportExcel(); }} className="w-full text-left px-4 py-2 text-xs font-bold text-green-600 hover:bg-green-50 flex items-center justify-between">
-                                            엑셀 추출
-                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                        </button>
-
-                                        {/* 두 번째 구분선 */}
-                                        <div className="h-px bg-gray-100 my-1"></div>
-
-                                        <button
-                                            onClick={() => {
-                                                setIsActionMenuOpen(false);
-                                                if (selectedUsers.length === 0 && selectedUserIds.length === 0) alert('삭제할 사용자를 먼저 선택해 주세요.');
-                                                else handleDeleteSelected(); // 기훈님 코드에 있던 삭제 함수 연결 완료!
-                                            }}
-                                            className={`w-full text-left px-4 py-2 text-xs font-medium ${(selectedUsers.length > 0 || selectedUserIds.length > 0) ? 'text-red-600 hover:bg-red-50' : 'text-gray-300 cursor-not-allowed'}`}
-                                        >
-                                            삭제
-                                        </button>
-
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20">
-                    <div className="p-0 overflow-auto flex-1 h-[600px] custom-scrollbar">
-                        <table className="w-full text-left whitespace-nowrap">
-                            <thead className="bg-slate-50/70 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10">
-                                <tr>
-                                    <th className="p-4 pl-6 w-10 text-center">
-                                        <input
-                                            type="checkbox"
-                                            checked={isAllSelected}
-                                            onChange={toggleAll}
-                                            className="w-4 h-4 accent-letusBlue cursor-pointer"
-                                            title="전체 선택"
-                                        />
-                                    </th>
-                                    <th className="p-4 w-10 text-center">No</th>
-                                    <th className="p-4">사용자명</th>
-                                    <th className="p-4">사용자 ID</th>
-                                    <th className="p-4">소속 팀</th>
-                                    <th className="p-4">소속 브랜드</th>
-                                    <th className="p-4">담당 업체/창고</th>
-                                    <th className="p-4">권한 그룹</th>
-                                    <th className="p-4 text-center">가입일시</th>
-                                    <th className="p-4 text-center">상태</th>
-                                </tr>
-                            </thead>
-                            {isLoading ? (
-                                <TableSkeleton rowCount={8} colCount={9} />
-                            ) : users.length === 0 ? (
-                                <tbody>
-                                    <tr>
-                                        <td colSpan="10" className="p-10 text-center text-gray-400">
-                                            <svg className="w-16 h-16 mx-auto mb-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                                            <p className="font-semibold text-gray-500 mb-1">등록된 사용자가 없습니다.</p>
-                                            <p className="text-sm">상단의 [사용자 추가] 버튼을 눌러 첫 계정을 생성하세요.</p>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            ) : (
-                                <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
-                                    {users.map((user, idx) => (
-                                        <tr key={user.id}
-                                            className={`transition-colors cursor-pointer ${selectedUsers.includes(user.id) ? 'bg-blue-50' : 'hover:bg-blue-50/30'}`}
-                                            onDoubleClick={() => setEditTarget(user)}
-                                            title="더블클릭하면 정보를 수정할 수 있습니다"
-                                        >
-                                            <td className="p-4 pl-6 text-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedUsers.includes(user.id)}
-                                                    onChange={() => toggleOne(user.id)}
-                                                    className="w-4 h-4 accent-letusBlue cursor-pointer"
-                                                />
-                                            </td>
-                                            <td className="p-4 text-center text-gray-400 font-medium">{idx + 1}</td>
-                                            <td className="p-4 font-black text-gray-800 text-sm tracking-tight">{user.name}</td>
-                                            <td className="p-4 font-bold text-gray-600">{user.login_id}</td>
-                                            <td className="p-4 text-gray-600 font-medium">{user.team || '-'}</td>
-                                            <td className="p-4">
-                                                <div className="flex gap-1.5 flex-wrap max-w-[200px]">
-                                                    {user.brands
-                                                        ? <span className="bg-slate-50 text-slate-600 border border-slate-200 px-2 py-1 rounded-[4px] text-[11px] whitespace-nowrap font-bold shadow-sm">{user.brands}</span>
-                                                        : <span className="text-gray-400">-</span>
-                                                    }
-                                                </div>
-                                            </td>
-                                            <td className="p-4">
-                                                {(user.managed_vendors || user.managed_brands) ? (
-                                                    <button
-                                                        onClick={e => { e.stopPropagation(); setVendorListTarget(user); }}
-                                                        className="inline-flex items-center gap-1 bg-blue-50 text-letusBlue border border-blue-200 rounded-[4px] px-2 py-1 text-[10px] font-bold hover:bg-blue-100 transition-colors whitespace-nowrap"
-                                                    >
-                                                        <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
-                                                        상세보기 ({(typeof user.managed_vendors === 'string' ? user.managed_vendors.split(',').filter(Boolean).length : 0) + (typeof user.managed_brands === 'string' ? user.managed_brands.split(',').filter(Boolean).length : 0)})
-                                                    </button>
-                                                ) : (
-                                                    <span className="text-gray-400 text-xs">-</span>
-                                                )}
-                                            </td>
-                                            <td className="p-4">
-                                                <span className={`px-2.5 py-1 rounded-[4px] font-bold text-[11px] ${user.role === '관리자' ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-slate-100 text-slate-600'}`}>
-                                                    {user.role}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 text-center text-gray-400 font-bold">{formatDateTime(user.created_at)}</td>
-                                            <td className="p-4 text-center">
-                                                <span className={`px-3 py-1 rounded-full font-bold text-[11px] shadow-sm ${user.status === '정상' || user.status === '정상 승인' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
-                                                    {user.status}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            )}
-                        </table>
-                    </div>
-                </div>
-                {isModalOpen && <UserAddModal onClose={() => setIsModalOpen(false)} onReload={fetchUsers} />}
-                {editTarget && <UserEditModal user={editTarget} onClose={() => setEditTarget(null)} onReload={fetchUsers} />}
-                {vendorListTarget && <VendorListModal user={vendorListTarget} onClose={() => setVendorListTarget(null)} />}
-                {isBulkUploadModalOpen && <UserBulkUploadModal onClose={() => setIsBulkUploadModalOpen(false)} onReload={fetchUsers} />}
-                {isBulkEditModalOpen && (<UserBulkEditModal selectedUserIds={selectedUsers} users={users} onClose={() => setIsBulkEditModalOpen(false)} onReload={fetchUsers} />)}
-            </div>
+    const toggleOne = (id) => {
+        setSelectedUsers(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
         );
     };
 
+    // 🔥 선택 항목 일괄 삭제 기능 (관리자 전용 & 대용량 청크 처리)
+    const handleDeleteSelected = async () => {
+        if (userProfile?.role !== '관리자') return alert('🚨 삭제 권한이 없습니다. 관리자에게 문의하세요.');
+        if (selectedIds.length === 0) return alert('삭제할 항목을 체크해 주세요.');
+
+        if (!window.confirm(`선택하신 ${selectedIds.length}건의 데이터를 정말 삭제하시겠습니까?\n이 작업은 영구적이며 복구할 수 없습니다.`)) return;
+
+        try {
+            // 🔥 URL 길이 초과 방지를 위해 200개씩 쪼개서 지우기!
+            const CHUNK_SIZE = 200;
+            for (let i = 0; i < selectedIds.length; i += CHUNK_SIZE) {
+                const chunk = selectedIds.slice(i, i + CHUNK_SIZE);
+                const { error } = await supabase.from('logistics_accidents').delete().in('id', chunk);
+                if (error) throw error;
+            }
+
+            alert(`🗑️ ${selectedIds.length}건의 데이터가 깔끔하게 삭제되었습니다.`);
+            setSelectedIds([]);
+            fetchAccidents();
+        } catch (err) {
+            alert('삭제 중 오류 발생: ' + err.message);
+        }
+    };
+
+    const fetchUsers = async (params = {}) => {
+        setIsLoading(true);
+        try {
+            let query = supabase.from('profiles').select('*');
+            const role = params.role !== undefined ? params.role : filterRole;
+            const status = params.status !== undefined ? params.status : filterStatus;
+            const keyword = params.keyword !== undefined ? params.keyword : filterKeyword;
+            const vendor = params.vendor !== undefined ? params.vendor : filterVendor;
+            if (role) query = query.eq('role', role);
+            if (status) query = query.eq('status', status);
+            if (keyword) query = query.ilike('name', `%${keyword}%`);
+            if (vendor) query = query.ilike('managed_vendors', `%${vendor}%`);
+            const { data, error } = await query.order('created_at', { ascending: false });
+            if (error) throw error;
+            setUsers(data || []);
+        } catch (error) {
+            console.error("fetchUsers error:", error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSearch = () => fetchUsers();
+
+    useEffect(() => {
+        window.addEventListener('trigger-refresh', handleSearch);
+        return () => window.removeEventListener('trigger-refresh', handleSearch);
+    }, [filterRole, filterStatus, filterKeyword, filterVendor]);
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
     return (
-        <div className="p-6">
-            {/* 사용자 관리 UI 내용 */}
-            <h2 className="text-2xl font-bold mb-4">사용자 관리</h2>
-            {/* ... 나머지 UI ... */}
+        <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-140px)] overflow-hidden min-h-[600px]">
+            <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex items-center z-30 shrink-0">
+                <div className="flex items-center gap-5 w-full flex-wrap">
+
+                    <div className="flex items-center shrink-0">
+                        <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">권한 그룹</label>
+                        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-24 cursor-pointer text-gray-700">
+                            <option value="">전체</option>
+                            <option value="관리자">관리자</option>
+                            <option value="사용자">사용자</option>
+                        </select>
+                    </div>
+
+                    <div className="flex items-center shrink-0">
+                        <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">계정 상태</label>
+                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-24 cursor-pointer text-gray-700">
+                            <option value="">전체</option>
+                            <option value="정상">정상 승인</option>
+                            <option value="정지">이용 정지</option>
+                        </select>
+                    </div>
+
+                    <div className="flex items-center shrink-0">
+                        <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">이름</label>
+                        <input
+                            type="text"
+                            value={filterKeyword}
+                            onChange={e => setFilterKeyword(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                            placeholder="이름 검색..."
+                            className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-32 text-gray-700"
+                        />
+                    </div>
+
+                    <div className="flex items-center shrink-0">
+                        <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 업체</label>
+                        <input
+                            type="text"
+                            value={filterVendor}
+                            onChange={e => setFilterVendor(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                            placeholder="업체명 검색..."
+                            className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-32 text-gray-700"
+                        />
+                    </div>
+
+                    <div className="ml-auto shrink-0 flex items-center gap-2">
+                        <button
+                            onClick={() => { setFilterRole(''); setFilterStatus(''); setFilterKeyword(''); setFilterVendor(''); fetchUsers({ role: '', status: '', keyword: '', vendor: '' }); }}
+                            className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] transition-colors text-xs"
+                        >
+                            초기화
+                        </button>
+                        <button onClick={handleSearch} className="border border-letusOrange text-letusOrange hover:bg-orange-50 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center">
+                            조회하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex justify-end w-full px-2 z-30 -mt-1 mb-1">
+                <div className="flex items-center gap-3">
+                    {/* 🔥 3단계: 지저분한 버튼들 싹 지우고 '선택실행' 드롭다운으로 통합! */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
+                            className="flex items-center justify-between text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded shadow-sm px-3 py-[7px] hover:bg-gray-50 transition-all w-[90px]"
+                        >
+                            선택실행
+                            <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+
+                        {isActionMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsActionMenuOpen(false)}></div>
+                                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 py-1.5 slide-down">
+
+                                    <button onClick={() => { setIsActionMenuOpen(false); setIsModalOpen(true); }} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                        사용자 추가
+                                    </button>
+
+                                    <button onClick={() => { setIsActionMenuOpen(false); setIsBulkUploadModalOpen(true); }} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                        일괄 등록
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            setIsActionMenuOpen(false);
+                                            // 기훈님 코드의 selectedUsers 또는 selectedUserIds 배열 길이 확인
+                                            if (selectedUsers.length === 0 && selectedUserIds.length === 0) alert('일괄 변경할 사용자를 먼저 체크박스로 선택해 주세요.');
+                                            else setIsBulkEditModalOpen(true);
+                                        }}
+                                        className={`w-full text-left px-4 py-2 text-xs font-medium ${(selectedUsers.length > 0 || selectedUserIds.length > 0) ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                    >
+                                        일괄 변경 {(selectedUsers.length > 0 || selectedUserIds.length > 0) && `(${Math.max(selectedUsers.length, selectedUserIds.length)})`}
+                                    </button>
+
+                                    {/* 첫 번째 구분선 */}
+                                    <div className="h-px bg-gray-100 my-1"></div>
+
+                                    <button onClick={() => { setIsActionMenuOpen(false); handleExportExcel(); }} className="w-full text-left px-4 py-2 text-xs font-bold text-green-600 hover:bg-green-50 flex items-center justify-between">
+                                        엑셀 추출
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                    </button>
+
+                                    {/* 두 번째 구분선 */}
+                                    <div className="h-px bg-gray-100 my-1"></div>
+
+                                    <button
+                                        onClick={() => {
+                                            setIsActionMenuOpen(false);
+                                            if (selectedUsers.length === 0 && selectedUserIds.length === 0) alert('삭제할 사용자를 먼저 선택해 주세요.');
+                                            else handleDeleteSelected(); // 기훈님 코드에 있던 삭제 함수 연결 완료!
+                                        }}
+                                        className={`w-full text-left px-4 py-2 text-xs font-medium ${(selectedUsers.length > 0 || selectedUserIds.length > 0) ? 'text-red-600 hover:bg-red-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                    >
+                                        삭제
+                                    </button>
+
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20">
+                <div className="p-0 overflow-auto flex-1 h-[600px] custom-scrollbar">
+                    <table className="w-full text-left whitespace-nowrap">
+                        <thead className="bg-slate-50/70 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10">
+                            <tr>
+                                <th className="p-4 pl-6 w-10 text-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={isAllSelected}
+                                        onChange={toggleAll}
+                                        className="w-4 h-4 accent-letusBlue cursor-pointer"
+                                        title="전체 선택"
+                                    />
+                                </th>
+                                <th className="p-4 w-10 text-center">No</th>
+                                <th className="p-4">사용자명</th>
+                                <th className="p-4">사용자 ID</th>
+                                <th className="p-4">소속 팀</th>
+                                <th className="p-4">소속 브랜드</th>
+                                <th className="p-4">담당 업체/창고</th>
+                                <th className="p-4">권한 그룹</th>
+                                <th className="p-4 text-center">가입일시</th>
+                                <th className="p-4 text-center">상태</th>
+                            </tr>
+                        </thead>
+                        {isLoading ? (
+                            <TableSkeleton rowCount={8} colCount={9} />
+                        ) : users.length === 0 ? (
+                            <tbody>
+                                <tr>
+                                    <td colSpan="10" className="p-10 text-center text-gray-400">
+                                        <svg className="w-16 h-16 mx-auto mb-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                                        <p className="font-semibold text-gray-500 mb-1">등록된 사용자가 없습니다.</p>
+                                        <p className="text-sm">상단의 [사용자 추가] 버튼을 눌러 첫 계정을 생성하세요.</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        ) : (
+                            <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
+                                {users.map((user, idx) => (
+                                    <tr key={user.id}
+                                        className={`transition-colors cursor-pointer ${selectedUsers.includes(user.id) ? 'bg-blue-50' : 'hover:bg-blue-50/30'}`}
+                                        onDoubleClick={() => setEditTarget(user)}
+                                        title="더블클릭하면 정보를 수정할 수 있습니다"
+                                    >
+                                        <td className="p-4 pl-6 text-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedUsers.includes(user.id)}
+                                                onChange={() => toggleOne(user.id)}
+                                                className="w-4 h-4 accent-letusBlue cursor-pointer"
+                                            />
+                                        </td>
+                                        <td className="p-4 text-center text-gray-400 font-medium">{idx + 1}</td>
+                                        <td className="p-4 font-black text-gray-800 text-sm tracking-tight">{user.name}</td>
+                                        <td className="p-4 font-bold text-gray-600">{user.login_id}</td>
+                                        <td className="p-4 text-gray-600 font-medium">{user.team || '-'}</td>
+                                        <td className="p-4">
+                                            <div className="flex gap-1.5 flex-wrap max-w-[200px]">
+                                                {user.brands
+                                                    ? <span className="bg-slate-50 text-slate-600 border border-slate-200 px-2 py-1 rounded-[4px] text-[11px] whitespace-nowrap font-bold shadow-sm">{user.brands}</span>
+                                                    : <span className="text-gray-400">-</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td className="p-4">
+                                            {(user.managed_vendors || user.managed_brands) ? (
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); setVendorListTarget(user); }}
+                                                    className="inline-flex items-center gap-1 bg-blue-50 text-letusBlue border border-blue-200 rounded-[4px] px-2 py-1 text-[10px] font-bold hover:bg-blue-100 transition-colors whitespace-nowrap"
+                                                >
+                                                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                                                    상세보기 ({(typeof user.managed_vendors === 'string' ? user.managed_vendors.split(',').filter(Boolean).length : 0) + (typeof user.managed_brands === 'string' ? user.managed_brands.split(',').filter(Boolean).length : 0)})
+                                                </button>
+                                            ) : (
+                                                <span className="text-gray-400 text-xs">-</span>
+                                            )}
+                                        </td>
+                                        <td className="p-4">
+                                            <span className={`px-2.5 py-1 rounded-[4px] font-bold text-[11px] ${user.role === '관리자' ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-slate-100 text-slate-600'}`}>
+                                                {user.role}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-center text-gray-400 font-bold">{formatDateTime(user.created_at)}</td>
+                                        <td className="p-4 text-center">
+                                            <span className={`px-3 py-1 rounded-full font-bold text-[11px] shadow-sm ${user.status === '정상' || user.status === '정상 승인' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                                                {user.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        )}
+                    </table>
+                </div>
+            </div>
+            {isModalOpen && <UserAddModal onClose={() => setIsModalOpen(false)} onReload={fetchUsers} />}
+            {editTarget && <UserEditModal user={editTarget} onClose={() => setEditTarget(null)} onReload={fetchUsers} />}
+            {vendorListTarget && <VendorListModal user={vendorListTarget} onClose={() => setVendorListTarget(null)} />}
+            {isBulkUploadModalOpen && <UserBulkUploadModal onClose={() => setIsBulkUploadModalOpen(false)} onReload={fetchUsers} />}
+            {isBulkEditModalOpen && (<UserBulkEditModal selectedUserIds={selectedUsers} users={users} onClose={() => setIsBulkEditModalOpen(false)} onReload={fetchUsers} />)}
         </div>
     );
 };
