@@ -1,8 +1,6 @@
 const { useState, useEffect, useMemo } = React;
-
-// ---------------------------------------------------------
-// 🛠️ 사고분석 전용 모달들 (여기로 이사)
-// ---------------------------------------------------------
+const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } = window.Recharts || {};
+const { CATEGORY_COLORS, BRAND_COLORS, StatusBadge, CategoryBadge } = window;
 
 // 1. 사고 내역 상세/수정 모달
 const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
