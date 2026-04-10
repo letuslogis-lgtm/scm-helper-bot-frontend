@@ -6223,63 +6223,36 @@
 
             if (!session) return <LoginView />;
 
+            // ... (기존 useState, useEffect 로직들은 그대로 유지) ...
+
+            if (!session) return <LoginView />;
+
             return (
-                <div className="flex h-screen overflow-hidden bg-letusBg text-gray-900 font-sans">
-                    <Sidebar page={currentPage} setPage={setCurrentPage} userProfile={userProfile} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} favorites={favorites} />
-                    <div className="flex-1 flex flex-col w-full bg-slate-100 overflow-y-auto overflow-x-hidden min-h-screen relative">
+                <MainLayout
+                    currentPage={currentPage} setCurrentPage={setCurrentPage}
+                    userProfile={userProfile} handleLogout={handleLogout}
+                    notifications={notifications} isNotiOpen={isNotiOpen} setIsNotiOpen={setIsNotiOpen}
+                    isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
+                    favorites={favorites} toggleFavorite={toggleFavorite}
+                    handleNotiClick={handleNotiClick} handleMarkAllAsRead={handleMarkAllAsRead}
+                    setSelfEditTarget={setSelfEditTarget}
+                >
+                    {/* 이제 메뉴들은 여기에 이름만 적으면 끝납니다! */}
+                    <div className={currentPage === 'home' ? 'block' : 'hidden'}><MyDashboard userProfile={userProfile} setPage={setCurrentPage} favorites={favorites} /></div>
+                    <div className={currentPage === 'dashboard' ? 'block' : 'hidden'}><Dashboard onNavigateToList={() => setCurrentPage('list')} onDrillDown={handleDrillDown} issues={issues} isLoading={isLoading} onReload={fetchIssues} /></div>
+                    <div className={currentPage === 'list' ? 'block' : 'hidden'}><IssueList userProfile={userProfile} issues={issues} isLoading={isLoading} onReload={fetchIssues} savedFilters={savedListFilters} setSavedFilters={setSavedListFilters} /></div>
+                    <div className={currentPage === 'worker_management' ? 'block' : 'hidden'}><WorkerManagement /></div>
+                    <div className={currentPage === 'attendance' ? 'block' : 'hidden'}><AttendanceManagement /></div>
+                    <div className={currentPage === 'accident_dashboard' ? 'block' : 'hidden'}><AccidentDashboard userProfile={userProfile} onDrillDown={handleAccidentDrillDown} /></div>
+                    <div className={currentPage === 'accident_list' ? 'block' : 'hidden'}><AccidentList userProfile={userProfile} initialFilter={accidentDrillDownFilters} /></div>
+                    <div className={currentPage === 'product_manager' ? 'block' : 'hidden'}><ProductManager /></div>
+                    <div className={currentPage === 'user_management' ? 'block' : 'hidden'}><UserManagement /></div>
+                    <div className={currentPage === 'support' ? 'block' : 'hidden'}><SupportCenter userProfile={userProfile} /></div>
 
-                        <Header
-                            page={currentPage} userProfile={userProfile} onLogout={handleLogout} notifications={notifications} isNotiOpen={isNotiOpen}
-                            toggleNoti={() => setIsNotiOpen(!isNotiOpen)} onNotiClick={handleNotiClick} onEditProfile={() => setSelfEditTarget(userProfile)}
-                            favorites={favorites} toggleFavorite={toggleFavorite} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
-                            onMarkAllRead={handleMarkAllAsRead}
-                        />
-
-                        <main className="flex-1 w-full">
-                            {/* 🔥 신규: 나의 홈 (Personal Dashboard) 추가 */}
-                            <div className={currentPage === 'home' ? 'block' : 'hidden'}>
-                                <MyDashboard userProfile={userProfile} setPage={setCurrentPage} favorites={favorites} />
-                            </div>
-                            <div className={currentPage === 'dashboard' ? 'block' : 'hidden'}>
-                                <Dashboard onNavigateToList={() => setCurrentPage('list')} onDrillDown={handleDrillDown} issues={issues} isLoading={isLoading} onReload={fetchIssues} />
-                            </div>
-                            <div className={currentPage === 'list' ? 'block' : 'hidden'}>
-                                <IssueList userProfile={userProfile} issues={issues} isLoading={isLoading} onReload={fetchIssues} savedFilters={savedListFilters} setSavedFilters={setSavedListFilters} />
-                            </div>
-                            <div className={currentPage === 'user_management' ? 'block' : 'hidden'}>
-                                <UserManagement />
-                            </div>
-                            <div className={currentPage === 'worker_management' ? 'block' : 'hidden'}>
-                                <WorkerManagement />
-                            </div>
-                            <div className={currentPage === 'support' ? 'block' : 'hidden'}>
-                                <SupportCenter userProfile={userProfile} />
-                            </div>
-                            {/* 🔥 물류 마감 - 근태 관리 화면 */}
-                            <div className={currentPage === 'attendance' ? 'block' : 'hidden'}>
-                                <AttendanceManagement />
-                            </div>
-                            {/* 🔥 사고분석 대시보드 화면 */}
-                            <div className={currentPage === 'accident_dashboard' ? 'block' : 'hidden'}>
-                                <AccidentDashboard userProfile={userProfile} onDrillDown={handleAccidentDrillDown} />
-                            </div>
-
-                            {/* 🔥 사고분석 LIST (임시 뼈대 삭제 후 실제 컴포넌트 연결) */}
-                            <div className={currentPage === 'accident_list' ? 'block' : 'hidden'}>
-                                <AccidentList userProfile={userProfile} initialFilter={accidentDrillDownFilters} />
-                            </div>
-
-                            {/* 🔥 마스터 데이터 관리 화면 */}
-                            <div className={currentPage === 'product_manager' ? 'block' : 'hidden'}>
-                                <ProductManager />
-                            </div>
-                        </main>
-
-                        {selfEditTarget && (
-                            <UserEditModal user={selfEditTarget} onClose={() => setSelfEditTarget(null)} onReload={fetchProfile} isProfileMode={true} />
-                        )}
-                    </div>
-                </div>
+                    {selfEditTarget && (
+                        <UserEditModal user={selfEditTarget} onClose={() => setSelfEditTarget(null)} onReload={fetchProfile} isProfileMode={true} />
+                    )}
+                </MainLayout>
             );
         }
 
