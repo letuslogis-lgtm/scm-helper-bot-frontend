@@ -879,7 +879,7 @@ const WorkerManagement = () => {
                                 <div className="flex items-center shrink-0">
                                     <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">지원 여부</label>
                                     <select value={filterSupport} onChange={e => setFilterSupport(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
-                                        <option value="">전체 (All)</option><option value="미지원">미지원</option>
+                                        <option value="">전체</option><option value="미지원">미지원</option>
                                         {uniqueVendorList.map(v => <option key={v} value={v}>{v}</option>)}
                                     </select>
                                 </div>
@@ -887,7 +887,7 @@ const WorkerManagement = () => {
                                 <div className="flex items-center shrink-0">
                                     <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 브랜드</label>
                                     <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
-                                        <option value="">전체 (All)</option>
+                                        <option value="">전체</option>
                                         {brandList.map(b => <option key={b} value={b}>{b}</option>)}
                                     </select>
                                 </div>
@@ -895,7 +895,7 @@ const WorkerManagement = () => {
                                 <div className="flex items-center shrink-0">
                                     <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 업무</label>
                                     <select value={filterTask} onChange={e => setFilterTask(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
-                                        <option value="">전체 (All)</option>
+                                        <option value="">전체</option>
                                         {taskList.map(t => <option key={t} value={t}>{t}</option>)}
                                     </select>
                                 </div>
@@ -903,14 +903,14 @@ const WorkerManagement = () => {
                                 <div className="flex items-center shrink-0">
                                     <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근로 형태</label>
                                     <select value={filterEmpType} onChange={e => setFilterEmpType(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 w-28 font-medium">
-                                        <option value="">전체 (All)</option><option value="현장직">현장직</option><option value="사무직">사무직</option>
+                                        <option value="">전체</option><option value="현장직">현장직</option><option value="사무직">사무직</option>
                                     </select>
                                 </div>
 
                                 <div className="flex items-center shrink-0">
                                     <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근무 상태</label>
                                     <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 w-28 font-medium">
-                                        <option value="">전체 (All)</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option>
+                                        <option value="">전체</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option>
                                     </select>
                                 </div>
 
