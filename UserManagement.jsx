@@ -1,4 +1,8 @@
-const { useState, useEffect } = React;
+
+const { useState, useEffect, useRef } = React;
+const supabase = window.supabase;
+const adminSupabase = window.adminSupabase; // 사용자 관리는 이게 필수입니다!
+const { StatusBadge, CategoryBadge, VendorSearchModal } = window;
 
 const UserManagement = () => {
     // 1. 사용자 관리 메인 로직 (기존에 index에 있던 UserManagement 내용)
