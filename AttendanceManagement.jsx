@@ -3,19 +3,6 @@ const { useState, useEffect, useMemo } = React;
 const supabaseClient = window.supabase;
 const { TableSkeleton, formatDateTime, Recharts } = window;
 
-const [holidayList, setHolidayList] = useState([]);
-
-// 컴포넌트 시작 시 휴일 목록 로드
-useEffect(() => {
-    const fetchHolidays = async () => {
-        const { data, error } = await supabaseClient
-            .from('company_holidays')
-            .select('holiday_date');
-        if (data) setHolidayList(data.map(h => h.holiday_date));
-    };
-    fetchHolidays();
-}, []);
-
 // ✖️ 공통으로 사용할 닫기 아이콘 컴포넌트
 const CloseIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
