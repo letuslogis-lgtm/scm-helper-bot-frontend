@@ -45,7 +45,7 @@ const BrandTaskSelectModal = ({ initialBrands, onApplyBrands, initialTasks, onAp
                     </h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><CloseIcon /></button>
                 </div>
-                
+
                 <div className="p-6 bg-slate-50 flex-1 overflow-y-auto space-y-6">
                     <div>
                         <h4 className="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5">
@@ -59,7 +59,7 @@ const BrandTaskSelectModal = ({ initialBrands, onApplyBrands, initialTasks, onAp
                             ))}
                         </div>
                     </div>
-                    
+
                     <div className="border-t border-gray-200 pt-5">
                         <h4 className="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5">
                             <span className="text-blue-500">⚙️</span> 담당 업무 (다중 선택 가능)
@@ -73,7 +73,7 @@ const BrandTaskSelectModal = ({ initialBrands, onApplyBrands, initialTasks, onAp
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="p-4 border-t border-gray-200 bg-white flex justify-end gap-2 shrink-0">
                     <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 text-[11px] font-bold rounded hover:bg-gray-50 transition-colors">취소</button>
                     <button onClick={handleApply} className="px-5 py-2 bg-letusBlue text-white text-[11px] font-bold rounded hover:bg-blue-600 transition-colors">적용하기</button>
@@ -90,28 +90,28 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
     const [companyType, setCompanyType] = useState('사내협력사');
     const [vendorName, setVendorName] = useState('');
     const [empType, setEmpType] = useState('현장직');
-    const [workplace, setWorkplace] = useState(''); 
-    const [managedBrand, setManagedBrand] = useState(''); 
-    const [task, setTask] = useState(''); 
+    const [workplace, setWorkplace] = useState('');
+    const [managedBrand, setManagedBrand] = useState('');
+    const [task, setTask] = useState('');
     const [supportStatus, setSupportStatus] = useState('미지원');
     const [status, setStatus] = useState('재직');
-    
-    const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false); 
+
+    const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
     const handleSave = async (e) => {
-        if(e) e.preventDefault();
+        if (e) e.preventDefault();
         setErrorMsg('');
         if (!name) { setErrorMsg('이름을 입력해 주세요.'); return; }
 
         setIsSaving(true);
         try {
             const { error } = await supabaseClient.from('workers').insert([{
-                name, phone, company_type: companyType, vendor_name: vendorName, 
+                name, phone, company_type: companyType, vendor_name: vendorName,
                 employment_type: empType, workplace, managed_brand: managedBrand, task, support_status: supportStatus, status
             }]);
-            
+
             if (error) throw error;
             alert('신규 근무자가 성공적으로 등록되었습니다.');
             onReload();
@@ -234,10 +234,10 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
             </div>
 
             {brandTaskModalOpen && (
-                <BrandTaskSelectModal 
+                <BrandTaskSelectModal
                     initialBrands={managedBrand} onApplyBrands={setManagedBrand}
                     initialTasks={task} onApplyTasks={setTask}
-                    onClose={() => setBrandTaskModalOpen(false)} 
+                    onClose={() => setBrandTaskModalOpen(false)}
                 />
             )}
         </div>
@@ -251,18 +251,18 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
     const [companyType, setCompanyType] = useState(worker?.company_type || '사내협력사');
     const [vendorName, setVendorName] = useState(worker?.vendor_name || '');
     const [empType, setEmpType] = useState(worker?.employment_type || '현장직');
-    const [workplace, setWorkplace] = useState(worker?.workplace || ''); 
-    const [managedBrand, setManagedBrand] = useState(worker?.managed_brand || ''); 
-    const [task, setTask] = useState(worker?.task || ''); 
+    const [workplace, setWorkplace] = useState(worker?.workplace || '');
+    const [managedBrand, setManagedBrand] = useState(worker?.managed_brand || '');
+    const [task, setTask] = useState(worker?.task || '');
     const [supportStatus, setSupportStatus] = useState(worker?.support_status || '미지원');
     const [status, setStatus] = useState(worker?.status || '재직');
-    
-    const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false); 
+
+    const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
     const handleSave = async (e) => {
-        if(e) e.preventDefault();
+        if (e) e.preventDefault();
         setErrorMsg('');
         if (!name) { setErrorMsg('이름은 필수 입력 항목입니다.'); return; }
         if (!worker || !worker.id) { setErrorMsg('근무자 고유 ID를 찾을 수 없습니다.'); return; }
@@ -270,10 +270,10 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
         setIsSaving(true);
         try {
             const { error } = await supabaseClient.from('workers').update({
-                name, phone, company_type: companyType, vendor_name: vendorName, 
+                name, phone, company_type: companyType, vendor_name: vendorName,
                 employment_type: empType, workplace, managed_brand: managedBrand, task, support_status: supportStatus, status
             }).eq('id', worker.id);
-            
+
             if (error) throw error;
             alert('근무자 정보가 성공적으로 수정되었습니다.');
             onReload();
@@ -396,10 +396,10 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
             </div>
 
             {brandTaskModalOpen && (
-                <BrandTaskSelectModal 
+                <BrandTaskSelectModal
                     initialBrands={managedBrand} onApplyBrands={setManagedBrand}
                     initialTasks={task} onApplyTasks={setTask}
-                    onClose={() => setBrandTaskModalOpen(false)} 
+                    onClose={() => setBrandTaskModalOpen(false)}
                 />
             )}
         </div>
@@ -456,7 +456,7 @@ const WorkerBulkUploadModal = ({ onClose, onReload }) => {
                         vendor_name: cleanRow['업체명(필수)'],
                         workplace: cleanRow['근무지'] || '',
                         managed_brand: cleanRow['담당브랜드'] || '',
-                        task: cleanRow['업무'] || '',                 
+                        task: cleanRow['업무'] || '',
                         employment_type: cleanRow['근로형태'] || '현장직',
                         status: cleanRow['상태'] || '재직'
                     });
@@ -507,16 +507,16 @@ const WorkerBulkUploadModal = ({ onClose, onReload }) => {
 
 // --- 🛠️ 4. 근무자 일괄 수정 모달 ---
 const WorkerBulkEditModal = ({ selectedIds, workers, vendorList, onClose, onReload }) => {
-    const [updateTarget, setUpdateTarget] = useState({ 
-        vendorGroup: false, locationGroup: false, brandTaskGroup: false, statusGroup: false 
+    const [updateTarget, setUpdateTarget] = useState({
+        vendorGroup: false, locationGroup: false, brandTaskGroup: false, statusGroup: false
     });
     const [companyType, setCompanyType] = useState('사내협력사');
     const [vendorName, setVendorName] = useState('');
-    const [supportStatus, setSupportStatus] = useState('미지원'); 
+    const [supportStatus, setSupportStatus] = useState('미지원');
     const [workplace, setWorkplace] = useState('');
     const [empType, setEmpType] = useState('현장직');
-    const [managedBrand, setManagedBrand] = useState(''); 
-    const [task, setTask] = useState(''); 
+    const [managedBrand, setManagedBrand] = useState('');
+    const [task, setTask] = useState('');
     const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false);
     const [status, setStatus] = useState('재직');
     const [isSaving, setIsSaving] = useState(false);
@@ -554,7 +554,7 @@ const WorkerBulkEditModal = ({ selectedIds, workers, vendorList, onClose, onRelo
                     <h3 className="text-sm font-bold text-gray-800 flex items-center"><span className="w-1.5 h-3.5 bg-letusBlue rounded-full mr-2"></span>선택 근무자 일괄 수정</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><CloseIcon /></button>
                 </div>
-                
+
                 <div className="p-6 bg-slate-50 flex-1 flex flex-col overflow-hidden">
                     <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs font-bold text-letusBlue text-center shrink-0 mb-4">
                         현재 <span className="text-lg mx-1">{selectedIds.length}</span>명의 근무자가 선택되었습니다.
@@ -675,18 +675,18 @@ const WorkerManagement = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [editTarget, setEditTarget] = useState(null);
-    
+
     // 🔥 기본 조회 필터 상태
     const [filterCompany, setFilterCompany] = useState('');
-    const [filterWorkplace, setFilterWorkplace] = useState(''); 
+    const [filterWorkplace, setFilterWorkplace] = useState('');
     const [filterKeyword, setFilterKeyword] = useState('');
-    
+
     // 🔥 상세 조회 필터 상태
     const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
     const [filterSupport, setFilterSupport] = useState('');
     const [filterBrand, setFilterBrand] = useState('');
     const [filterTask, setFilterTask] = useState('');
-    const [filterEmpType, setFilterEmpType] = useState('');     
+    const [filterEmpType, setFilterEmpType] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
 
     // 🔥 정렬(Sort) 상태
@@ -711,19 +711,19 @@ const WorkerManagement = () => {
         setIsLoading(true);
         try {
             let query = supabaseClient.from('workers').select('*');
-            
+
             // 기본 조건
             if (filterCompany) query = query.eq('company_type', filterCompany);
             if (filterWorkplace) query = query.eq('workplace', filterWorkplace);
             if (filterKeyword) query = query.or(`name.ilike.%${filterKeyword}%,vendor_name.ilike.%${filterKeyword}%`);
-            
+
             // 상세 조건
             if (filterSupport) query = query.eq('support_status', filterSupport);
             if (filterBrand) query = query.ilike('managed_brand', `%${filterBrand}%`);
             if (filterTask) query = query.ilike('task', `%${filterTask}%`);
             if (filterEmpType) query = query.eq('employment_type', filterEmpType);
             if (filterStatus) query = query.eq('status', filterStatus);
-            
+
             const { data, error } = await query.order('created_at', { ascending: false });
             if (error) throw error;
             setWorkers(data || []);
@@ -735,13 +735,13 @@ const WorkerManagement = () => {
     };
 
     // 화면 첫 진입 시 1회만 데이터 불러오기
-    useEffect(() => { fetchWorkers(); }, []); 
+    useEffect(() => { fetchWorkers(); }, []);
 
     // 🔥 정렬 기능 (오름차순 -> 내림차순 -> 해제)
     const requestSort = (key) => {
         let direction = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
-        else if (sortConfig.key === key && sortConfig.direction === 'desc') direction = null; 
+        else if (sortConfig.key === key && sortConfig.direction === 'desc') direction = null;
 
         setSortConfig({ key: direction ? key : null, direction });
     };
@@ -772,9 +772,9 @@ const WorkerManagement = () => {
 
     // 🔥 정렬 아이콘 렌더러 (파란색 화살표)
     const SortIcon = ({ columnKey }) => {
-        if (sortConfig.key !== columnKey) return null;
+        if (sortConfig.key !== columnKey) return null; // 평소엔 아무것도 렌더링 안 함
         return (
-            <span className="text-blue-500 ml-1 font-extrabold inline-block w-2">
+            <span className="text-blue-500 ml-1 font-extrabold inline-block text-[14px]">
                 {sortConfig.direction === 'asc' ? '↑' : '↓'}
             </span>
         );
@@ -826,11 +826,11 @@ const WorkerManagement = () => {
     return (
         // 🔥 전체 창 높이 고정 (h-[calc(100vh-64px)]), overflow-hidden으로 이중 스크롤 방지
         <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)] overflow-hidden">
-            
+
             {/* 🔍 상단 고정 조회 영역 (이미지 2, 3 레이아웃 반영) */}
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col z-30 shrink-0">
                 <div className="px-6 py-4 flex items-center justify-between gap-4">
-                    
+
                     {/* 왼쪽 기본 검색 영역 */}
                     <div className="flex items-center gap-6 flex-1 flex-wrap">
                         <div className="flex items-center gap-2 shrink-0">
@@ -854,14 +854,16 @@ const WorkerManagement = () => {
                         </div>
                     </div>
 
-                    {/* 오른쪽 우측 정렬된 버튼 그룹 */}
+                    {/* 우측 버튼 그룹 */}
                     <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={() => setIsAdvancedSearchOpen(!isAdvancedSearchOpen)} className={`px-4 h-8 text-xs font-bold rounded border transition-colors flex items-center gap-1.5 ${isAdvancedSearchOpen ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
-                            {isAdvancedSearchOpen ? '∧ 상세 조회' : '∨ 상세 조회'}
+                        {/* 기훈님이 주신 상세조회 버튼 적용! */}
+                        <button onClick={() => setIsAdvancedSearchOpen(!isAdvancedSearchOpen)} className={`text-[11px] font-bold border px-3 h-[30px] rounded-[3px] transition-colors flex items-center gap-1 shadow-sm ${isAdvancedSearchOpen ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
+                            <svg className={`w-3.5 h-3.5 transition-transform ${isAdvancedSearchOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                            상세 조회
                         </button>
                         <div className="w-px h-4 bg-gray-200 mx-1"></div>
-                        <button onClick={handleReset} className="px-4 h-8 bg-white border border-gray-300 text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition-colors">초기화</button>
-                        <button onClick={handleSearch} className="px-5 h-8 bg-orange-500 text-white text-xs font-bold rounded hover:bg-orange-600 transition-colors flex items-center gap-1.5 shadow-sm">
+                        <button onClick={handleReset} className="px-4 h-[30px] bg-white border border-gray-300 text-gray-600 text-xs font-bold rounded-[3px] hover:bg-gray-50 transition-colors">초기화</button>
+                        <button onClick={handleSearch} className="px-5 h-[30px] bg-orange-500 text-white text-xs font-bold rounded-[3px] hover:bg-orange-600 transition-colors flex items-center gap-1.5 shadow-sm">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                             조회하기
                         </button>
@@ -870,37 +872,37 @@ const WorkerManagement = () => {
 
                 {/* 상세 조회 아코디언 영역 */}
                 {isAdvancedSearchOpen && (
-                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center gap-6 flex-wrap slide-down">
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-bold text-gray-600">지원 여부</span>
-                            <select value={filterSupport} onChange={e => setFilterSupport(e.target.value)} className="border border-gray-200 rounded px-2 h-8 text-xs outline-none focus:border-letusOrange min-w-[110px] cursor-pointer bg-white text-gray-700">
+                    <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-5 flex-wrap slide-down">
+                        <div className="flex items-center shrink-0">
+                            <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">지원 여부</label>
+                            <select value={filterSupport} onChange={e => setFilterSupport(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange min-w-[120px] cursor-pointer bg-white text-gray-700">
                                 <option value="">전체</option><option value="미지원">미지원</option>
                                 {uniqueVendorList.map(v => <option key={v} value={v}>{v}</option>)}
                             </select>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-bold text-gray-600">담당 브랜드</span>
-                            <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className="border border-gray-200 rounded px-2 h-8 text-xs outline-none focus:border-letusOrange min-w-[110px] cursor-pointer bg-white text-gray-700">
+                        <div className="flex items-center shrink-0">
+                            <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 브랜드</label>
+                            <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange min-w-[120px] cursor-pointer bg-white text-gray-700">
                                 <option value="">전체</option>
                                 {brandList.map(b => <option key={b} value={b}>{b}</option>)}
                             </select>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-bold text-gray-600">담당 업무</span>
-                            <select value={filterTask} onChange={e => setFilterTask(e.target.value)} className="border border-gray-200 rounded px-2 h-8 text-xs outline-none focus:border-letusOrange min-w-[110px] cursor-pointer bg-white text-gray-700">
+                        <div className="flex items-center shrink-0">
+                            <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 업무</label>
+                            <select value={filterTask} onChange={e => setFilterTask(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange min-w-[120px] cursor-pointer bg-white text-gray-700">
                                 <option value="">전체</option>
                                 {taskList.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-bold text-gray-600">근로 형태</span>
-                            <select value={filterEmpType} onChange={e => setFilterEmpType(e.target.value)} className="border border-gray-200 rounded px-2 h-8 text-xs outline-none focus:border-letusOrange min-w-[110px] cursor-pointer bg-white text-gray-700">
+                        <div className="flex items-center shrink-0">
+                            <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근로 형태</label>
+                            <select value={filterEmpType} onChange={e => setFilterEmpType(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange min-w-[100px] cursor-pointer bg-white text-gray-700">
                                 <option value="">전체</option><option value="현장직">현장직</option><option value="사무직">사무직</option>
                             </select>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-bold text-gray-600">근무 상태</span>
-                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded px-2 h-8 text-xs outline-none focus:border-letusOrange min-w-[110px] cursor-pointer bg-white text-gray-700">
+                        <div className="flex items-center shrink-0">
+                            <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근무 상태</label>
+                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange min-w-[100px] cursor-pointer bg-white text-gray-700">
                                 <option value="">전체</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option>
                             </select>
                         </div>
@@ -938,18 +940,18 @@ const WorkerManagement = () => {
                         <thead className="bg-slate-50/90 backdrop-blur-sm border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             {/* 🔥 헤더 전체 가운데 정렬 & 클릭 정렬 로직 적용 */}
                             <tr>
-                                <th className="p-3 pl-5 w-10 text-center"><input type="checkbox" checked={isAllSelected} onChange={toggleAll} className="w-4 h-4 accent-letusBlue cursor-pointer" /></th>
-                                <th className="p-3 w-10 text-center">No</th>
-                                <th className="p-3 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('name')}>근무자명<SortIcon columnKey="name" /></th>
-                                <th className="p-3 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('company_type')}>소속 구분<SortIcon columnKey="company_type" /></th>
-                                <th className="p-3 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('support_status')}>지원 여부<SortIcon columnKey="support_status" /></th>
-                                <th className="p-3 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('vendor_name')}>업체명<SortIcon columnKey="vendor_name" /></th>
-                                <th className="p-3 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('workplace')}>근무지<SortIcon columnKey="workplace" /></th>
-                                <th className="p-3 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('managed_brand')}>담당 브랜드<SortIcon columnKey="managed_brand" /></th>
-                                <th className="p-3 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('task')}>업무<SortIcon columnKey="task" /></th>
-                                <th className="p-3 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('employment_type')}>근로 형태<SortIcon columnKey="employment_type" /></th>
-                                <th className="p-3 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('phone')}>연락처<SortIcon columnKey="phone" /></th>
-                                <th className="p-3 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('status')}>상태<SortIcon columnKey="status" /></th>
+                                <th className="p-4 pl-5 w-10 text-center"><input type="checkbox" checked={isAllSelected} onChange={toggleAll} className="w-4 h-4 accent-letusBlue cursor-pointer" /></th>
+                                <th className="p-4 w-10 text-center">No</th>
+                                <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('name')}>근무자명<SortIcon columnKey="name" /></th>
+                                <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('company_type')}>소속 구분<SortIcon columnKey="company_type" /></th>
+                                <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('support_status')}>지원 여부<SortIcon columnKey="support_status" /></th>
+                                <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('vendor_name')}>업체명<SortIcon columnKey="vendor_name" /></th>
+                                <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('workplace')}>근무지<SortIcon columnKey="workplace" /></th>
+                                <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('managed_brand')}>담당 브랜드<SortIcon columnKey="managed_brand" /></th>
+                                <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('task')}>업무<SortIcon columnKey="task" /></th>
+                                <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('employment_type')}>근로 형태<SortIcon columnKey="employment_type" /></th>
+                                <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('phone')}>연락처<SortIcon columnKey="phone" /></th>
+                                <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('status')}>상태<SortIcon columnKey="status" /></th>
                             </tr>
                         </thead>
                         {isLoading ? (
@@ -967,30 +969,30 @@ const WorkerManagement = () => {
                             <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
                                 {sortedWorkers.map((worker, idx) => (
                                     <tr key={worker.id} className={`transition-colors cursor-pointer ${selectedIds.includes(worker.id) ? 'bg-blue-50' : 'hover:bg-blue-50/30'}`} onDoubleClick={() => setEditTarget(worker)}>
-                                        <td className="p-3 pl-5 text-center"><input type="checkbox" checked={selectedIds.includes(worker.id)} onChange={() => toggleOne(worker.id)} className="w-4 h-4 accent-letusBlue cursor-pointer" /></td>
-                                        <td className="p-3 text-center text-gray-400 font-medium">{idx + 1}</td>
-                                        <td className="p-3 text-center font-black text-gray-800 text-sm">{worker.name}</td>
-                                        <td className="p-3 text-center">
+                                        <td className="p-4 pl-5 text-center"><input type="checkbox" checked={selectedIds.includes(worker.id)} onChange={() => toggleOne(worker.id)} className="w-4 h-4 accent-letusBlue cursor-pointer" /></td>
+                                        <td className="p-4 text-center text-gray-400 font-medium">{idx + 1}</td>
+                                        <td className="p-4 text-center font-black text-gray-800 text-sm">{worker.name}</td>
+                                        <td className="p-4 text-center">
                                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${worker.company_type === '사내협력사' ? 'bg-blue-50 text-letusBlue border border-blue-100' : 'bg-orange-50 text-letusOrange border border-orange-100'}`}>{worker.company_type}</span>
                                         </td>
-                                        <td className="p-3 text-center">
+                                        <td className="p-4 text-center">
                                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${worker.support_status && worker.support_status !== '미지원' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>{worker.support_status || '미지원'}</span>
                                         </td>
-                                        <td className="p-3 text-center font-bold text-gray-600">{worker.vendor_name}</td>
-                                        <td className="p-3 text-center font-bold text-gray-600">{worker.workplace || '-'}</td>
-                                        <td className="p-3 text-center text-gray-600 font-medium">
+                                        <td className="p-4 text-center font-bold text-gray-600">{worker.vendor_name}</td>
+                                        <td className="p-4 text-center font-bold text-gray-600">{worker.workplace || '-'}</td>
+                                        <td className="p-4 text-center text-gray-600 font-medium">
                                             {worker.managed_brand ? worker.managed_brand.split(',').map(b => b.trim()).filter(Boolean).map((b, i) => (
                                                 <span key={i} className="inline-block bg-orange-50 text-letusOrange border border-orange-100 px-1.5 py-0.5 rounded text-[10px] font-bold mr-1 mb-1">{b}</span>
                                             )) : '-'}
                                         </td>
-                                        <td className="p-3 text-center text-gray-600 font-medium">
+                                        <td className="p-4 text-center text-gray-600 font-medium">
                                             {worker.task ? worker.task.split(',').map(t => t.trim()).filter(Boolean).map((t, i) => (
                                                 <span key={i} className="inline-block bg-blue-50 text-letusBlue border border-blue-100 px-1.5 py-0.5 rounded text-[10px] font-bold mr-1 mb-1">{t}</span>
                                             )) : '-'}
                                         </td>
-                                        <td className="p-3 text-center text-gray-600">{worker.employment_type}</td>
-                                        <td className="p-3 text-center font-mono text-gray-500">{worker.phone || '-'}</td>
-                                        <td className="p-3 text-center">
+                                        <td className="p-4 text-center text-gray-600">{worker.employment_type}</td>
+                                        <td className="p-4 text-center font-mono text-gray-500">{worker.phone || '-'}</td>
+                                        <td className="p-4 text-center">
                                             <span className={`px-3 py-1 rounded-full font-bold text-[11px] shadow-sm ${worker.status === '재직' ? 'bg-green-100 text-green-700 border border-green-200' : worker.status === '휴직' ? 'bg-yellow-50 text-yellow-600 border border-yellow-200' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>{worker.status}</span>
                                         </td>
                                     </tr>
