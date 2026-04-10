@@ -550,47 +550,64 @@ const WorkerBulkUploadModal = ({ onClose, onReload }) => {
     );
 };
 
-// --- 🛠️ 4. 근무자 일괄 수정 모달 ---
+// --- 🛠️ 4. 근무자 일괄 수정 모달 (UI 최적화 & 그룹화 리뉴얼) ---
 const WorkerBulkEditModal = ({ selectedIds, workers, vendorList, onClose, onReload }) => {
-    // 🔥 지원 여부에 이어 brandTask(브랜드/업무) 체크 상태 추가
-    const [updateTarget, setUpdateTarget] = useState({ vendor: false, status: false, support: false, brandTask: false });
+    // 🔥 카테고리별로 크게 4그룹으로 묶어서 체크 상태 관리
+    const [updateTarget, setUpdateTarget] = useState({
+        vendorGroup: false,    // 소속구분, 업체명, 지원여부
+        locationGroup: false,  // 근무지, 근로형태
+        brandTaskGroup: false, // 담당브랜드, 업무
+        statusGroup: false     // 근무상태
+    });
 
+    // 1. 소속/지원 그룹 상태
     const [companyType, setCompanyType] = useState('사내협력사');
     const [vendorName, setVendorName] = useState('');
-    const [status, setStatus] = useState('재직');
     const [supportStatus, setSupportStatus] = useState('미지원');
 
-    // 🔥 신규: 브랜드 및 업무 일괄 변경용 상태
+    // 2. 근무 환경 그룹 상태
+    const [workplace, setWorkplace] = useState('');
+    const [empType, setEmpType] = useState('현장직');
+
+    // 3. 업무 그룹 상태
     const [managedBrand, setManagedBrand] = useState('');
     const [task, setTask] = useState('');
     const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false);
 
+    // 4. 상태 그룹 상태
+    const [status, setStatus] = useState('재직');
+
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSave = async () => {
-        // 체크된 항목이 하나도 없을 경우 방어
-        if (!updateTarget.vendor && !updateTarget.status && !updateTarget.support && !updateTarget.brandTask) {
-            return alert('변경할 대상을 체크해 주세요.');
+        const { vendorGroup, locationGroup, brandTaskGroup, statusGroup } = updateTarget;
+
+        if (!vendorGroup && !locationGroup && !brandTaskGroup && !statusGroup) {
+            return alert('변경할 항목 그룹을 최소 하나 이상 체크해 주세요.');
         }
-        if (updateTarget.vendor && !vendorName) return alert('변경할 소속 업체를 입력해 주세요.');
+        if (vendorGroup && !vendorName) {
+            return alert('변경할 소속 업체를 입력해 주세요.');
+        }
 
         setIsSaving(true);
         try {
             const updateData = {};
-            if (updateTarget.vendor) {
+
+            if (vendorGroup) {
                 updateData.company_type = companyType;
                 updateData.vendor_name = vendorName;
-            }
-            if (updateTarget.status) {
-                updateData.status = status;
-            }
-            if (updateTarget.support) {
                 updateData.support_status = supportStatus;
             }
-            // 🔥 신규: 브랜드 및 업무 데이터 일괄 업데이트
-            if (updateTarget.brandTask) {
+            if (locationGroup) {
+                updateData.workplace = workplace;
+                updateData.employment_type = empType;
+            }
+            if (brandTaskGroup) {
                 updateData.managed_brand = managedBrand;
                 updateData.task = task;
+            }
+            if (statusGroup) {
+                updateData.status = status;
             }
 
             const { error } = await supabaseClient.from('workers').update(updateData).in('id', selectedIds);
@@ -608,96 +625,116 @@ const WorkerBulkEditModal = ({ selectedIds, workers, vendorList, onClose, onRelo
 
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-[450px] overflow-hidden flex flex-col slide-up">
-                <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-white">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-[480px] overflow-hidden flex flex-col slide-up">
+                <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-white shrink-0">
                     <h3 className="text-sm font-bold text-gray-800 flex items-center"><span className="w-1.5 h-3.5 bg-letusBlue rounded-full mr-2"></span>선택 근무자 일괄 수정</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><CloseIcon /></button>
                 </div>
-                <div className="p-6 bg-slate-50 flex-1 space-y-5">
-                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs font-bold text-letusBlue text-center shrink-0">
+
+                <div className="p-6 bg-slate-50 flex-1 flex flex-col overflow-hidden">
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs font-bold text-letusBlue text-center shrink-0 mb-4">
                         현재 <span className="text-lg mx-1">{selectedIds.length}</span>명의 근무자가 선택되었습니다.
                     </div>
 
-                    {/* 🔥 항목이 많아졌으므로 스크롤 영역을 명확히 지정 */}
-                    <div className="space-y-4 max-h-[55vh] overflow-y-auto custom-scrollbar pr-1 pb-2">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-3">
 
-                        {/* 1. 업체 변경 */}
-                        <div className={`border rounded-lg p-4 transition-colors ${updateTarget.vendor ? 'border-letusBlue bg-white shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
-                            <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm mb-3">
-                                <input type="checkbox" checked={updateTarget.vendor} onChange={e => setUpdateTarget({ ...updateTarget, vendor: e.target.checked })} className="w-4 h-4 accent-letusBlue" />
-                                소속 구분 및 업체명 일괄 변경
+                        {/* 🏢 1. 소속 및 지원 정보 그룹 */}
+                        <div className={`border rounded-lg transition-all overflow-hidden ${updateTarget.vendorGroup ? 'border-letusBlue bg-white shadow-sm' : 'border-gray-200 bg-gray-50/70'}`}>
+                            <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm p-3 hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" checked={updateTarget.vendorGroup} onChange={e => setUpdateTarget({ ...updateTarget, vendorGroup: e.target.checked })} className="w-4 h-4 accent-letusBlue" />
+                                소속 및 지원 정보 변경
                             </label>
-                            {updateTarget.vendor && (
-                                <div className="pl-6 animate-fade-in flex gap-2">
-                                    <select value={companyType} onChange={(e) => setCompanyType(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none w-28">
-                                        <option value="사내협력사">사내협력사</option>
-                                        <option value="외주도급사">외주도급사</option>
-                                    </select>
-                                    <input type="text" value={vendorName} onChange={(e) => setVendorName(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none flex-1" placeholder="업체명 입력" />
+                            {updateTarget.vendorGroup && (
+                                <div className="px-4 pb-4 pt-1 animate-fade-in flex flex-col gap-3">
+                                    <div className="flex gap-2">
+                                        <select value={companyType} onChange={(e) => setCompanyType(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none w-28 bg-white">
+                                            <option value="사내협력사">사내협력사</option>
+                                            <option value="외주도급사">외주도급사</option>
+                                        </select>
+                                        <input type="text" value={vendorName} onChange={(e) => setVendorName(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none flex-1" placeholder="업체명 입력" />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-gray-600 w-[60px]">지원 여부</span>
+                                        <select value={supportStatus} onChange={(e) => setSupportStatus(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none flex-1 bg-white cursor-pointer text-gray-700">
+                                            <option value="미지원">미지원</option>
+                                            {vendorList.map(vendor => (
+                                                <option key={vendor} value={vendor}>{vendor}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* 🔥 2. 신규: 브랜드 및 업무 일괄 덮어쓰기 */}
-                        <div className={`border rounded-lg p-4 transition-colors ${updateTarget.brandTask ? 'border-orange-400 bg-white shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
-                            <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm mb-3">
-                                <input type="checkbox" checked={updateTarget.brandTask} onChange={e => setUpdateTarget({ ...updateTarget, brandTask: e.target.checked })} className="w-4 h-4 accent-orange-500" />
-                                담당 브랜드 및 업무 일괄 덮어쓰기
+                        {/* 📍 2. 근무 환경 그룹 */}
+                        <div className={`border rounded-lg transition-all overflow-hidden ${updateTarget.locationGroup ? 'border-indigo-400 bg-white shadow-sm' : 'border-gray-200 bg-gray-50/70'}`}>
+                            <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm p-3 hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" checked={updateTarget.locationGroup} onChange={e => setUpdateTarget({ ...updateTarget, locationGroup: e.target.checked })} className="w-4 h-4 accent-indigo-500" />
+                                근무지 및 근로 형태 변경
                             </label>
-                            {updateTarget.brandTask && (
-                                <div className="pl-6 animate-fade-in flex flex-col gap-2">
-                                    <div className="min-h-[64px] border border-gray-300 rounded bg-white px-3 py-2.5 flex flex-col gap-2.5">
+                            {updateTarget.locationGroup && (
+                                <div className="px-4 pb-4 pt-1 animate-fade-in flex gap-2">
+                                    <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none flex-1 bg-white cursor-pointer">
+                                        <option value="">선택 안함</option>
+                                        <option value="양지1센터">양지1센터</option>
+                                        <option value="양지2센터">양지2센터</option>
+                                        <option value="양지3센터">양지3센터</option>
+                                        <option value="안성센터">안성센터</option>
+                                        <option value="평택센터">평택센터</option>
+                                        <option value="음성센터">음성센터</option>
+                                        <option value="동부센터">동부센터</option>
+                                        <option value="서부센터">서부센터</option>
+                                    </select>
+                                    <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none flex-1 bg-white cursor-pointer">
+                                        <option value="현장직">현장직</option>
+                                        <option value="사무직">사무직</option>
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ⚙️ 3. 브랜드/업무 그룹 */}
+                        <div className={`border rounded-lg transition-all overflow-hidden ${updateTarget.brandTaskGroup ? 'border-orange-400 bg-white shadow-sm' : 'border-gray-200 bg-gray-50/70'}`}>
+                            <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm p-3 hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" checked={updateTarget.brandTaskGroup} onChange={e => setUpdateTarget({ ...updateTarget, brandTaskGroup: e.target.checked })} className="w-4 h-4 accent-orange-500" />
+                                담당 브랜드 및 업무 변경
+                            </label>
+                            {updateTarget.brandTaskGroup && (
+                                <div className="px-4 pb-4 pt-1 animate-fade-in flex flex-col gap-2">
+                                    <div className="min-h-[50px] border border-gray-200 rounded bg-gray-50 px-3 py-2 flex flex-col gap-2">
                                         <div className="flex flex-wrap gap-1.5 items-center">
-                                            <span className="text-[9px] font-black text-orange-400 bg-orange-50 px-1 rounded">BRAND</span>
+                                            <span className="text-[9px] font-black text-orange-400 bg-orange-50 px-1 rounded border border-orange-100">BRAND</span>
                                             {managedBrand ? managedBrand.split(',').filter(Boolean).map((b, i) => (
-                                                <span key={i} className="bg-orange-50 text-letusOrange border border-orange-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{b.trim()}</span>
-                                            )) : <span className="text-gray-300 text-[10px]">미설정 (기존 데이터 삭제됨)</span>}
+                                                <span key={i} className="text-[10px] font-bold text-gray-700">{b.trim()}{i < managedBrand.split(',').length - 1 ? ',' : ''}</span>
+                                            )) : <span className="text-gray-400 text-[10px]">미설정 (삭제됨)</span>}
                                         </div>
                                         <div className="flex flex-wrap gap-1.5 items-center">
-                                            <span className="text-[9px] font-black text-blue-400 bg-blue-50 px-1 rounded">TASK</span>
+                                            <span className="text-[9px] font-black text-blue-400 bg-blue-50 px-1 rounded border border-blue-100">TASK</span>
                                             {task ? task.split(',').filter(Boolean).map((t, i) => (
-                                                <span key={i} className="bg-blue-50 text-blue-600 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{t.trim()}</span>
-                                            )) : <span className="text-gray-300 text-[10px]">미설정 (기존 데이터 삭제됨)</span>}
+                                                <span key={i} className="text-[10px] font-bold text-gray-700">{t.trim()}{i < task.split(',').length - 1 ? ',' : ''}</span>
+                                            )) : <span className="text-gray-400 text-[10px]">미설정 (삭제됨)</span>}
                                         </div>
                                     </div>
-                                    <button type="button" onClick={() => setBrandTaskModalOpen(true)} className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-letusBlue bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded px-3 py-2 transition-colors w-full mt-1">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                                        브랜드 및 업무 팝업에서 선택하기
+                                    <button type="button" onClick={() => setBrandTaskModalOpen(true)} className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-orange-600 bg-orange-50 border border-orange-200 hover:bg-orange-100 rounded px-3 py-1.5 transition-colors w-full">
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                        브랜드/업무 팝업에서 선택하기
                                     </button>
                                 </div>
                             )}
                         </div>
 
-                        {/* 3. 지원 여부 변경 */}
-                        <div className={`border rounded-lg p-4 transition-colors ${updateTarget.support ? 'border-green-500 bg-white shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
-                            <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm mb-3">
-                                <input type="checkbox" checked={updateTarget.support} onChange={e => setUpdateTarget({ ...updateTarget, support: e.target.checked })} className="w-4 h-4 accent-green-500" />
-                                지원 여부 일괄 덮어쓰기
+                        {/* 🟢 4. 근무 상태 그룹 */}
+                        <div className={`border rounded-lg transition-all overflow-hidden ${updateTarget.statusGroup ? 'border-purple-400 bg-white shadow-sm' : 'border-gray-200 bg-gray-50/70'}`}>
+                            <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm p-3 hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" checked={updateTarget.statusGroup} onChange={e => setUpdateTarget({ ...updateTarget, statusGroup: e.target.checked })} className="w-4 h-4 accent-purple-500" />
+                                근무 상태 덮어쓰기
                             </label>
-                            {updateTarget.support && (
-                                <div className="pl-6 animate-fade-in">
-                                    <select value={supportStatus} onChange={(e) => setSupportStatus(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none w-full max-w-[200px] cursor-pointer text-gray-700">
-                                        <option value="미지원">미지원</option>
-                                        {vendorList.map(vendor => (
-                                            <option key={vendor} value={vendor}>{vendor}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 4. 상태 변경 */}
-                        <div className={`border rounded-lg p-4 transition-colors ${updateTarget.status ? 'border-purple-400 bg-white shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
-                            <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm mb-3">
-                                <input type="checkbox" checked={updateTarget.status} onChange={e => setUpdateTarget({ ...updateTarget, status: e.target.checked })} className="w-4 h-4 accent-purple-500" />
-                                근무 상태 일괄 덮어쓰기
-                            </label>
-                            {updateTarget.status && (
-                                <div className="pl-6 animate-fade-in">
-                                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none w-28 cursor-pointer">
-                                        <option value="재직">재직</option>
-                                        <option value="휴직">휴직</option>
-                                        <option value="퇴사">퇴사</option>
+                            {updateTarget.statusGroup && (
+                                <div className="px-4 pb-4 pt-1 animate-fade-in">
+                                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none w-full bg-white cursor-pointer text-gray-700">
+                                        <option value="재직">🟢 재직</option>
+                                        <option value="휴직">🟡 휴직</option>
+                                        <option value="퇴사">⚫ 퇴사</option>
                                     </select>
                                 </div>
                             )}
@@ -706,15 +743,14 @@ const WorkerBulkEditModal = ({ selectedIds, workers, vendorList, onClose, onRelo
                     </div>
                 </div>
 
-                <div className="p-4 border-t bg-white flex justify-end gap-2 shrink-0">
+                <div className="p-4 border-t border-gray-200 bg-white flex justify-end gap-2 shrink-0">
                     <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 text-[11px] font-bold rounded hover:bg-gray-50">취소</button>
-                    <button onClick={handleSave} disabled={isSaving || (!updateTarget.vendor && !updateTarget.status && !updateTarget.support && !updateTarget.brandTask)} className="px-5 py-2 bg-letusBlue text-white text-[11px] font-bold rounded hover:bg-blue-600 flex items-center gap-1.5 disabled:opacity-50">
-                        {isSaving ? '적용 중...' : '선택 대상 일괄 적용'}
+                    <button onClick={handleSave} disabled={isSaving || (!updateTarget.vendorGroup && !updateTarget.locationGroup && !updateTarget.brandTaskGroup && !updateTarget.statusGroup)} className="px-5 py-2 bg-letusBlue text-white text-[11px] font-bold rounded hover:bg-blue-600 flex items-center gap-1.5 disabled:opacity-50">
+                        {isSaving ? '적용 중...' : '선택 대상 일괄 덮어쓰기'}
                     </button>
                 </div>
             </div>
 
-            {/* 🔥 모달 안에 팝업 모달(브랜드/업무 선택) 렌더링 */}
             {brandTaskModalOpen && (
                 <BrandTaskSelectModal
                     initialBrands={managedBrand} onApplyBrands={setManagedBrand}
