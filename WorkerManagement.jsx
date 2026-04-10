@@ -219,7 +219,7 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
                                 <select value={supportStatus} onChange={(e) => setSupportStatus(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-green-500 bg-white cursor-pointer w-full text-gray-700">
                                     <option value="미지원">미지원</option>
                                     {vendorList.map(vendor => (
-                                        <option key={vendor} value={vendor}>{vendor} (지원)</option>
+                                        <option key={vendor} value={vendor}>{vendor}</option>
                                     ))}
                                 </select>
                             </div>
@@ -411,7 +411,7 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
                                 <select value={supportStatus} onChange={(e) => setSupportStatus(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-green-500 bg-white cursor-pointer w-full text-gray-700">
                                     <option value="미지원">미지원</option>
                                     {vendorList.map(vendor => (
-                                        <option key={vendor} value={vendor}>{vendor} (지원)</option>
+                                        <option key={vendor} value={vendor}>{vendor}</option>
                                     ))}
                                 </select>
                             </div>
