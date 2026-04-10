@@ -1,7 +1,7 @@
 const { useState, useEffect } = React;
 
 const useAppLogic = () => {
-    // 1. 상태 변수들
+    // 1. 상태 관리
     const [session, setSession] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState('home');
@@ -24,7 +24,7 @@ const useAppLogic = () => {
         brand: '전체', status: '전체', startDate: today, endDate: today, searchType: '품목코드', searchValue: ''
     });
 
-    // 2. 주요 함수들
+    // 2. 주요 액션 함수들
     const toggleFavorite = (pageId) => {
         setFavorites(prev => {
             const newFavs = prev.includes(pageId) ? prev.filter(id => id !== pageId) : [...prev, pageId];
@@ -59,7 +59,9 @@ const useAppLogic = () => {
     };
 
     const handleAccidentDrillDown = (filterObj) => {
-        setAccidentDrillDownFilters({ brands: filterObj.brands || [], statuses: filterObj.statuses || [], isDelayed: filterObj.isDelayed || '전체' });
+        setAccidentDrillDownFilters({
+            brands: filterObj.brands || [], statuses: filterObj.statuses || [], isDelayed: filterObj.isDelayed || '전체'
+        });
         setCurrentPage('accident_list');
     };
 
@@ -69,8 +71,12 @@ const useAppLogic = () => {
             const { data, error } = await window.supabase.from('logistics_issues').select('*').order('id', { ascending: false });
             if (error) throw error;
             setIssues(data || []);
-        } catch (error) { console.error('Supabase fetch exception:', error); setIssues([]); }
-        finally { setIsLoading(false); }
+        } catch (error) {
+            console.error('Supabase fetch exception:', error.message || error);
+            setIssues([]);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const fetchProfile = async () => {
@@ -81,17 +87,25 @@ const useAppLogic = () => {
                 setUserProfile(data);
                 if (data.role === '사용자' && currentPage === 'user_management') setCurrentPage('dashboard');
             }
-        } catch (err) { console.error('프로필 갱신 실패:', err); }
+        } catch (err) {
+            console.error('프로필 갱신 실패:', err);
+        }
     };
 
-    // 3. UseEffects (로그인 확인, 실시간 알림 등)
+    // 3. 부수 효과 (인증, 알림 등)
     useEffect(() => {
-        window.supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setAuthLoading(false); });
-        const { data: { subscription } } = window.supabase.auth.onAuthStateChange((_event, session) => { setSession(session); setAuthLoading(false); });
+        window.supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session); setAuthLoading(false);
+        });
+        const { data: { subscription } } = window.supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session); setAuthLoading(false);
+        });
         return () => subscription.unsubscribe();
     }, []);
 
-    useEffect(() => { if (session) { fetchIssues(); fetchProfile(); } }, [session]);
+    useEffect(() => {
+        if (session) { fetchIssues(); fetchProfile(); }
+    }, [session]);
 
     useEffect(() => {
         if (session) localStorage.setItem('letus_noti_' + session.user.id, JSON.stringify(notifications));
@@ -112,15 +126,24 @@ const useAppLogic = () => {
 
     useEffect(() => {
         if (!session || !userProfile) return;
+
         if (Notification.permission === 'default' && !sessionStorage.getItem('notiAsked')) {
             sessionStorage.setItem('notiAsked', 'true');
             Notification.requestPermission();
         }
 
+        const channel = window.supabase.channel('logistics_issue_notifications')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'logistics_issues' }, (payload) => handleIssueChange(payload.new, '신규 입고'))
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'logistics_issues' }, (payload) => handleIssueChange(payload.new, '상태 변경'))
+            .subscribe();
+
         const handleIssueChange = (newData, type) => {
             const userBrands = userProfile?.managed_brands ? userProfile.managed_brands.split(',').map(s => s.trim()) : [];
             const userVendors = userProfile?.managed_vendors ? userProfile.managed_vendors.split(',').map(s => s.trim()) : [];
-            let shouldAlert = false; let message = ''; const currentStatus = newData.status || '조치대기';
+
+            let shouldAlert = false;
+            let message = '';
+            const currentStatus = newData.status || '조치대기';
 
             if (currentStatus === '조치대기' && userProfile?.role?.includes('관리자') && (userBrands.includes('전체') || userBrands.includes(newData.brand))) {
                 shouldAlert = true; message = `[신규] ${newData.brand} 브랜드의 새로운 이슈가 접수되었습니다. (${newData.reception_no})`;
@@ -133,13 +156,15 @@ const useAppLogic = () => {
             if (shouldAlert) {
                 const nowTime = new Date().getTime();
                 if (window.lastAlertMsg === message && nowTime - (window.lastAlertTime || 0) < 2000) return;
-                window.lastAlertMsg = message; window.lastAlertTime = nowTime;
+                window.lastAlertMsg = message;
+                window.lastAlertTime = nowTime;
 
                 const newNoti = {
                     id: newData.id + '_' + nowTime, title: type, message: message,
                     date: new Date(nowTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     read: false, read_at: null, filterObj: { brand: newData.brand || '전체', status: newData.status || '전체' }
                 };
+
                 setNotifications(prev => [newNoti, ...prev].slice(0, 10));
 
                 if (Notification.permission === 'granted') {
@@ -149,15 +174,10 @@ const useAppLogic = () => {
             }
         };
 
-        const channel = window.supabase.channel('logistics_issue_notifications')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'logistics_issues' }, (payload) => handleIssueChange(payload.new, '신규 입고'))
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'logistics_issues' }, (payload) => handleIssueChange(payload.new, '상태 변경'))
-            .subscribe();
-
         return () => { window.supabase.removeChannel(channel); };
     }, [session, userProfile]);
 
-    // 내보낼 데이터 묶음
+    // 4. 컴포넌트로 전달할 데이터 묶음
     return {
         session, authLoading, currentPage, setCurrentPage, issues, isLoading, userProfile,
         selfEditTarget, setSelfEditTarget, notifications, isNotiOpen, setIsNotiOpen,
