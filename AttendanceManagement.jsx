@@ -803,7 +803,7 @@ const AttendanceManagement = () => {
                                         <input type="date" value={tempStartDate} onChange={(e) => setTempStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
                                         <span className="text-gray-400 text-xs mx-0.5">~</span>
                                         <input type="date" value={tempEndDate} onChange={(e) => setTempEndDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
-                                        <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-letusBlue text-white font-bold px-3 py-1.5 h-full rounded text-[11px] shadow-sm hover:bg-blue-600 transition-colors ml-1">조회</button>
+                                        <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-orange-500 text-white font-bold px-3 py-1.5 h-full rounded text-[11px] shadow-sm hover:bg-blue-600 transition-colors ml-1">조회</button>
                                     </div>
                                 )}
 
