@@ -281,33 +281,36 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
 
         setIsSaving(true);
         try {
-            console.log("업데이트 대상 ID:", worker.id); // 디버깅용
+            // 🚨 1. 콘솔에 엑스레이 로그 찍기 (F12 눌러서 확인 가능)
+            console.log("🛠️ [수정 시도] 타겟 ID:", worker.id);
+            const updatePayload = {
+                name, phone, company_type: companyType, vendor_name: vendorName,
+                employment_type: empType, workplace, managed_brand: managedBrand, task, support_status: supportStatus, status
+            };
+            console.log("🛠️ [수정 시도] 보낼 데이터:", updatePayload);
 
-            // 🔥 불필요한 .select() 검증 로직 제거, 순수하게 update만 실행
-            const { error } = await supabaseClient.from('workers').update({
-                name,
-                phone,
-                company_type: companyType,
-                vendor_name: vendorName,
-                employment_type: empType,
-                workplace,
-                managed_brand: managedBrand,
-                task,
-                support_status: supportStatus,
-                status
-            }).eq('id', worker.id);
+            // 🚨 2. .select()를 붙여서 진짜로 데이터가 바뀌고 돌아왔는지 확인!
+            const { data, error } = await supabaseClient.from('workers').update(updatePayload).eq('id', worker.id).select();
 
-            // 만약 DB에서 진짜 에러를 뱉었다면 (예: 컬럼 누락 등)
+            console.log("🛠️ [수정 결과] 반환된 데이터:", data);
+
             if (error) {
-                console.error("DB Update Error:", error);
-                alert(`❌ DB 에러!\n메시지: ${error.message}\n상세: ${error.details || '없음'}`);
+                console.error("DB 에러 상세:", error);
                 throw error;
+            }
+
+            // 🚨 3. 에러는 안 났지만 업데이트된 데이터가 0개일 경우 (여기에 걸릴 확률 99%)
+            if (!data || data.length === 0) {
+                alert(`❌ 경고: 저장 처리는 돌았지만 실제 DB 값이 변하지 않았습니다!\n\n(F12 콘솔창의 [수정 시도] 로그를 복사해서 알려주세요!)`);
+                setIsSaving(false);
+                return;
             }
 
             alert('근무자 정보가 성공적으로 수정되었습니다.');
             onReload();
             onClose();
         } catch (error) {
+            console.error("Worker Update Error:", error);
             setErrorMsg(`수정 실패: ${error.message}`);
         } finally {
             setIsSaving(false);
