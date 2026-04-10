@@ -827,21 +827,21 @@ const WorkerManagement = () => {
         // 🔥 전체 창 높이 고정 (h-[calc(100vh-64px)]), overflow-hidden으로 이중 스크롤 방지
         <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-140px)] overflow-hidden min-h-[600px]">
 
-            {/* 🔍 상단 고정 조회 영역 (이미지 2, 3 레이아웃 반영) */}
+            {/* 🔍 상단 고정 조회 영역 */}
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col z-30 shrink-0">
-                <div className="px-6 py-4 flex items-center justify-between gap-4">
+                <div className="px-6 py-3 flex items-center justify-between gap-4">
 
                     {/* 왼쪽 기본 검색 영역 */}
                     <div className="flex items-center gap-6 flex-1 flex-wrap">
                         <div className="flex items-center gap-2 shrink-0">
                             <span className="text-xs font-bold text-gray-700">소속 구분</span>
-                            <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)} className="border border-gray-200 rounded px-2 h-8 text-xs outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
+                            <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)} className="border border-gray-200 rounded px-2 h-[30px] text-xs outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
                                 <option value="">전체</option><option value="사내협력사">사내협력사</option><option value="외주도급사">외주도급사</option>
                             </select>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                             <span className="text-xs font-bold text-gray-700">근무지</span>
-                            <select value={filterWorkplace} onChange={e => setFilterWorkplace(e.target.value)} className="border border-gray-200 rounded px-2 h-8 text-xs outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
+                            <select value={filterWorkplace} onChange={e => setFilterWorkplace(e.target.value)} className="border border-gray-200 rounded px-2 h-[30px] text-xs outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
                                 <option value="">전체</option>
                                 <option value="양지1센터">양지1센터</option><option value="양지2센터">양지2센터</option><option value="양지3센터">양지3센터</option>
                                 <option value="안성센터">안성센터</option><option value="평택센터">평택센터</option><option value="음성센터">음성센터</option>
@@ -850,13 +850,12 @@ const WorkerManagement = () => {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                             <span className="text-xs font-bold text-gray-700">검색어</span>
-                            <input type="text" value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="이름 또는 업체명 입력" className="border border-gray-200 rounded px-3 h-8 text-xs outline-none focus:border-letusOrange w-48 text-gray-700" />
+                            <input type="text" value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="이름 또는 업체명 입력" className="border border-gray-200 rounded px-3 h-[30px] text-xs outline-none focus:border-letusOrange w-48 text-gray-700" />
                         </div>
                     </div>
 
-                    {/* 우측 버튼 그룹 */}
+                    {/* 오른쪽 우측 정렬된 버튼 그룹 */}
                     <div className="flex items-center gap-2 shrink-0">
-                        {/* 기훈님이 주신 상세조회 버튼 적용! */}
                         <button onClick={() => setIsAdvancedSearchOpen(!isAdvancedSearchOpen)} className={`text-[11px] font-bold border px-3 h-[30px] rounded-[3px] transition-colors flex items-center gap-1 shadow-sm ${isAdvancedSearchOpen ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
                             <svg className={`w-3.5 h-3.5 transition-transform ${isAdvancedSearchOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
                             상세 조회
