@@ -1,9 +1,6 @@
 const { useState, useEffect, useMemo } = React;
 
-// 🔥 Supabase 클라이언트 초기화 (외부 JSX 파일이므로 독립적으로 생성)
-const _supabaseUrl = 'https://kbbkodmighrrgwtwrgdp.supabase.co';
-const _supabaseAnonKey = 'sb_publishable_2yOkLjobrM_oMlncJFqL3A_gbuU9eAr';
-const supabaseClient = window.supabase.createClient(_supabaseUrl, _supabaseAnonKey);
+const supabase = window.supabase;
 
 // ✖️ 공통으로 사용할 닫기 아이콘 컴포넌트
 const CloseIcon = () => (
