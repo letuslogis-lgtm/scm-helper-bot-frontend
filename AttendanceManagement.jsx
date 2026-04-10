@@ -732,12 +732,31 @@ const AttendanceManagement = () => {
         return activeTab === 'summary' ? filteredChartData.length : filteredDetailData.length;
     }, [activeTab, filteredChartData.length, filteredDetailData.length]);
 
+    // 선택된 데이터를 바탕으로 지표를 실시간 계산 (IPC 통합 인원 완벽 대응)
     const currentStats = useMemo(() => {
         const targetData = activeTab === 'summary' ? filteredChartData : filteredDetailData;
+
         return targetData.reduce((acc, curr) => {
-            if (curr.company_type === '사내협력사') acc.partnerCount++;
-            else if (curr.company_type === '외주도급사') acc.contractorCount++;
+            // 1. 기본 인원수는 1명으로 잡되, IPC처럼 통합 데이터인 경우 비고란에서 실제 인원을 빼옵니다.
+            let actualHeadcount = 1;
+            if (curr.worker_name === 'IPC_통합') {
+                // 정규식을 이용해 비고란("총 54명 투입...")에서 숫자만 쏙 뽑아옵니다.
+                const match = curr.remark?.match(/총 (\d+)명/);
+                if (match) {
+                    actualHeadcount = parseInt(match[1], 10);
+                }
+            }
+
+            // 2. 뽑아낸 실제 인원수를 더해줍니다. (일반 업체는 1명씩, IPC는 50명씩 더해짐)
+            if (curr.company_type === '사내협력사') {
+                acc.partnerCount += actualHeadcount;
+            } else if (curr.company_type === '외주도급사') {
+                acc.contractorCount += actualHeadcount;
+            }
+
+            // 3. 총 근무시간은 어차피 합산된 값이 들어있으므로 그대로 더합니다.
             acc.totalHours += (Number(curr.work_hours) || 0);
+
             return acc;
         }, { partnerCount: 0, contractorCount: 0, totalHours: 0 });
     }, [activeTab, filteredChartData, filteredDetailData]);
