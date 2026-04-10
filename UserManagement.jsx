@@ -1,8 +1,13 @@
-
 const { useState, useEffect, useRef } = React;
 const supabase = window.supabase;
 const adminSupabase = window.adminSupabase;
-const { StatusBadge, CategoryBadge, VendorSearchModal, CloseIcon, TableSkeleton, formatDateTime } = window; // (혹시 빠진 부품 있을까 봐 넉넉히 챙겼습니다)
+
+// 🔥 여기에 UserEditModal 과 VendorListModal 을 꼭 추가해야 합니다!
+const {
+    StatusBadge, CategoryBadge, VendorSearchModal,
+    CloseIcon, TableSkeleton, formatDateTime,
+    UserEditModal, VendorListModal
+} = window;
 
 // 🔥 껍데기를 없애고 바로 진짜 로직 시작!
 const UserManagement = () => {
