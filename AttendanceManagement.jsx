@@ -580,6 +580,7 @@ const AttendanceManagement = () => {
     const [chartStartDate, setChartStartDate] = useState(tempChartStartDate);
     const [chartEndDate, setChartEndDate] = useState(tempChartEndDate);
 
+    const [inputValue, setInputValue] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedVendor, setSelectedVendor] = useState('전체');
 
@@ -588,6 +589,15 @@ const AttendanceManagement = () => {
 
     const [filterType, setFilterType] = useState('D');
     const [chartFilterType, setChartFilterType] = useState('M');
+
+    React.useEffect(() => {
+    const timer = setTimeout(() => {
+        setSearchTerm(inputValue);
+    }, 300); // 300ms = 0.3초 대기
+
+    // 타자를 계속 치고 있으면 이전 타이머를 취소시켜서 렌더링을 막습니다!
+    return () => clearTimeout(timer); 
+}, [inputValue]);
 
     const getFilterDates = (type) => {
         const now = new Date();
@@ -932,7 +942,7 @@ const currentStats = useMemo(() => {
                                 </div>
                                 <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
                                 <div className="flex items-center gap-2 relative">
-                                    <input type="text" placeholder="사원명 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="border border-gray-200 rounded-lg pl-8 pr-3 py-[7px] text-xs font-bold text-gray-700 outline-none focus:border-letusBlue w-40" />
+                                    <input type="text" placeholder="사원명 검색..." value={inputValue} onChange={(e) => setInputValue(e.target.value)} className="border border-gray-200 rounded-lg pl-8 pr-3 py-[7px] text-xs font-bold text-gray-700 outline-none focus:border-letusBlue w-40" />
                                     <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                 </div>
                             </div>
