@@ -825,7 +825,7 @@ const WorkerManagement = () => {
 
     return (
         // 🔥 전체 창 높이 고정 (h-[calc(100vh-64px)]), overflow-hidden으로 이중 스크롤 방지
-        <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)] overflow-hidden">
+        <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-140px)] overflow-hidden min-h-[600px]">
 
             {/* 🔍 상단 고정 조회 영역 (이미지 2, 3 레이아웃 반영) */}
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col z-30 shrink-0">
