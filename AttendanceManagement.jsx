@@ -267,7 +267,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     continue;
                 }
 
-                let parsedCount = 0;
                 // --- 🚩 여기서부터 일반 업체 (협력사, 도급사2) 로직 ---
                 let parsedCount = 0;
                 rows.forEach(rawRow => {
