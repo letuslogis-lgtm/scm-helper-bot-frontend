@@ -13,7 +13,7 @@ const BrandTaskSelectModal = ({ initialBrands, onApplyBrands, initialTasks, onAp
     const [selectedTasks, setSelectedTasks] = useState(initialTasks ? initialTasks.split(',').map(t => t.trim()).filter(Boolean) : []);
 
     const brandList = ['전체', '퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소', '바로스'];
-    const taskList = ['총괄 운영', '상/하차', '피킹', '입고', '반품', '연기'];
+    const taskList = ['총괄 운영', '상/하차', '피킹', '입고', '반품', '연기', 'A/S', '시공관리'];
 
     const toggleBrand = (brand) => {
         if (brand === '전체') {
@@ -843,6 +843,8 @@ const WorkerManagement = () => {
                             <option value="안성센터">안성센터</option>
                             <option value="평택센터">평택센터</option>
                             <option value="음성센터">음성센터</option>
+                            <option value="동부센터">동부센터</option>
+                            <option value="서부센터">서부센터</option>
                         </select>
                     </div>
 
