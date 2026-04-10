@@ -5,7 +5,41 @@ const { useState, useEffect, useMemo, useRef } = React;
 // ---------------------------------------------------------
 
 // 1. 오늘의 할 일(To-do) 관리 모달
-const handleSubmit = () => {
+const TodoModal = ({ todo, onClose, onSave, onDelete }) => {
+
+    const [text, setText] = useState(todo ? todo.text : '');
+
+    const [priority, setPriority] = useState(todo ? todo.priority : '4');
+
+    const [repeat, setRepeat] = useState(todo && todo.repeat ? todo.repeat : []);
+
+
+
+    const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
+
+
+
+    const handleToggleDay = (day) => {
+
+        if (repeat.includes(day)) setRepeat(repeat.filter(d => d !== day));
+
+        else setRepeat([...repeat, day]);
+
+    };
+
+
+
+    const handleSelectAllDays = () => {
+
+        if (repeat.length === 7) setRepeat([]); // 모두 선택되어 있으면 전체 해제
+
+        else setRepeat([...DAYS]); // 아니면 전체 선택
+
+    };
+
+
+
+    const handleSubmit = () => {
         if (!text.trim()) return alert('할 일을 입력해 주세요.');
 
         // 🚩 [핵심 수정] 선택된 요일이 0개면 빈 배열([]) 대신 null을 저장합니다.
@@ -477,20 +511,20 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
 
     const priorityWeight = { '긴급': 0, '1': 1, '2': 2, '3': 3, '4': 4 };
     const sortedTodos = [...todos].sort((a, b) => {
-    // 0순위: 완료 여부 확인 (완료된 항목은 무조건 맨 뒤로)
-    // 💡 주의: 기훈님 DB/상태에 있는 체크박스 속성명(is_completed, checked 등)에 맞게 수정해주세요!
-    if (a.is_done !== b.is_done) {
-        return a.is_completed ? 1 : -1; 
-    }
+        // 0순위: 완료 여부 확인 (완료된 항목은 무조건 맨 뒤로)
+        // 💡 주의: 기훈님 DB/상태에 있는 체크박스 속성명(is_completed, checked 등)에 맞게 수정해주세요!
+        if (a.is_done !== b.is_done) {
+            return a.is_completed ? 1 : -1;
+        }
 
-    // 1순위: 기존 중요도 정렬
-    const pA = priorityWeight[a.priority] ?? 4;
-    const pB = priorityWeight[b.priority] ?? 4;
-    if (pA !== pB) return pA - pB;
-    
-    // 2순위: 기존 최신순 정렬
-    return b.id - a.id;
-});
+        // 1순위: 기존 중요도 정렬
+        const pA = priorityWeight[a.priority] ?? 4;
+        const pB = priorityWeight[b.priority] ?? 4;
+        if (pA !== pB) return pA - pB;
+
+        // 2순위: 기존 최신순 정렬
+        return b.id - a.id;
+    });
 
     // --- 캘린더 핸들러 ---
     const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
