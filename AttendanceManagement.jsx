@@ -102,8 +102,103 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 }
 
                 const { data, isTextFile } = await readFileAsync(file);
-                let rows = [];
+                const exactVendor = vendorType.replace('협력사_', '');
+                const companyType = vendorType.startsWith('협력사_') ? '사내협력사' : '외주도급사';
 
+                // 🚩 [궁극의 해결책] IPC(도급사1) 전용 가로(2D 배열) 파싱 로직
+                if (vendorType === '도급사1' || vendorType === 'IPC') {
+                    if (isTextFile) {
+                        failedFiles.push(`${file.name} (IPC는 엑셀 양식만 지원)`);
+                        continue;
+                    }
+
+                    let wb = XLSX.read(data, { type: 'binary' });
+                    let sheetName = wb.SheetNames[0];
+
+                    // 핵심: header: 1 옵션을 써서 병합 셀을 무시하고, 날짜 텍스트 그대로(raw: false) 가져옵니다.
+                    const raw2D = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: false, defval: '' });
+
+                    // 행 통째로 찾기
+                    const dateRowArr = raw2D.find(arr => arr.some(v => String(v).includes('월') && String(v).includes('일')));
+                    const manpowerRowArr = raw2D.find(arr => arr.some(v => String(v).replace(/\s/g, '') === '인원'));
+                    const overtimeRowArr = raw2D.find(arr => arr.some(v => String(v).replace(/\s/g, '') === '연장시간'));
+                    const deductionRowArr = raw2D.find(arr => arr.some(v => String(v).replace(/\s/g, '') === '공제시간'));
+
+                    if (!dateRowArr || !manpowerRowArr) {
+                        failedFiles.push(`${file.name} (IPC 날짜/인원 행을 찾을 수 없음)`);
+                        continue;
+                    }
+
+                    let parsedCountInFile = 0;
+                    let satData = null; // 토요일 데이터 임시 보관소
+
+                    // 찾아낸 날짜 행을 가로로 쭉 스캔
+                    dateRowArr.forEach((dateStr, colIdx) => {
+                        const val = String(dateStr).replace(/\s+/g, ''); // 공백 제거
+                        const match = val.match(/(\d+)월(\d+)일/);
+                        if (!match) return; // '구분', '계' 같은 빈칸이나 텍스트는 무시
+
+                        // 위아래 위치(colIdx)가 똑같은 칸의 데이터를 가져옴 (안전한 숫자 변환 적용)
+                        const manpower = safeParse(manpowerRowArr[colIdx]);
+                        const overtime = overtimeRowArr ? safeParse(overtimeRowArr[colIdx]) : 0;
+                        const deduction = deductionRowArr ? safeParse(deductionRowArr[colIdx]) : 0;
+
+                        if (manpower === 0 && overtime === 0) return;
+
+                        // 날짜 생성
+                        const currYear = new Date().getFullYear();
+                        const m = parseInt(match[1], 10);
+                        const d = parseInt(match[2], 10);
+                        const dateObj = new Date(currYear, m - 1, d);
+                        const dayOfWeek = dateObj.getDay(); // 0:일, 6:토
+                        const formattedDate = `${currYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+                        // 토요일(6) 저장 후 패스
+                        if (dayOfWeek === 6) {
+                            satData = { manpower, overtime, deduction, date: formattedDate };
+                            return;
+                        }
+
+                        // 일요일(0) 합산
+                        let finalManpower = manpower;
+                        let finalOvertime = overtime;
+                        let finalDeduction = deduction;
+
+                        if (dayOfWeek === 0 && satData) {
+                            finalManpower += satData.manpower;
+                            finalOvertime += satData.overtime;
+                            finalDeduction += satData.deduction;
+                            satData = null;
+                        }
+
+                        const n_hours = (finalManpower * 8) - finalDeduction;
+                        const o_hours = finalOvertime;
+
+                        allStandardData.push({
+                            work_date: formattedDate,
+                            company_type: companyType,
+                            vendor_name: 'IPC',
+                            worked_vendor: 'IPC',
+                            worker_name: 'IPC_통합',
+                            start_time: '08:30',
+                            end_time: o_hours > 0 ? 'OT발생' : '17:30',
+                            work_hours: n_hours + o_hours,
+                            normal_hours: n_hours,
+                            overtime_hours: o_hours,
+                            weighted_hours: n_hours + (o_hours * 1.5),
+                            remark: `총 ${finalManpower}명 투입 (공제 ${finalDeduction}H 적용)`
+                        });
+                        parsedCountInFile++;
+                    });
+
+                    if (parsedCountInFile > 0) successFiles.push(file.name);
+                    else failedFiles.push(`${file.name} (데이터 0건)`);
+
+                    continue; // 🚩 IPC 처리가 끝났으니 다음 엑셀 파일로 넘어갑니다!
+                }
+
+                // --- 🚩 여기서부터는 기존 일반 업체 (협력사, 도급사2) 로직 ---
+                let rows = [];
                 if (isTextFile) {
                     const lines = data.split(/\r?\n/).filter(line => line.trim() !== '');
                     if (lines.length > 0) {
@@ -119,16 +214,17 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 } else {
                     let wb = XLSX.read(data, { type: 'binary' });
                     for (let j = 0; j < wb.SheetNames.length; j++) {
-                        const tempRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[j]], { defval: '' });
+                        const tempRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[j]], { defval: '', raw: false });
                         if (tempRows.length > 0) { rows = tempRows; break; }
                     }
+                    // 가짜 엑셀 (HTML) 파싱
                     if (rows.length === 0 && (data.includes('<table') || data.includes('<TABLE'))) {
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(data, 'text/html');
                         const table = doc.querySelector('table');
                         if (table) {
                             wb = XLSX.utils.table_to_book(table);
-                            rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+                            rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '', raw: false });
                         }
                     }
                 }
@@ -138,79 +234,7 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     continue;
                 }
 
-                const exactVendor = vendorType.replace('협력사_', '');
-                const companyType = vendorType.startsWith('협력사_') ? '사내협력사' : '외주도급사';
                 let parsedCount = 0;
-
-                // 🚩 [수정완료] IPC 전용 로직
-                if (vendorType === '도급사1' || vendorType === 'IPC') {
-                    const manpowerRow = rows.find(r => Object.values(r).some(v => String(v).includes('인원')));
-                    const overtimeRow = rows.find(r => Object.values(r).some(v => String(v).includes('연장시간')));
-                    const deductionRow = rows.find(r => Object.values(r).some(v => String(v).includes('공제시간')));
-
-                    if (manpowerRow) {
-                        const dateColumns = Object.keys(manpowerRow).filter(key => key.includes('월') && key.includes('일'));
-                        let satData = null;
-
-                        dateColumns.forEach(dateCol => {
-                            // safeParse 적용하여 에러 차단
-                            const manpower = safeParse(manpowerRow[dateCol]);
-                            const overtime = overtimeRow ? safeParse(overtimeRow[dateCol]) : 0;
-                            const deduction = deductionRow ? safeParse(deductionRow[dateCol]) : 0;
-
-                            if (manpower === 0 && overtime === 0) return;
-
-                            const currentYear = new Date().getFullYear();
-                            const [m, d] = dateCol.split('월').map(v => parseInt(v));
-                            const dateObj = new Date(currentYear, m - 1, d);
-                            const dayOfWeek = dateObj.getDay();
-                            const formattedDate = `${currentYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-
-                            if (dayOfWeek === 6) {
-                                satData = { manpower, overtime, deduction, date: formattedDate };
-                                return;
-                            }
-
-                            let finalManpower = manpower;
-                            let finalOvertime = overtime;
-                            let finalDeduction = deduction;
-
-                            if (dayOfWeek === 0 && satData) {
-                                finalManpower += satData.manpower;
-                                finalOvertime += satData.overtime;
-                                finalDeduction += satData.deduction;
-                                satData = null;
-                            }
-
-                            const n_hours = (finalManpower * 8) - finalDeduction;
-                            const o_hours = finalOvertime;
-
-                            allStandardData.push({
-                                work_date: formattedDate,
-                                company_type: companyType,
-                                vendor_name: 'IPC',
-                                worked_vendor: 'IPC',
-                                worker_name: 'IPC_통합',
-                                start_time: '08:30',
-                                end_time: o_hours > 0 ? 'OT발생' : '17:30',
-                                work_hours: n_hours + o_hours,
-                                normal_hours: n_hours,
-                                overtime_hours: o_hours,
-                                weighted_hours: n_hours + (o_hours * 1.5),
-                                remark: `총 ${finalManpower}명 투입 (공제 ${finalDeduction}H 적용됨)`
-                            });
-                            parsedCount++;
-                        });
-                    }
-
-                    if (parsedCount > 0) successFiles.push(file.name);
-                    else failedFiles.push(`${file.name} (양식 불일치)`);
-
-                    // 🚩 [수정완료] return을 쓰면 함수가 죽어버립니다. continue로 다음 파일로 넘어가야 합니다!
-                    continue;
-                }
-
-                // --- 여기부터 기존 일반 업체 로직 ---
                 rows.forEach(rawRow => {
                     const row = {};
                     for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
@@ -243,14 +267,7 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                             const gubun = row['구분'] || '정상';
                             remarkStr = remarkStr ? `${gubun} / ${remarkStr}` : gubun;
 
-                            const parseNum = (v) => {
-                                if (!v) return 0;
-                                const n = parseFloat(v);
-                                return isNaN(n) ? 0 : n;
-                            };
-
-                            const parseMinToHour = (v) => parseNum(v) / 60;
-
+                            const parseMinToHour = (v) => safeParse(v) / 60;
                             const calcDiff = (start, end) => {
                                 if (!start || !end) return 0;
                                 const [sH, sM] = start.split(':').map(Number);
@@ -303,7 +320,7 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 else failedFiles.push(`${file.name} (양식 불일치)`);
             }
 
-            if (allStandardData.length === 0) throw new Error('추출된 데이터가 0건입니다.');
+            if (allStandardData.length === 0) throw new Error('추출된 데이터가 0건입니다. 엑셀 파일 형식을 확인해 주세요.');
 
             const { error } = await supabaseClient.from('worker_attendance').insert(allStandardData);
             if (error) throw error;
