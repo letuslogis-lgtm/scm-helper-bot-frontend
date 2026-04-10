@@ -621,6 +621,7 @@ const AttendanceManagement = () => {
     const [inputValue, setInputValue] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [includeOffice, setIncludeOffice] = useState(false);
+    const [workerTypes, setWorkerTypes] = useState({});
     const [selectedVendor, setSelectedVendor] = useState('전체');
 
     const [attendanceData, setAttendanceData] = useState([]);
@@ -628,6 +629,29 @@ const AttendanceManagement = () => {
 
     const [filterType, setFilterType] = useState('D');
     const [chartFilterType, setChartFilterType] = useState('M');
+
+    React.useEffect(() => {
+        const fetchWorkerTypes = async () => {
+            try {
+                // workers 테이블에서 이름과 직종 정보만 쏙 빼옵니다.
+                const { data, error } = await supabaseClient
+                    .from('workers')
+                    .select('name, employment_type');
+
+                if (data) {
+                    const typeMap = {};
+                    data.forEach(w => {
+                        // 띄어쓰기 없이 이름을 키값으로 매핑 (예: { "홍길동": "사무직" })
+                        typeMap[w.name.replace(/\s/g, '')] = w.employment_type;
+                    });
+                    setWorkerTypes(typeMap);
+                }
+            } catch (err) {
+                console.error("직종 정보를 불러오지 못했습니다.", err);
+            }
+        };
+        fetchWorkerTypes();
+    }, []);
 
     React.useEffect(() => {
         const timer = setTimeout(() => {
@@ -744,17 +768,23 @@ const AttendanceManagement = () => {
                 if (!matchName && !matchVendor) return false;
             }
 
-            // 4. 사무직 필터 (체크박스 로직)
+            // 4. 🚩 [사무직 필터 진짜 로직으로 교체!] 
             if (!includeOffice) {
-                // '사무'라는 글자가 이름이나 비고란에 있으면 제외!
-                const isOfficeWorker = row.worker_name?.includes('사무') || row.remark?.includes('사무');
-                if (isOfficeWorker) return false;
-            }
+                // 현재 줄(row)에 있는 사원 이름에서 띄어쓰기를 뺍니다.
+                const cleanName = row.worker_name?.replace(/\s/g, '') || '';
 
-            return true; // 위 조건을 모두 통과한 진짜 데이터만 살아남습니다.
+                // 아까 만들어둔 '사전(workerTypes)'에서 이 사람의 직종을 찾습니다.
+                const empType = workerTypes[cleanName];
+
+                // DB에 저장된 값이 '사무직' 이라면 화면에서 뺍니다! 
+                if (empType === '사무직') {
+                    return false;
+                }
+            }
+            return true;
         });
-    }, [attendanceData, startDate, endDate, selectedVendor, searchTerm, includeOffice]);
-    // 👆 마지막 줄 대괄호 안에도 searchTerm으로 싹 바꿨습니다!
+    }, [attendanceData, startDate, endDate, selectedVendor, searchTerm, includeOffice, workerTypes]);
+    // 👆 마지막 줄 의존성 배열에 workerTypes를 꼭 추가해야 합니다!
 
     const sortedDetailData = React.useMemo(() => {
         let sortableItems = [...filteredDetailData];
