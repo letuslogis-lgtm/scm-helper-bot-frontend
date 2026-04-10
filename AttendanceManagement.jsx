@@ -22,7 +22,8 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
         if (nameClean.includes('바로')) return '협력사_바로서비스';
         if (nameClean.includes('하나')) return '협력사_하나물류';
         if (nameClean.includes('에프스토리') || nameClean.includes('fstory')) return '협력사_에프스토리';
-        if (nameClean.includes('도급사1') || nameClean.includes('IPC')) return '도급사1';
+        // 🚩 [수정완료] 소문자로 변환된 문자열에서 소문자 'ipc'를 찾도록 변경
+        if (nameClean.includes('도급사1') || nameClean.includes('ipc')) return '도급사1';
         if (nameClean.includes('도급사2') || nameClean.includes('한국사람들')) return '도급사2';
         return '';
     };
@@ -74,6 +75,13 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
         if (isTextFile) reader.readAsText(file, 'euc-kr');
         else reader.readAsBinaryString(file);
     });
+
+    // 🚩 [추가됨] 엑셀의 '-' 기호나 빈칸을 안전하게 0으로 바꿔주는 함수
+    const safeParse = (val) => {
+        if (!val || val === '-' || String(val).trim() === '') return 0;
+        const n = parseFloat(String(val).replace(/,/g, ''));
+        return isNaN(n) ? 0 : n;
+    };
 
     const handleUpload = async () => {
         if (files.length === 0) return alert('업로드할 파일을 추가해 주세요.');
@@ -134,41 +142,35 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 const companyType = vendorType.startsWith('협력사_') ? '사내협력사' : '외주도급사';
                 let parsedCount = 0;
 
-                // 1. IPC(도급사1)는 파일 구조가 완전히 다르므로 별도로 먼저 처리합니다.
+                // 🚩 [수정완료] IPC 전용 로직
                 if (vendorType === '도급사1' || vendorType === 'IPC') {
-                    // 인원, 연장시간, 공제시간이 적힌 행을 각각 찾습니다.
                     const manpowerRow = rows.find(r => Object.values(r).some(v => String(v).includes('인원')));
                     const overtimeRow = rows.find(r => Object.values(r).some(v => String(v).includes('연장시간')));
                     const deductionRow = rows.find(r => Object.values(r).some(v => String(v).includes('공제시간')));
 
                     if (manpowerRow) {
-                        // "02월 01일" 형태의 날짜 컬럼들만 필터링 (계 제외)
                         const dateColumns = Object.keys(manpowerRow).filter(key => key.includes('월') && key.includes('일'));
-
-                        let satData = null; // 토요일 데이터를 잠시 담아둘 변수
+                        let satData = null;
 
                         dateColumns.forEach(dateCol => {
-                            const manpower = parseFloat(manpowerRow[dateCol]) || 0;
-                            const overtime = parseFloat(overtimeRow ? overtimeRow[dateCol] : 0) || 0;
-                            const deduction = parseFloat(deductionRow ? deductionRow[dateCol] : 0) || 0;
+                            // safeParse 적용하여 에러 차단
+                            const manpower = safeParse(manpowerRow[dateCol]);
+                            const overtime = overtimeRow ? safeParse(overtimeRow[dateCol]) : 0;
+                            const deduction = deductionRow ? safeParse(deductionRow[dateCol]) : 0;
 
                             if (manpower === 0 && overtime === 0) return;
 
-                            // 요일 판별 (2026년 기준 혹은 현재 연도 기준)
                             const currentYear = new Date().getFullYear();
                             const [m, d] = dateCol.split('월').map(v => parseInt(v));
                             const dateObj = new Date(currentYear, m - 1, d);
-                            const dayOfWeek = dateObj.getDay(); // 0:일, 6:토
+                            const dayOfWeek = dateObj.getDay();
                             const formattedDate = `${currentYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-                            // --- [특이사항 로직 적용] ---
-                            // 토요일(6)이면 저장만 하고 패스
                             if (dayOfWeek === 6) {
                                 satData = { manpower, overtime, deduction, date: formattedDate };
                                 return;
                             }
 
-                            // 일요일(0)이면 토요일분 합산
                             let finalManpower = manpower;
                             let finalOvertime = overtime;
                             let finalDeduction = deduction;
@@ -177,10 +179,9 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                 finalManpower += satData.manpower;
                                 finalOvertime += satData.overtime;
                                 finalDeduction += satData.deduction;
-                                satData = null; // 합산 완료 후 비움
+                                satData = null;
                             }
 
-                            // 계산식: 정상 = (인원 * 8) - 공제, 연장 = 그대로
                             const n_hours = (finalManpower * 8) - finalDeduction;
                             const o_hours = finalOvertime;
 
@@ -201,8 +202,15 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                             parsedCount++;
                         });
                     }
-                    return; // IPC 처리가 끝났으므로 아래 일반 rows.forEach는 실행하지 않음
+
+                    if (parsedCount > 0) successFiles.push(file.name);
+                    else failedFiles.push(`${file.name} (양식 불일치)`);
+
+                    // 🚩 [수정완료] return을 쓰면 함수가 죽어버립니다. continue로 다음 파일로 넘어가야 합니다!
+                    continue;
                 }
+
+                // --- 여기부터 기존 일반 업체 로직 ---
                 rows.forEach(rawRow => {
                     const row = {};
                     for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
