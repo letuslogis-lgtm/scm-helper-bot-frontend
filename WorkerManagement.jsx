@@ -547,15 +547,18 @@ const WorkerBulkUploadModal = ({ onClose, onReload }) => {
 };
 
 // --- 🛠️ 4. 근무자 일괄 수정 모달 ---
-const WorkerBulkEditModal = ({ selectedIds, workers, onClose, onReload }) => {
-    const [updateTarget, setUpdateTarget] = useState({ vendor: false, status: false });
+const WorkerBulkEditModal = ({ selectedIds, workers, vendorList, onClose, onReload }) => {
+    // 🔥 지원 여부(support) 체크 상태 추가
+    const [updateTarget, setUpdateTarget] = useState({ vendor: false, status: false, support: false });
+
     const [companyType, setCompanyType] = useState('사내협력사');
     const [vendorName, setVendorName] = useState('');
     const [status, setStatus] = useState('재직');
+    const [supportStatus, setSupportStatus] = useState('미지원'); // 🔥 지원 여부 값 상태 추가
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSave = async () => {
-        if (!updateTarget.vendor && !updateTarget.status) return alert('변경할 대상을 체크해 주세요.');
+        if (!updateTarget.vendor && !updateTarget.status && !updateTarget.support) return alert('변경할 대상을 체크해 주세요.');
         if (updateTarget.vendor && !vendorName) return alert('변경할 소속 업체를 입력해 주세요.');
 
         setIsSaving(true);
@@ -567,6 +570,10 @@ const WorkerBulkEditModal = ({ selectedIds, workers, onClose, onReload }) => {
             }
             if (updateTarget.status) {
                 updateData.status = status;
+            }
+            // 🔥 체크되었을 경우 지원 여부 데이터도 추가
+            if (updateTarget.support) {
+                updateData.support_status = supportStatus;
             }
 
             const { error } = await supabaseClient.from('workers').update(updateData).in('id', selectedIds);
@@ -594,7 +601,8 @@ const WorkerBulkEditModal = ({ selectedIds, workers, onClose, onReload }) => {
                         현재 <span className="text-lg mx-1">{selectedIds.length}</span>명의 근무자가 선택되었습니다.
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
+                        {/* 1. 업체 변경 */}
                         <div className={`border rounded-lg p-4 transition-colors ${updateTarget.vendor ? 'border-letusBlue bg-white shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
                             <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm mb-3">
                                 <input type="checkbox" checked={updateTarget.vendor} onChange={e => setUpdateTarget({ ...updateTarget, vendor: e.target.checked })} className="w-4 h-4 accent-letusBlue" />
@@ -611,6 +619,26 @@ const WorkerBulkEditModal = ({ selectedIds, workers, onClose, onReload }) => {
                             )}
                         </div>
 
+                        {/* 🔥 2. 신규: 지원 여부 일괄 변경 */}
+                        <div className={`border rounded-lg p-4 transition-colors ${updateTarget.support ? 'border-green-500 bg-white shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
+                            <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm mb-3">
+                                <input type="checkbox" checked={updateTarget.support} onChange={e => setUpdateTarget({ ...updateTarget, support: e.target.checked })} className="w-4 h-4 accent-green-500" />
+                                지원 여부 일괄 덮어쓰기
+                            </label>
+                            {updateTarget.support && (
+                                <div className="pl-6 animate-fade-in">
+                                    <select value={supportStatus} onChange={(e) => setSupportStatus(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none w-full max-w-[200px] cursor-pointer text-gray-700">
+                                        <option value="미지원">미지원</option>
+                                        {/* (지원) 텍스트 제거 및 동적 목록 렌더링 */}
+                                        {vendorList.map(vendor => (
+                                            <option key={vendor} value={vendor}>{vendor}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 3. 상태 변경 */}
                         <div className={`border rounded-lg p-4 transition-colors ${updateTarget.status ? 'border-purple-400 bg-white shadow-sm' : 'border-gray-200 bg-gray-50'}`}>
                             <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 text-sm mb-3">
                                 <input type="checkbox" checked={updateTarget.status} onChange={e => setUpdateTarget({ ...updateTarget, status: e.target.checked })} className="w-4 h-4 accent-purple-500" />
@@ -631,7 +659,7 @@ const WorkerBulkEditModal = ({ selectedIds, workers, onClose, onReload }) => {
 
                 <div className="p-4 border-t bg-white flex justify-end gap-2">
                     <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 text-[11px] font-bold rounded hover:bg-gray-50">취소</button>
-                    <button onClick={handleSave} disabled={isSaving || (!updateTarget.vendor && !updateTarget.status)} className="px-5 py-2 bg-letusBlue text-white text-[11px] font-bold rounded hover:bg-blue-600 flex items-center gap-1.5 disabled:opacity-50">
+                    <button onClick={handleSave} disabled={isSaving || (!updateTarget.vendor && !updateTarget.status && !updateTarget.support)} className="px-5 py-2 bg-letusBlue text-white text-[11px] font-bold rounded hover:bg-blue-600 flex items-center gap-1.5 disabled:opacity-50">
                         {isSaving ? '적용 중...' : '선택 대상 일괄 적용'}
                     </button>
                 </div>
