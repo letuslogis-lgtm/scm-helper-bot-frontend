@@ -946,7 +946,7 @@ const WorkerManagement = () => {
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-10 min-h-0">
                 <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap min-w-max">
-                        <thead className="bg-slate-50/90 backdrop-blur-sm border-b border-gray-200 text-[11px] text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
+                        <thead className="bg-slate-50/90 backdrop-blur-sm border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             {/* 🔥 헤더 전체 가운데 정렬 & 클릭 정렬 로직 적용 */}
                             <tr>
                                 <th className="p-4 pl-5 w-10 text-center"><input type="checkbox" checked={isAllSelected} onChange={toggleAll} className="w-4 h-4 accent-letusBlue cursor-pointer" /></th>
