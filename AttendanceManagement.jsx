@@ -1,6 +1,7 @@
 const { useState, useEffect, useMemo } = React;
 
 const supabaseClient = window.supabase;
+const { TableSkeleton, formatDateTime, Recharts } = window;
 
 // ✖️ 공통으로 사용할 닫기 아이콘 컴포넌트
 const CloseIcon = () => (
