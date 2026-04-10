@@ -25,14 +25,14 @@ const TodoModal = ({ todo, onClose, onSave, onDelete }) => {
     const handleSubmit = () => {
         if (!text.trim()) return alert('할 일을 입력해 주세요.');
 
-        // 🚩 [핵심 수정] 선택된 요일이 0개면 빈 배열([]) 대신 null을 저장합니다.
+        // 🔥 선택된 요일이 0개면 빈 배열([]) 대신 null 저장
         const finalRepeat = repeat.length > 0 ? repeat : null;
 
         onSave({
             id: todo ? todo.id : Date.now(),
             text: text.trim(),
             priority,
-            repeat: finalRepeat, // 👈 헷갈리는 배열 대신 깔끔한 finalRepeat 적용!
+            repeat: finalRepeat,
             isDone: todo ? todo.isDone : false
         });
     };
@@ -50,7 +50,6 @@ const TodoModal = ({ todo, onClose, onSave, onDelete }) => {
                 </div>
 
                 <div className="p-5 space-y-4">
-                    {/* 1. 할 일 텍스트 */}
                     <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-bold text-gray-700">할 일 <span className="text-letusOrange">*</span></label>
                         <input
@@ -60,7 +59,6 @@ const TodoModal = ({ todo, onClose, onSave, onDelete }) => {
                         />
                     </div>
 
-                    {/* 2. 우선 순위 */}
                     <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-bold text-gray-700">우선 순위</label>
                         <select value={priority} onChange={e => setPriority(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-letusBlue bg-white cursor-pointer font-bold">
@@ -72,7 +70,6 @@ const TodoModal = ({ todo, onClose, onSave, onDelete }) => {
                         </select>
                     </div>
 
-                    {/* 3. 반복 여부 */}
                     <div className="flex flex-col gap-1.5 pt-1">
                         <div className="flex justify-between items-end mb-1">
                             <label className="text-xs font-bold text-gray-700">반복 설정 (요일)</label>
@@ -96,7 +93,6 @@ const TodoModal = ({ todo, onClose, onSave, onDelete }) => {
                     </div>
                 </div>
 
-                {/* 4. 하단 버튼 (좌측 삭제, 우측 취소/저장) */}
                 <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
                     <div>
                         {todo && (
@@ -127,7 +123,6 @@ const CalendarEventModal = ({ selectedDate, onClose, onSave }) => {
     const [collabTeams, setCollabTeams] = useState('');
     const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
-    // 00:00 부터 23:30까지 30분 단위 생성
     const timeOptions = useMemo(() => {
         const opts = [];
         for (let i = 0; i < 24; i++) {
@@ -237,7 +232,6 @@ const CalendarEventModal = ({ selectedDate, onClose, onSave }) => {
     );
 };
 
-
 // 3. 팀 조회/검색 모달
 const TeamSearchModal = ({ initialTeams, onApply, onClose }) => {
     const [query, setQuery] = useState('');
@@ -252,7 +246,6 @@ const TeamSearchModal = ({ initialTeams, onApply, onClose }) => {
         const fetchTeams = async () => {
             setIsLoading(true);
             try {
-                // DB 프로필 테이블에서 유저들의 '팀' 정보만 긁어와 중복 제거 후 리스트업
                 const { data, error } = await supabase.from('profiles').select('team');
                 if (error) throw error;
                 const uniqueTeams = [...new Set(data.map(d => d.team).filter(Boolean))].sort();
@@ -330,7 +323,7 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
     });
 
     const [todos, setTodos] = useState([]);
-    const [todoDoneLogs, setTodoDoneLogs] = useState({}); // 🔥 날짜별 완료 기록 상태
+    const [todoDoneLogs, setTodoDoneLogs] = useState({});
 
     const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
     const [editingTodo, setEditingTodo] = useState(null);
@@ -398,7 +391,7 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                     setCalendarEvents(formattedEvents);
                 }
 
-                // 📝 TODO 마스터 리스트 불러오기 
+                // 📝 TODO 마스터 리스트 불러오기 (🔥 createdAt 매핑 추가!)
                 const { data: todoData, error: todoError } = await supabase
                     .from('todos')
                     .select('*')
@@ -411,12 +404,13 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                         text: t.text,
                         priority: t.priority,
                         isDone: t.is_done,
-                        repeat: t.repeat_days || []
+                        repeat: t.repeat_days || [],
+                        createdAt: t.created_at ? t.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
                     }));
                     setTodos(formattedTodos);
                 }
 
-                // ✅ TODO 날짜별 완료 로그 불러오기 (try 블록 안쪽에 안전하게 위치!)
+                // ✅ TODO 날짜별 완료 로그 불러오기
                 const { data: logData, error: logError } = await supabase
                     .from('todo_logs')
                     .select('todo_id, completed_date')
@@ -450,11 +444,13 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
             if (editingTodo) {
                 const { error } = await supabase.from('todos').update(todoPayload).eq('id', savedTodo.id);
                 if (error) throw error;
-                setTodos(todos.map(t => t.id === savedTodo.id ? savedTodo : t));
+                // 기존 createdAt 유지
+                setTodos(todos.map(t => t.id === savedTodo.id ? { ...savedTodo, createdAt: t.createdAt } : t));
             } else {
                 const { data, error } = await supabase.from('todos').insert([todoPayload]).select();
                 if (error) throw error;
-                if (data && data.length > 0) setTodos([{ ...savedTodo, id: data[0].id }, ...todos]);
+                // 새롭게 생성된 createdAt 추출
+                if (data && data.length > 0) setTodos([{ ...savedTodo, id: data[0].id, createdAt: data[0].created_at ? data[0].created_at.split('T')[0] : new Date().toISOString().split('T')[0] }, ...todos]);
             }
             setIsTodoModalOpen(false);
             setEditingTodo(null);
@@ -469,9 +465,9 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
         } catch (err) { alert('삭제 실패: ' + err.message); }
     };
 
-    // 🔥 3. 완료 상태 토글 (DB 연동) - 한국 시간(KST) 기준 날짜 추출로 변경!
+    // 🔥 완료 상태 토글
     const toggleTodoDone = async (id) => {
-        const pad = n => String(n).padStart(2, '0'); // toISOString 대신 직접 한국 날짜 포맷팅
+        const pad = n => String(n).padStart(2, '0');
         const dateStr = `${selectedTodoDate.getFullYear()}-${pad(selectedTodoDate.getMonth() + 1)}-${pad(selectedTodoDate.getDate())}`;
 
         const logKey = `${id}_${dateStr}`;
@@ -492,20 +488,31 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
         } catch (err) { alert('상태 변경 실패: ' + err.message); }
     };
 
+    // 🔥 [핵심 수정] 선택된 날짜에 맞게 필터링 및 동적 정렬(로그 기반)
+    const padDate = n => String(n).padStart(2, '0');
+    const selectedDateStr = `${selectedTodoDate.getFullYear()}-${padDate(selectedTodoDate.getMonth() + 1)}-${padDate(selectedTodoDate.getDate())}`;
+    const dayOfWeekStrForSelected = ['일', '월', '화', '수', '목', '금', '토'][selectedTodoDate.getDay()];
+    
     const priorityWeight = { '긴급': 0, '1': 1, '2': 2, '3': 3, '4': 4 };
-    const sortedTodos = [...todos].sort((a, b) => {
-        // 0순위: 완료 여부 확인 (완료된 항목은 무조건 맨 뒤로)
-        // 💡 주의: 기훈님 DB/상태에 있는 체크박스 속성명(is_completed, checked 등)에 맞게 수정해주세요!
-        if (a.is_done !== b.is_done) {
-            return a.is_completed ? 1 : -1;
-        }
 
-        // 1순위: 기존 중요도 정렬
+    // 1. 선택된 날짜에 보이는 TODO 필터링
+    const filteredTodosForSelected = todos.filter(todo => {
+        // 반복 요일이 없는 일반 TODO는 생성된 날짜(createdAt)에만 딱! 나타나도록 수정
+        if (!todo.repeat || todo.repeat.length === 0) return todo.createdAt === selectedDateStr;
+        return todo.repeat.includes(dayOfWeekStrForSelected);
+    });
+
+    // 2. 화면에 그릴 때, '해당 날짜의 완료 로그(todoDoneLogs)'를 기준으로 즉시 정렬
+    const sortedAndFilteredTodos = [...filteredTodosForSelected].sort((a, b) => {
+        const aCompleted = !!todoDoneLogs[`${a.id}_${selectedDateStr}`];
+        const bCompleted = !!todoDoneLogs[`${b.id}_${selectedDateStr}`];
+
+        if (aCompleted !== bCompleted) return aCompleted ? 1 : -1; // 완료된 건 맨 뒤로
+
         const pA = priorityWeight[a.priority] ?? 4;
         const pB = priorityWeight[b.priority] ?? 4;
         if (pA !== pB) return pA - pB;
 
-        // 2순위: 기존 최신순 정렬
         return b.id - a.id;
     });
 
@@ -545,22 +552,19 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
         } catch (err) { alert('삭제 실패: ' + err.message); }
     };
 
-    // 🔥 신규: 드래그 앤 드롭으로 일정 날짜 변경 (DB 연동)
     const handleDropEvent = async (e, targetDateStr) => {
         e.preventDefault();
-        const eventId = e.dataTransfer.getData('text/plain'); // 드래그한 일정 ID 가져오기
+        const eventId = e.dataTransfer.getData('text/plain');
         if (!eventId) return;
 
         const targetEvent = calendarEvents.find(ev => ev.id.toString() === eventId);
         if (!targetEvent) return;
 
-        // 기존 일정의 기간(며칠짜리인지) 계산
         const oldStart = new Date(targetEvent.startDate);
         const oldEnd = new Date(targetEvent.endDate);
         const diffTime = Math.abs(oldEnd - oldStart);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        // 새로운 시작일과 그에 맞춘 종료일 계산
         const newStart = new Date(targetDateStr);
         const newEnd = new Date(newStart);
         newEnd.setDate(newEnd.getDate() + diffDays);
@@ -570,7 +574,6 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
         const newEndDateStr = `${newEnd.getFullYear()}-${pad(newEnd.getMonth() + 1)}-${pad(newEnd.getDate())}`;
 
         try {
-            // DB에 변경된 날짜 업데이트
             const { error } = await supabase
                 .from('calendar_events')
                 .update({ start_date: newStartDateStr, end_date: newEndDateStr })
@@ -578,7 +581,6 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
 
             if (error) throw error;
 
-            // 화면(상태) 즉시 반영
             setCalendarEvents(calendarEvents.map(ev =>
                 ev.id === targetEvent.id ? { ...ev, startDate: newStartDateStr, endDate: newEndDateStr } : ev
             ));
@@ -678,7 +680,6 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
     return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-6 max-w-[1600px] mx-auto">
 
-            {/* 🔥 1. 상단 배너 (우측 정렬 및 슬림화) */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-6 py-4 md:px-8 md:py-5 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden shrink-0">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-50 to-transparent rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
 
@@ -706,24 +707,13 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 flex-1 min-h-[400px]">
 
-                {/* 🔥 2. TO DO 구역 (날짜 연동 및 로그 적용) */}
+                {/* 🔥 TO DO 리스트 구역 */}
                 <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col h-full relative">
                     <div className="flex justify-between items-center mb-5 shrink-0">
                         <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
                             📝 {selectedTodoDate.getDate() === new Date().getDate() && selectedTodoDate.getMonth() === new Date().getMonth() ? '오늘' : `${selectedTodoDate.getMonth() + 1}/${selectedTodoDate.getDate()}`}의 TODO
-
                             {(() => {
-                                const dayOfWeekStr = ['일', '월', '화', '수', '목', '금', '토'][selectedTodoDate.getDay()];
-                                const filteredTodosForDate = sortedTodos.filter(todo => {
-                                    if (!todo.repeat || todo.repeat.length === 0) return true;
-                                    return todo.repeat.includes(dayOfWeekStr);
-                                });
-
-                                // 🔥 시차 버그 수정: 한국 시간 기준 YYYY-MM-DD 추출
-                                const pad = n => String(n).padStart(2, '0');
-                                const dateStr = `${selectedTodoDate.getFullYear()}-${pad(selectedTodoDate.getMonth() + 1)}-${pad(selectedTodoDate.getDate())}`;
-                                const remainingCount = filteredTodosForDate.filter(t => !todoDoneLogs[`${t.id}_${dateStr}`]).length;
-
+                                const remainingCount = sortedAndFilteredTodos.filter(t => !todoDoneLogs[`${t.id}_${selectedDateStr}`]).length;
                                 return <span className="bg-blue-50 text-letusBlue text-[10px] px-2 py-0.5 rounded font-black">{remainingCount}개 남음</span>;
                             })()}
                         </h3>
@@ -733,27 +723,14 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2.5">
-                        {(() => {
-                            const dayOfWeekStr = ['일', '월', '화', '수', '목', '금', '토'][selectedTodoDate.getDay()];
-                            const filteredTodosForDate = sortedTodos.filter(todo => {
-                                if (!todo.repeat || todo.repeat.length === 0) return true;
-                                return todo.repeat.includes(dayOfWeekStr);
-                            });
-
-                            if (filteredTodosForDate.length === 0) {
-                                return (
-                                    <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
-                                        <span className="text-3xl mb-2">💡</span>
-                                        <span className="text-[11px] font-bold">이 날짜에 등록된 할 일이 없습니다.</span>
-                                    </div>
-                                );
-                            }
-
-                            return filteredTodosForDate.map(todo => {
-                                // 🔥 시차 버그 수정: 한국 시간 기준 YYYY-MM-DD 추출
-                                const pad = n => String(n).padStart(2, '0');
-                                const dateStr = `${selectedTodoDate.getFullYear()}-${pad(selectedTodoDate.getMonth() + 1)}-${pad(selectedTodoDate.getDate())}`;
-                                const isCompleted = !!todoDoneLogs[`${todo.id}_${dateStr}`];
+                        {sortedAndFilteredTodos.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
+                                <span className="text-3xl mb-2">💡</span>
+                                <span className="text-[11px] font-bold">이 날짜에 등록된 할 일이 없습니다.</span>
+                            </div>
+                        ) : (
+                            sortedAndFilteredTodos.map(todo => {
+                                const isCompleted = !!todoDoneLogs[`${todo.id}_${selectedDateStr}`];
 
                                 return (
                                     <div key={todo.id} className={`flex flex-col p-3 rounded-lg border transition-all ${isCompleted ? 'bg-gray-50 border-gray-100 opacity-70' : 'bg-white border-gray-200 hover:border-letusBlue/50 hover:shadow-sm'}`}>
@@ -780,12 +757,12 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                         </div>
                                     </div>
                                 );
-                            });
-                        })()}
+                            })
+                        )}
                     </div>
                 </div>
 
-                {/* 🔥 3. 달력 구역 */}
+                {/* 🔥 달력 구역 */}
                 <div className="lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col h-full relative">
                     <div className="flex justify-between items-center mb-5 shrink-0">
                         <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">📅 업무 캘린더</h3>
@@ -797,7 +774,6 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                     </div>
 
                     <div className="flex-1 flex flex-col border border-gray-100 rounded-lg overflow-hidden bg-gray-50/30">
-                        {/* 🔥 요일 크기 증가 text-[10px] -> text-[12px] */}
                         <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-100/50 shrink-0">
                             {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
                                 <div key={day} className={`py-2 text-center text-[12px] font-black ${i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-gray-500'}`}>{day}</div>
@@ -813,9 +789,10 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                 const dayOfWeekStr = ['일', '월', '화', '수', '목', '금', '토'][new Date(currentDate.getFullYear(), currentDate.getMonth(), day).getDay()];
 
                                 const dayEvents = calendarEvents.filter(e => dateStr >= e.startDate && dateStr <= e.endDate);
+                                
+                                // 🔥 달력 점 찍기 최적화: 반복 아니면 생성일에만 표시!
                                 const dayTodos = todos.filter(t => {
-                                    // 🔥 반복 요일이 없으면 모든 날짜에 점이 찍히도록(true) 수정!
-                                    if (!t.repeat || t.repeat.length === 0) return true;
+                                    if (!t.repeat || t.repeat.length === 0) return t.createdAt === dateStr;
                                     return t.repeat.includes(dayOfWeekStr);
                                 });
 
@@ -823,7 +800,6 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                     <div
                                         key={day}
                                         onClick={() => setSelectedTodoDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))}
-                                        // 🔥 추가: 해당 날짜 칸을 '드롭 가능 구역'으로 만듦
                                         onDragOver={(e) => e.preventDefault()}
                                         onDrop={(e) => {
                                             const pad = n => String(n).padStart(2, '0');
@@ -835,12 +811,10 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                             : ''
                                             }`}
                                     >
-                                        {/* 1. 날짜 표시 */}
                                         <span className={`text-[13px] font-bold w-7 h-7 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-letusBlue text-white shadow-sm' : 'text-gray-600'}`}>
                                             {day}
                                         </span>
 
-                                        {/* 2. TODO 점 표시 */}
                                         {dayTodos.length > 0 && (
                                             <div className="flex gap-1 mb-1 px-1 mt-0.5">
                                                 {dayTodos.slice(0, 5).map((t, i) => {
@@ -853,7 +827,6 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                             </div>
                                         )}
 
-                                        {/* 3. 캘린더 일정 바 */}
                                         <div className="flex flex-col gap-0.5 overflow-hidden flex-1">
                                             {dayEvents.slice(0, 2).map((ev, idx) => (
                                                 <div
@@ -862,7 +835,6 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                                         e.stopPropagation();
                                                         setDayEventsModalData({ isOpen: true, dateStr, events: dayEvents, todos: dayTodos });
                                                     }}
-                                                    // 🔥 추가: 일정을 드래그할 수 있게 만들고(draggable), 집어들 때 ID를 저장
                                                     draggable
                                                     onDragStart={(e) => {
                                                         e.stopPropagation();
@@ -875,7 +847,6 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                                 </div>
                                             ))}
 
-                                            {/* 더보기 버튼 */}
                                             {(dayEvents.length > 2) && (
                                                 <div
                                                     onClick={(e) => {
@@ -889,7 +860,6 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                             )}
                                         </div>
 
-                                        {/* 우측 상단 일정 추가 버튼 */}
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -954,13 +924,11 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                 />
             )}
 
-            {/* 🔥 상세 일정/TODO 보기 모달 (더보기 버튼 클릭 시 뜸) */}
             {dayEventsModalData.isOpen && (
                 <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
                     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setDayEventsModalData({ isOpen: false, dateStr: '', events: [], todos: [] })}></div>
                     <div className="bg-white rounded-xl shadow-2xl z-10 w-full max-w-sm slide-up border border-gray-100 overflow-hidden flex flex-col max-h-[80vh]">
                         <div className="p-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
-                            {/* 🔥 모달 제목 크기 증가 text-sm -> text-base */}
                             <h3 className="font-bold text-base text-gray-800 flex items-center gap-2">
                                 <span className="w-1.5 h-4 bg-letusBlue rounded-full"></span>
                                 {dayEventsModalData.dateStr} 일정 상세
@@ -975,7 +943,6 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
 
                             {dayEventsModalData.events.length > 0 && (
                                 <div className="flex flex-col gap-2">
-                                    {/* 🔥 리스트 제목 크기 증가 text-xs -> text-sm */}
                                     <h4 className="text-sm font-black text-gray-500 border-b pb-1 mb-1">📅 등록된 일정</h4>
                                     {dayEventsModalData.events.map(ev => (
                                         <div key={ev.id} className={`p-3 rounded-lg border flex flex-col gap-1 relative group ${ev.isImportant ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'}`}>
@@ -988,15 +955,12 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                             </button>
 
                                             <div className="flex items-center justify-between">
-                                                {/* 🔥 시간 라벨 크기 증가 text-[10px] -> text-xs */}
                                                 <span className={`text-xs font-black px-1.5 py-0.5 rounded ${ev.isImportant ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-letusBlue'}`}>
                                                     {ev.startTime} ~ {ev.endTime}
                                                 </span>
                                                 {ev.collabTeams && <span className="text-[11px] text-gray-500 font-bold truncate max-w-[100px] mr-8">협업: {ev.collabTeams}</span>}
                                             </div>
-                                            {/* 🔥 일정 제목 크기 증가 text-xs -> text-sm */}
                                             <span className="text-sm font-bold text-gray-800 mt-1 pr-6">{ev.title}</span>
-                                            {/* 🔥 일정 내용 크기 증가 text-[10px] -> text-xs */}
                                             {ev.description && <span className="text-xs text-gray-600 mt-0.5">{ev.description}</span>}
                                         </div>
                                     ))}
@@ -1005,8 +969,7 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
 
                             {dayEventsModalData.todos.length > 0 && (
                                 <div className="flex flex-col gap-2 mt-2">
-                                    {/* 🔥 리스트 제목 크기 증가 text-xs -> text-sm */}
-                                    <h4 className="text-sm font-black text-gray-500 border-b pb-1 mb-1">📝 해당 요일 반복 TODO</h4>
+                                    <h4 className="text-sm font-black text-gray-500 border-b pb-1 mb-1">📝 해당 일자 TODO</h4>
                                     {dayEventsModalData.todos.map(todo => {
                                         const dateStr = selectedTodoDate.toISOString().split('T')[0];
                                         const isCompleted = !!todoDoneLogs[`${todo.id}_${dateStr}`];
@@ -1018,9 +981,7 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                                     onChange={() => toggleTodoDone(todo.id)}
                                                     className="w-4 h-4 accent-letusBlue shrink-0 cursor-pointer"
                                                 />
-                                                {/* 🔥 TODO 내용 크기 증가 text-xs -> text-sm */}
                                                 <span className={`text-sm font-bold ${isCompleted ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{todo.text}</span>
-                                                {/* 🔥 긴급 라벨 크기 증가 text-[9px] -> text-[11px] */}
                                                 {todo.priority === '긴급' && <span className="ml-auto bg-red-100 text-red-600 text-[11px] font-black px-1.5 py-0.5 rounded-sm">긴급</span>}
                                             </div>
                                         )
