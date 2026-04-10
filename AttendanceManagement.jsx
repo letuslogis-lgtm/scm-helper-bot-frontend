@@ -29,6 +29,19 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
     const [manualVendor, setManualVendor] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [holidayList, setHolidayList] = useState([]);
+
+    React.useEffect(() => {
+        const fetchHolidays = async () => {
+            try {
+                const { data, error } = await supabaseClient.from('company_holidays').select('holiday_date');
+                if (data) setHolidayList(data.map(h => h.holiday_date));
+            } catch (err) {
+                console.error("휴일 데이터를 불러오지 못했습니다.", err);
+            }
+        };
+        fetchHolidays();
+    }, []);
 
     const detectVendor = (fileName) => {
         const nameClean = fileName.toLowerCase().replace(/\s/g, '');
@@ -118,20 +131,17 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 const exactVendor = vendorType.replace('협력사_', '');
                 const companyType = vendorType.startsWith('협력사_') ? '사내협력사' : '외주도급사';
 
-                // 🚩 [궁극의 해결책] IPC(도급사1) 전용 가로(2D 배열) 파싱 로직
+                // 🚩 IPC(도급사1) 전용 가로(2D 배열) 파싱 로직
                 if (vendorType === '도급사1' || vendorType === 'IPC') {
                     if (isTextFile) {
                         failedFiles.push(`${file.name} (IPC는 엑셀 양식만 지원)`);
                         continue;
                     }
-
+                    
                     let wb = XLSX.read(data, { type: 'binary' });
                     let sheetName = wb.SheetNames[0];
-
-                    // 핵심: header: 1 옵션을 써서 병합 셀을 무시하고, 날짜 텍스트 그대로(raw: false) 가져옵니다.
                     const raw2D = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: false, defval: '' });
 
-                    // 행 통째로 찾기
                     const dateRowArr = raw2D.find(arr => arr.some(v => String(v).includes('월') && String(v).includes('일')));
                     const manpowerRowArr = raw2D.find(arr => arr.some(v => String(v).replace(/\s/g, '') === '인원'));
                     const overtimeRowArr = raw2D.find(arr => arr.some(v => String(v).replace(/\s/g, '') === '연장시간'));
@@ -143,46 +153,54 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     }
 
                     let parsedCountInFile = 0;
-                    let satData = null; // 토요일 데이터 임시 보관소
+                    // 👇 변수명을 satData에서 nonWorkingTemp(쉬는 날 묶음)으로 변경했습니다.
+                    let nonWorkingTemp = null; 
 
-                    // 찾아낸 날짜 행을 가로로 쭉 스캔
                     dateRowArr.forEach((dateStr, colIdx) => {
-                        const val = String(dateStr).replace(/\s+/g, ''); // 공백 제거
+                        const val = String(dateStr).replace(/\s+/g, ''); 
                         const match = val.match(/(\d+)월(\d+)일/);
-                        if (!match) return; // '구분', '계' 같은 빈칸이나 텍스트는 무시
+                        if (!match) return; 
 
-                        // 위아래 위치(colIdx)가 똑같은 칸의 데이터를 가져옴 (안전한 숫자 변환 적용)
                         const manpower = safeParse(manpowerRowArr[colIdx]);
                         const overtime = overtimeRowArr ? safeParse(overtimeRowArr[colIdx]) : 0;
                         const deduction = deductionRowArr ? safeParse(deductionRowArr[colIdx]) : 0;
 
                         if (manpower === 0 && overtime === 0) return;
 
-                        // 날짜 생성
                         const currYear = new Date().getFullYear();
                         const m = parseInt(match[1], 10);
                         const d = parseInt(match[2], 10);
                         const dateObj = new Date(currYear, m - 1, d);
-                        const dayOfWeek = dateObj.getDay(); // 0:일, 6:토
+                        const dayOfWeek = dateObj.getDay(); 
                         const formattedDate = `${currYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-                        // 토요일(6) 저장 후 패스
-                        if (dayOfWeek === 6) {
-                            satData = { manpower, overtime, deduction, date: formattedDate };
-                            return;
+                        // 👇👇 [핵심 로직] 주말(토, 일)이거나 Supabase에 등록된 휴일인지 판별!
+                        const isNonWorkingDay = (dayOfWeek === 6 || dayOfWeek === 0 || holidayList.includes(formattedDate));
+
+                        if (isNonWorkingDay) {
+                            // 쉬는 날이면 주머니에 계속 합산해 둡니다. (연휴가 3일이든 4일이든 다 더해짐)
+                            if (!nonWorkingTemp) {
+                                nonWorkingTemp = { manpower, overtime, deduction, date: formattedDate };
+                            } else {
+                                nonWorkingTemp.manpower += manpower;
+                                nonWorkingTemp.overtime += overtime;
+                                nonWorkingTemp.deduction += deduction;
+                            }
+                            return; // 평일이 나올 때까지 다음 날짜로 넘어감
                         }
 
-                        // 일요일(0) 합산
+                        // 평일(일하는 날)을 만나면 주머니에 쌓인 데이터를 모두 털어서 합칩니다.
                         let finalManpower = manpower;
                         let finalOvertime = overtime;
                         let finalDeduction = deduction;
 
-                        if (dayOfWeek === 0 && satData) {
-                            finalManpower += satData.manpower;
-                            finalOvertime += satData.overtime;
-                            finalDeduction += satData.deduction;
-                            satData = null;
+                        if (nonWorkingTemp) {
+                            finalManpower += nonWorkingTemp.manpower;
+                            finalOvertime += nonWorkingTemp.overtime;
+                            finalDeduction += nonWorkingTemp.deduction;
+                            nonWorkingTemp = null; // 주머니 비우기
                         }
+                        // 👆👆 여기까지 👆👆
 
                         const n_hours = (finalManpower * 8) - finalDeduction;
                         const o_hours = finalOvertime;
@@ -206,8 +224,8 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
 
                     if (parsedCountInFile > 0) successFiles.push(file.name);
                     else failedFiles.push(`${file.name} (데이터 0건)`);
-
-                    continue; // 🚩 IPC 처리가 끝났으니 다음 엑셀 파일로 넘어갑니다!
+                    
+                    continue; 
                 }
 
                 // --- 🚩 여기서부터는 기존 일반 업체 (협력사, 도급사2) 로직 ---
