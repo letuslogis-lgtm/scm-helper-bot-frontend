@@ -737,10 +737,10 @@ const AttendanceManagement = () => {
             // 2. 업체 탭 필터 (기존 기훈님 로직 유지)
             if (selectedVendor !== '전체' && row.company_type !== selectedVendor) return false;
 
-            // 3. 검색어 필터 (디바운스로 버벅임 해결!)
-            if (deferredSearchTerm) {
-                const matchName = row.worker_name?.includes(deferredSearchTerm);
-                const matchVendor = row.vendor_name?.includes(deferredSearchTerm) || row.worked_vendor?.includes(deferredSearchTerm);
+            // 3. 🚩 검색어 필터 (여기를 searchTerm으로 고쳤습니다!)
+            if (searchTerm) {
+                const matchName = row.worker_name?.includes(searchTerm);
+                const matchVendor = row.vendor_name?.includes(searchTerm) || row.worked_vendor?.includes(searchTerm);
                 if (!matchName && !matchVendor) return false;
             }
 
@@ -753,7 +753,8 @@ const AttendanceManagement = () => {
 
             return true; // 위 조건을 모두 통과한 진짜 데이터만 살아남습니다.
         });
-    }, [attendanceData, startDate, endDate, selectedVendor, deferredSearchTerm, includeOffice]);
+    }, [attendanceData, startDate, endDate, selectedVendor, searchTerm, includeOffice]);
+    // 👆 마지막 줄 대괄호 안에도 searchTerm으로 싹 바꿨습니다!
 
     const sortedDetailData = React.useMemo(() => {
         let sortableItems = [...filteredDetailData];
