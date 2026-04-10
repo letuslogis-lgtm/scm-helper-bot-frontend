@@ -179,6 +179,8 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
                                     <option value="안성센터">안성센터</option>
                                     <option value="평택센터">평택센터</option>
                                     <option value="음성센터">음성센터</option>
+                                    <option value="동부센터">동부센터</option>
+                                    <option value="서부센터">서부센터</option>
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
@@ -371,6 +373,8 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
                                     <option value="안성센터">안성센터</option>
                                     <option value="평택센터">평택센터</option>
                                     <option value="음성센터">음성센터</option>
+                                    <option value="동부센터">동부센터</option>
+                                    <option value="서부센터">서부센터</option>
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
