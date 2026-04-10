@@ -6,38 +6,21 @@ const { useState, useEffect, useMemo, useRef } = React;
 
 // 1. 오늘의 할 일(To-do) 관리 모달
 const TodoModal = ({ todo, onClose, onSave, onDelete }) => {
-
     const [text, setText] = useState(todo ? todo.text : '');
-
     const [priority, setPriority] = useState(todo ? todo.priority : '4');
-
     const [repeat, setRepeat] = useState(todo && todo.repeat ? todo.repeat : []);
-
-
 
     const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
-
-
     const handleToggleDay = (day) => {
-
         if (repeat.includes(day)) setRepeat(repeat.filter(d => d !== day));
-
         else setRepeat([...repeat, day]);
-
     };
-
-
 
     const handleSelectAllDays = () => {
-
         if (repeat.length === 7) setRepeat([]); // 모두 선택되어 있으면 전체 해제
-
         else setRepeat([...DAYS]); // 아니면 전체 선택
-
     };
-
-
 
     const handleSubmit = () => {
         if (!text.trim()) return alert('할 일을 입력해 주세요.');
