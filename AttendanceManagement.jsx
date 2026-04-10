@@ -105,6 +105,22 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
         let failedFiles = [];
 
         try {
+            // 🚩 [추가 1] 마스터 데이터(근무자 관리) 불러오기
+            const { data: workerMaster, error: masterError } = await supabaseClient
+                .from('workers')
+                .select('name, support_status, managed_brand');
+            
+            // 이름(name)을 키값으로 하는 빠른 검색용 사전(Map) 만들기
+            const workerMap = {};
+            if (workerMaster) {
+                workerMaster.forEach(w => {
+                    workerMap[w.name.replace(/\s/g, '')] = { 
+                        supportVendor: w.support_vendor, 
+                        brand: w.assigned_brand 
+                    };
+                });
+            }
+            
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 const vendorType = (files.length === 1 && manualVendor) ? manualVendor : detectVendor(file.name);
@@ -187,7 +203,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                             finalDeduction += nonWorkingTemp.deduction;
                             nonWorkingTemp = null; // 주머니 비우기
                         }
-                        // 👆👆 여기까지 👆👆
 
                         const n_hours = (finalManpower * 8) - finalDeduction;
                         const o_hours = finalOvertime;
@@ -253,6 +268,8 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 }
 
                 let parsedCount = 0;
+                // --- 🚩 여기서부터 일반 업체 (협력사, 도급사2) 로직 ---
+                let parsedCount = 0;
                 rows.forEach(rawRow => {
                     const row = {};
                     for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
@@ -261,19 +278,58 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     const nameVal = row['사원명'] || row['근로자명'] || row['구분'] || '';
                     if (!nameVal || nameVal === '계') return;
 
+                    // 💡 [핵심] 여기서 딱 한 번만 이름을 검색해둡니다!
+                    const cleanName = nameVal.replace(/\s/g, '');
+                    const masterInfo = workerMap[cleanName];
+                    
+                    // 마스터에 지원 여부(support_status)가 있으면 1순위, 없으면 엑셀 업체명(exactVendor)
+                    const actualWorkedVendor = masterInfo?.supportVendor ? masterInfo.supportVendor : exactVendor;
+                    const assignedBrand = masterInfo?.brand || '';
+
+                    // 1️⃣ 도급사2 로직
                     if (vendorType === '도급사2') {
                         const dateColumns = Object.keys(row).filter(key => key.includes('월') && key.includes('일'));
                         dateColumns.forEach(dateCol => {
                             const workValue = row[dateCol];
                             if (workValue) {
                                 allStandardData.push({
-                                    work_date: dateCol, company_type: companyType, vendor_name: exactVendor, worked_vendor: exactVendor,
-                                    worker_name: nameVal, start_time: '', end_time: '',
-                                    work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8, remark: `기록: ${workValue}`
+                                    work_date: dateCol, 
+                                    company_type: companyType, 
+                                    vendor_name: exactVendor, 
+                                    worked_vendor: actualWorkedVendor, // 👈 지원업체 적용!
+                                    worker_name: nameVal, 
+                                    start_time: '', end_time: '',
+                                    work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8, 
+                                    remark: assignedBrand ? `[${assignedBrand}] 기록: ${workValue}` : `기록: ${workValue}` // 👈 브랜드 적용!
                                 });
                                 parsedCount++;
                             }
                         });
+                    } 
+                    // 2️⃣ 그 외 (사내협력사 등) 로직
+                    else if (dateVal) {
+                        let startTime = row['출근시간'] || row['출근'] || '';
+                        let endTime = row['퇴근시간'] || row['퇴근'] || '';
+                        let remarkStr = row['이상유무'] || row['비고'] || '';
+
+                        // (중간 시간 계산 로직 p_over, calcDiff 등은 기존 코드 그대로 유지... 생략)
+
+                        // 👇 [주의] 이 부분은 기존 기훈님의 if (gubun === '정상') 등 시간 계산 로직이 끝난 직후, 맨 마지막에 push 하는 부분입니다.
+                        if (startTime || endTime || w_hours > 0) {
+                            allStandardData.push({
+                                work_date: dateVal.replace(/\./g, '-'), 
+                                company_type: companyType, 
+                                vendor_name: exactVendor, 
+                                worked_vendor: actualWorkedVendor, // 👈 지원업체 적용!
+                                worker_name: nameVal, 
+                                start_time: startTime, end_time: endTime,
+                                work_hours: w_hours, normal_hours: n_hours, overtime_hours: o_hours, weighted_hours: weight_hours,
+                                remark: assignedBrand ? `[${assignedBrand}] ${remarkStr}` : remarkStr // 👈 브랜드 적용!
+                            });
+                        }
+                        parsedCount++;
+                    }
+                });
                     } else if (dateVal) {
                         let startTime = row['출근시간'] || row['출근'] || '';
                         let endTime = row['퇴근시간'] || row['퇴근'] || '';
@@ -582,6 +638,7 @@ const AttendanceManagement = () => {
 
     const [inputValue, setInputValue] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [includeOffice, setIncludeOffice] = useState(false);
     const [selectedVendor, setSelectedVendor] = useState('전체');
 
     const [attendanceData, setAttendanceData] = useState([]);
@@ -689,13 +746,32 @@ const AttendanceManagement = () => {
         fetchAttendance();
     }, []);
 
-    const filteredDetailData = attendanceData.filter(row => {
-        const matchDate = row.work_date && row.work_date >= startDate && row.work_date <= endDate;
-        const matchVendor = selectedVendor === '전체' || row.company_type === selectedVendor;
-        const matchSearch = (row.worker_name && row.worker_name.includes(searchTerm)) || (row.vendor_name && row.vendor_name.includes(searchTerm));
+    // 기존의 filteredDetailData = ... 부분을 통째로 지우고 아래 코드로 교체하세요!
+    const filteredDetailData = useMemo(() => {
+        return attendanceData.filter(row => {
+            // 1. 날짜 필터
+            if (row.work_date < startDate || row.work_date > endDate) return false;
 
-        return matchDate && matchVendor && matchSearch;
-    });
+            // 2. 업체 탭 필터 (기존 기훈님 로직 유지)
+            if (selectedVendor !== '전체' && row.company_type !== selectedVendor) return false;
+
+            // 3. 검색어 필터 (디바운스로 버벅임 해결!)
+            if (deferredSearchTerm) {
+                const matchName = row.worker_name?.includes(deferredSearchTerm);
+                const matchVendor = row.vendor_name?.includes(deferredSearchTerm) || row.worked_vendor?.includes(deferredSearchTerm);
+                if (!matchName && !matchVendor) return false;
+            }
+
+            // 4. 사무직 필터 (체크박스 로직)
+            if (!includeOffice) {
+                // '사무'라는 글자가 이름이나 비고란에 있으면 제외!
+                const isOfficeWorker = row.worker_name?.includes('사무') || row.remark?.includes('사무');
+                if (isOfficeWorker) return false;
+            }
+
+            return true; // 위 조건을 모두 통과한 진짜 데이터만 살아남습니다.
+        });
+    }, [attendanceData, startDate, endDate, selectedVendor, deferredSearchTerm, includeOffice]);
 
     const sortedDetailData = React.useMemo(() => {
         let sortableItems = [...filteredDetailData];
@@ -944,6 +1020,11 @@ const currentStats = useMemo(() => {
                                 <div className="flex items-center gap-2 relative">
                                     <input type="text" placeholder="사원명 검색..." value={inputValue} onChange={(e) => setInputValue(e.target.value)} className="border border-gray-200 rounded-lg pl-8 pr-3 py-[7px] text-xs font-bold text-gray-700 outline-none focus:border-letusBlue w-40" />
                                     <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <div className="flex items-center shrink-0 bg-blue-50/50 px-3 py-[5px] rounded-lg border border-blue-100 transition-colors hover:bg-blue-100/50">
+                                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-letusBlue">
+                                            <input type="checkbox" checked={includeOffice} onChange={e => setIncludeOffice(e.target.checked)} className="w-3.5 h-3.5 accent-letusBlue cursor-pointer" />'사무직' 포함
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         )}
