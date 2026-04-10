@@ -134,6 +134,75 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 const companyType = vendorType.startsWith('협력사_') ? '사내협력사' : '외주도급사';
                 let parsedCount = 0;
 
+                // 1. IPC(도급사1)는 파일 구조가 완전히 다르므로 별도로 먼저 처리합니다.
+                if (vendorType === '도급사1' || vendorType === 'IPC') {
+                    // 인원, 연장시간, 공제시간이 적힌 행을 각각 찾습니다.
+                    const manpowerRow = rows.find(r => Object.values(r).some(v => String(v).includes('인원')));
+                    const overtimeRow = rows.find(r => Object.values(r).some(v => String(v).includes('연장시간')));
+                    const deductionRow = rows.find(r => Object.values(r).some(v => String(v).includes('공제시간')));
+
+                    if (manpowerRow) {
+                        // "02월 01일" 형태의 날짜 컬럼들만 필터링 (계 제외)
+                        const dateColumns = Object.keys(manpowerRow).filter(key => key.includes('월') && key.includes('일'));
+
+                        let satData = null; // 토요일 데이터를 잠시 담아둘 변수
+
+                        dateColumns.forEach(dateCol => {
+                            const manpower = parseFloat(manpowerRow[dateCol]) || 0;
+                            const overtime = parseFloat(overtimeRow ? overtimeRow[dateCol] : 0) || 0;
+                            const deduction = parseFloat(deductionRow ? deductionRow[dateCol] : 0) || 0;
+
+                            if (manpower === 0 && overtime === 0) return;
+
+                            // 요일 판별 (2026년 기준 혹은 현재 연도 기준)
+                            const currentYear = new Date().getFullYear();
+                            const [m, d] = dateCol.split('월').map(v => parseInt(v));
+                            const dateObj = new Date(currentYear, m - 1, d);
+                            const dayOfWeek = dateObj.getDay(); // 0:일, 6:토
+                            const formattedDate = `${currentYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+                            // --- [특이사항 로직 적용] ---
+                            // 토요일(6)이면 저장만 하고 패스
+                            if (dayOfWeek === 6) {
+                                satData = { manpower, overtime, deduction, date: formattedDate };
+                                return;
+                            }
+
+                            // 일요일(0)이면 토요일분 합산
+                            let finalManpower = manpower;
+                            let finalOvertime = overtime;
+                            let finalDeduction = deduction;
+
+                            if (dayOfWeek === 0 && satData) {
+                                finalManpower += satData.manpower;
+                                finalOvertime += satData.overtime;
+                                finalDeduction += satData.deduction;
+                                satData = null; // 합산 완료 후 비움
+                            }
+
+                            // 계산식: 정상 = (인원 * 8) - 공제, 연장 = 그대로
+                            const n_hours = (finalManpower * 8) - finalDeduction;
+                            const o_hours = finalOvertime;
+
+                            allStandardData.push({
+                                work_date: formattedDate,
+                                company_type: companyType,
+                                vendor_name: 'IPC',
+                                worked_vendor: 'IPC',
+                                worker_name: 'IPC_통합',
+                                start_time: '08:30',
+                                end_time: o_hours > 0 ? 'OT발생' : '17:30',
+                                work_hours: n_hours + o_hours,
+                                normal_hours: n_hours,
+                                overtime_hours: o_hours,
+                                weighted_hours: n_hours + (o_hours * 1.5),
+                                remark: `총 ${finalManpower}명 투입 (공제 ${finalDeduction}H 적용됨)`
+                            });
+                            parsedCount++;
+                        });
+                    }
+                    return; // IPC 처리가 끝났으므로 아래 일반 rows.forEach는 실행하지 않음
+                }
                 rows.forEach(rawRow => {
                     const row = {};
                     for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
