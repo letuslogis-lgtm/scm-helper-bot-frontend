@@ -928,7 +928,7 @@ const WorkerManagement = () => {
             {isAddModalOpen && <WorkerAddModal vendorList={uniqueVendorList} onClose={() => setIsAddModalOpen(false)} onReload={fetchWorkers} />}
             {editTarget && <WorkerEditModal vendorList={uniqueVendorList} worker={editTarget} onClose={() => setEditTarget(null)} onReload={fetchWorkers} />}
             {isBulkUploadModalOpen && <WorkerBulkUploadModal onClose={() => setIsBulkUploadModalOpen(false)} onReload={fetchWorkers} />}
-            {isBulkEditModalOpen && <WorkerBulkEditModal selectedIds={selectedIds} workers={workers} onClose={() => setIsBulkEditModalOpen(false)} onReload={fetchWorkers} />}
+            {isBulkEditModalOpen && <WorkerBulkEditModal vendorList={uniqueVendorList} selectedIds={selectedIds} workers={workers} onClose={() => setIsBulkEditModalOpen(false)} onReload={fetchWorkers} />}
         </div>
     );
 };
