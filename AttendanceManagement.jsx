@@ -22,8 +22,8 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
         if (nameClean.includes('바로')) return '협력사_바로서비스';
         if (nameClean.includes('하나')) return '협력사_하나물류';
         if (nameClean.includes('에프스토리') || nameClean.includes('fstory')) return '협력사_에프스토리';
-        if (nameClean.includes('도급사1') || nameClean.includes('ipc')) return '도급사1';
-        if (nameClean.includes('도급사2') || nameClean.includes('승현')) return '도급사2';
+        if (nameClean.includes('도급사1') || nameClean.includes('IPC')) return '도급사1';
+        if (nameClean.includes('도급사2') || nameClean.includes('한국사람들')) return '도급사2';
         return '';
     };
 
@@ -252,7 +252,7 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
         { id: '협력사_하나물류', label: '하나물류' },
         { id: '협력사_에프스토리', label: '에프스토리' },
         { id: '도급사1', label: 'IPC' },
-        { id: '도급사2', label: '승현' },
+        { id: '도급사2', label: '한국사람들' },
         { id: '도급사3', label: '도급사3' }
     ];
 
@@ -276,7 +276,7 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                         <ul className="text-xs text-gray-600 space-y-2 list-disc list-inside ml-1">
                             <li>협력사 및 도급사 근태 데이터를 <span className="font-bold text-gray-800">다중 업로드</span> 할 수 있습니다.</li>
                             <li>ERP 엑셀 다운로드 파일 오류 시, <span className="font-bold text-blue-600">CSV 또는 TXT 형식</span>을 권장합니다.</li>
-                            <li>파일 이름에 <span className="font-bold text-blue-600">바로서비스, 하나, IPC, 승현</span> 등 업체명이 포함되어야 자동 인식됩니다.</li>
+                            <li>파일 이름에 <span className="font-bold text-blue-600">바로서비스, 하나, IPC, 한국사람들</span> 등 업체명이 포함되어야 자동 인식됩니다.</li>
                         </ul>
                     </div>
 
@@ -421,7 +421,7 @@ const AttendanceBulkEditModal = ({ selectedIds, onClose, onReload }) => {
                                 <option value="하나물류">하나물류</option>
                                 <option value="에프스토리">에프스토리</option>
                                 <option value="IPC">IPC</option>
-                                <option value="승현">승현</option>
+                                <option value="한국사람들">한국사람들</option>
                                 <option value="JNT">JNT</option>
                             </select>
                             <p className="text-[10px] text-gray-400 mt-1.5 font-medium">* 선택 시 원 소속과 무관하게 해당 업체의 생산성(UPH)으로 집계됩니다.</p>
