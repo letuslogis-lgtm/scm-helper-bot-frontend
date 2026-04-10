@@ -328,7 +328,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                         }
                         parsedCount++;
                     }
-                });
                     } else if (dateVal) {
                         let startTime = row['출근시간'] || row['출근'] || '';
                         let endTime = row['퇴근시간'] || row['퇴근'] || '';
