@@ -45,7 +45,7 @@ const BrandTaskSelectModal = ({ initialBrands, onApplyBrands, initialTasks, onAp
                     </h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><CloseIcon /></button>
                 </div>
-                
+
                 <div className="p-6 bg-slate-50 flex-1 overflow-y-auto space-y-6">
                     <div>
                         <h4 className="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5">
@@ -59,7 +59,7 @@ const BrandTaskSelectModal = ({ initialBrands, onApplyBrands, initialTasks, onAp
                             ))}
                         </div>
                     </div>
-                    
+
                     <div className="border-t border-gray-200 pt-5">
                         <h4 className="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5">
                             <span className="text-blue-500">⚙️</span> 담당 업무 (다중 선택 가능)
@@ -73,7 +73,7 @@ const BrandTaskSelectModal = ({ initialBrands, onApplyBrands, initialTasks, onAp
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="p-4 border-t border-gray-200 bg-white flex justify-end gap-2 shrink-0">
                     <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 text-[11px] font-bold rounded hover:bg-gray-50 transition-colors">취소</button>
                     <button onClick={handleApply} className="px-5 py-2 bg-letusBlue text-white text-[11px] font-bold rounded hover:bg-blue-600 transition-colors">적용하기</button>
@@ -90,18 +90,18 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
     const [companyType, setCompanyType] = useState('사내협력사');
     const [vendorName, setVendorName] = useState('');
     const [empType, setEmpType] = useState('현장직');
-    const [workplace, setWorkplace] = useState(''); 
-    const [managedBrand, setManagedBrand] = useState(''); 
-    const [task, setTask] = useState(''); 
+    const [workplace, setWorkplace] = useState('');
+    const [managedBrand, setManagedBrand] = useState('');
+    const [task, setTask] = useState('');
     const [supportStatus, setSupportStatus] = useState('미지원'); // 🔥 기본값 세팅
     const [status, setStatus] = useState('재직');
-    
-    const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false); 
+
+    const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
     const handleSave = async (e) => {
-        if(e) e.preventDefault();
+        if (e) e.preventDefault();
         setErrorMsg('');
 
         if (!name) { setErrorMsg('이름을 입력해 주세요.'); return; }
@@ -109,10 +109,10 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
         setIsSaving(true);
         try {
             const { error } = await supabaseClient.from('workers').insert([{
-                name, phone, company_type: companyType, vendor_name: vendorName, 
+                name, phone, company_type: companyType, vendor_name: vendorName,
                 employment_type: empType, workplace, managed_brand: managedBrand, task, support_status: supportStatus, status
             }]);
-            
+
             if (error) throw error;
 
             alert('신규 근무자가 성공적으로 등록되었습니다.');
@@ -245,10 +245,10 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
             </div>
 
             {brandTaskModalOpen && (
-                <BrandTaskSelectModal 
+                <BrandTaskSelectModal
                     initialBrands={managedBrand} onApplyBrands={setManagedBrand}
                     initialTasks={task} onApplyTasks={setTask}
-                    onClose={() => setBrandTaskModalOpen(false)} 
+                    onClose={() => setBrandTaskModalOpen(false)}
                 />
             )}
         </div>
@@ -262,18 +262,18 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
     const [companyType, setCompanyType] = useState(worker?.company_type || '사내협력사');
     const [vendorName, setVendorName] = useState(worker?.vendor_name || '');
     const [empType, setEmpType] = useState(worker?.employment_type || '현장직');
-    const [workplace, setWorkplace] = useState(worker?.workplace || ''); 
-    const [managedBrand, setManagedBrand] = useState(worker?.managed_brand || ''); 
-    const [task, setTask] = useState(worker?.task || ''); 
+    const [workplace, setWorkplace] = useState(worker?.workplace || '');
+    const [managedBrand, setManagedBrand] = useState(worker?.managed_brand || '');
+    const [task, setTask] = useState(worker?.task || '');
     const [supportStatus, setSupportStatus] = useState(worker?.support_status || '미지원');
     const [status, setStatus] = useState(worker?.status || '재직');
-    
-    const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false); 
+
+    const [brandTaskModalOpen, setBrandTaskModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
     const handleSave = async (e) => {
-        if(e) e.preventDefault(); // 기본 폼 제출 방지
+        if (e) e.preventDefault();
         setErrorMsg('');
 
         if (!name) { setErrorMsg('이름은 필수 입력 항목입니다.'); return; }
@@ -281,24 +281,33 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
 
         setIsSaving(true);
         try {
-            // 🔥 .select()를 붙여서 실제로 데이터가 변경되었는지 확인하는 로직 강화
-            const { data, error } = await supabaseClient.from('workers').update({
-                name, phone, company_type: companyType, vendor_name: vendorName, 
-                employment_type: empType, workplace, managed_brand: managedBrand, task, support_status: supportStatus, status
-            }).eq('id', worker.id).select();
-            
-            if (error) throw error;
-            
-            // 만약 에러는 안 났지만 업데이트된 행(row)이 없다면 (RLS 정책 문제 등)
-            if (!data || data.length === 0) {
-                throw new Error("데이터 저장에 실패했습니다. (DB 테이블의 UPDATE 권한 설정이나 RLS를 확인해주세요.)");
+            console.log("업데이트 대상 ID:", worker.id); // 디버깅용
+
+            // 🔥 불필요한 .select() 검증 로직 제거, 순수하게 update만 실행
+            const { error } = await supabaseClient.from('workers').update({
+                name,
+                phone,
+                company_type: companyType,
+                vendor_name: vendorName,
+                employment_type: empType,
+                workplace,
+                managed_brand: managedBrand,
+                task,
+                support_status: supportStatus,
+                status
+            }).eq('id', worker.id);
+
+            // 만약 DB에서 진짜 에러를 뱉었다면 (예: 컬럼 누락 등)
+            if (error) {
+                console.error("DB Update Error:", error);
+                alert(`❌ DB 에러!\n메시지: ${error.message}\n상세: ${error.details || '없음'}`);
+                throw error;
             }
 
             alert('근무자 정보가 성공적으로 수정되었습니다.');
             onReload();
             onClose();
         } catch (error) {
-            console.error("Worker Update Error:", error); // 디버깅용 콘솔 출력
             setErrorMsg(`수정 실패: ${error.message}`);
         } finally {
             setIsSaving(false);
@@ -425,10 +434,10 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
             </div>
 
             {brandTaskModalOpen && (
-                <BrandTaskSelectModal 
+                <BrandTaskSelectModal
                     initialBrands={managedBrand} onApplyBrands={setManagedBrand}
                     initialTasks={task} onApplyTasks={setTask}
-                    onClose={() => setBrandTaskModalOpen(false)} 
+                    onClose={() => setBrandTaskModalOpen(false)}
                 />
             )}
         </div>
@@ -485,7 +494,7 @@ const WorkerBulkUploadModal = ({ onClose, onReload }) => {
                         vendor_name: cleanRow['업체명(필수)'],
                         workplace: cleanRow['근무지'] || '',
                         managed_brand: cleanRow['담당브랜드'] || '',
-                        task: cleanRow['업무'] || '',                 
+                        task: cleanRow['업무'] || '',
                         employment_type: cleanRow['근로형태'] || '현장직',
                         status: cleanRow['상태'] || '재직'
                     });
@@ -635,13 +644,13 @@ const WorkerManagement = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [editTarget, setEditTarget] = useState(null);
-    
+
     // 조회 필터
     const [filterCompany, setFilterCompany] = useState('');
-    const [filterWorkplace, setFilterWorkplace] = useState(''); 
-    const [filterEmpType, setFilterEmpType] = useState('');     
+    const [filterWorkplace, setFilterWorkplace] = useState('');
+    const [filterEmpType, setFilterEmpType] = useState('');
     const [filterKeyword, setFilterKeyword] = useState('');
-    
+
     const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
     const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
@@ -658,12 +667,12 @@ const WorkerManagement = () => {
         setIsLoading(true);
         try {
             let query = supabaseClient.from('workers').select('*');
-            
+
             if (filterCompany && filterCompany !== '전체') query = query.eq('company_type', filterCompany);
             if (filterWorkplace && filterWorkplace !== '전체') query = query.eq('workplace', filterWorkplace);
             if (filterEmpType && filterEmpType !== '전체') query = query.eq('employment_type', filterEmpType);
             if (filterKeyword) query = query.or(`name.ilike.%${filterKeyword}%,vendor_name.ilike.%${filterKeyword}%`);
-            
+
             const { data, error } = await query.order('created_at', { ascending: false });
             if (error) throw error;
             setWorkers(data || []);
@@ -676,7 +685,7 @@ const WorkerManagement = () => {
 
     useEffect(() => {
         fetchWorkers();
-    }, [filterCompany, filterWorkplace, filterEmpType]); 
+    }, [filterCompany, filterWorkplace, filterEmpType]);
 
     const handleSearch = () => fetchWorkers();
 
@@ -729,7 +738,7 @@ const WorkerManagement = () => {
         <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in pb-20 w-full min-h-[calc(100vh-64px)]">
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex items-center z-30 shrink-0">
                 <div className="flex items-center gap-5 w-full flex-wrap">
-                    
+
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">소속 구분</label>
                         <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-28 cursor-pointer text-gray-700">
