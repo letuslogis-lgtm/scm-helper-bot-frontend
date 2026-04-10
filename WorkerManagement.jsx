@@ -48,12 +48,12 @@ const BrandTaskSelectModal = ({ initialBrands, onApplyBrands, initialTasks, onAp
 
                 <div className="p-6 bg-slate-50 flex-1 overflow-y-auto space-y-6">
                     <div>
-                        <h4 className="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5">
+                        <h4 className="text-[11px] font-bold text-gray-700 mb-3 flex items-center gap-1.5">
                             <span className="text-orange-500">🏷️</span> 담당 브랜드 (다중 선택 가능)
                         </h4>
                         <div className="flex flex-wrap gap-2">
                             {brandList.map(b => (
-                                <button key={b} onClick={() => toggleBrand(b)} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${selectedBrands.includes(b) ? 'bg-orange-50 text-letusOrange border-orange-200 shadow-sm' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}>
+                                <button key={b} onClick={() => toggleBrand(b)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors ${selectedBrands.includes(b) ? 'bg-orange-50 text-letusOrange border-orange-200 shadow-sm' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}>
                                     {b}
                                 </button>
                             ))}
@@ -61,12 +61,12 @@ const BrandTaskSelectModal = ({ initialBrands, onApplyBrands, initialTasks, onAp
                     </div>
 
                     <div className="border-t border-gray-200 pt-5">
-                        <h4 className="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5">
+                        <h4 className="text-[11px] font-bold text-gray-700 mb-3 flex items-center gap-1.5">
                             <span className="text-blue-500">⚙️</span> 담당 업무 (다중 선택 가능)
                         </h4>
                         <div className="flex flex-wrap gap-2">
                             {taskList.map(t => (
-                                <button key={t} onClick={() => toggleTask(t)} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${selectedTasks.includes(t) ? 'bg-blue-50 text-letusBlue border-blue-200 shadow-sm' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}>
+                                <button key={t} onClick={() => toggleTask(t)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors ${selectedTasks.includes(t) ? 'bg-blue-50 text-letusBlue border-blue-200 shadow-sm' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}>
                                     {t}
                                 </button>
                             ))}
@@ -135,37 +135,37 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
 
                 <div className="p-6 bg-slate-50 flex-1 overflow-y-auto max-h-[70vh] custom-scrollbar">
                     <form id="addForm" onSubmit={handleSave} className="space-y-4">
-                        {errorMsg && <div className="bg-red-50 text-red-600 text-xs font-bold p-3 rounded border border-red-100">{errorMsg}</div>}
+                        {errorMsg && <div className="bg-red-50 text-red-600 text-[11px] font-bold p-3 rounded border border-red-100">{errorMsg}</div>}
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">이름 <span className="text-red-500">*</span></label>
-                                <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" placeholder="홍길동" />
+                                <label className="text-[11px] font-bold text-gray-700">이름 <span className="text-red-500">*</span></label>
+                                <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white" placeholder="홍길동" />
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">연락처</label>
-                                <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" placeholder="010-0000-0000" />
+                                <label className="text-[11px] font-bold text-gray-700">연락처</label>
+                                <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white" placeholder="010-0000-0000" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">소속 구분 <span className="text-red-500">*</span></label>
-                                <select value={companyType} onChange={(e) => setCompanyType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
+                                <label className="text-[11px] font-bold text-gray-700">소속 구분 <span className="text-red-500">*</span></label>
+                                <select value={companyType} onChange={(e) => setCompanyType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
                                     <option value="사내협력사">사내협력사</option>
                                     <option value="외주도급사">외주도급사</option>
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">업체명 <span className="text-red-500">*</span></label>
-                                <input type="text" value={vendorName} onChange={(e) => setVendorName(e.target.value)} required className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" placeholder="업체명 입력" />
+                                <label className="text-[11px] font-bold text-gray-700">업체명 <span className="text-red-500">*</span></label>
+                                <input type="text" value={vendorName} onChange={(e) => setVendorName(e.target.value)} required className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white" placeholder="업체명 입력" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">근무지</label>
-                                <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
+                                <label className="text-[11px] font-bold text-gray-700">근무지</label>
+                                <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
                                     <option value="">선택 안함</option>
                                     <option value="양지1센터">양지1센터</option><option value="양지2센터">양지2센터</option><option value="양지3센터">양지3센터</option>
                                     <option value="안성센터">안성센터</option><option value="평택센터">평택센터</option><option value="음성센터">음성센터</option>
@@ -173,8 +173,8 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">근로 형태</label>
-                                <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
+                                <label className="text-[11px] font-bold text-gray-700">근로 형태</label>
+                                <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
                                     <option value="현장직">현장직</option>
                                     <option value="사무직">사무직</option>
                                 </select>
@@ -182,7 +182,7 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-bold text-gray-700">담당 브랜드 및 업무 관리</label>
+                            <label className="text-[11px] font-bold text-gray-700">담당 브랜드 및 업무 관리</label>
                             <div className="min-h-[64px] border border-gray-300 rounded bg-white px-3 py-2.5 flex flex-col gap-2.5">
                                 <div className="flex flex-wrap gap-1.5 items-center">
                                     <span className="text-[9px] font-black text-orange-400 bg-orange-50 px-1 rounded">BRAND</span>
@@ -205,8 +205,8 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
 
                         <div className="grid grid-cols-2 gap-4 border-t border-gray-200 pt-3 mt-1">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">지원 여부</label>
-                                <select value={supportStatus} onChange={(e) => setSupportStatus(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-green-500 bg-white cursor-pointer w-full text-gray-700">
+                                <label className="text-[11px] font-bold text-gray-700">지원 여부</label>
+                                <select value={supportStatus} onChange={(e) => setSupportStatus(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-green-500 bg-white cursor-pointer w-full text-gray-700">
                                     <option value="미지원">미지원</option>
                                     {vendorList.map(vendor => (
                                         <option key={vendor} value={vendor}>{vendor}</option>
@@ -214,8 +214,8 @@ const WorkerAddModal = ({ vendorList, onClose, onReload }) => {
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">근무 상태</label>
-                                <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer w-full">
+                                <label className="text-[11px] font-bold text-gray-700">근무 상태</label>
+                                <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white cursor-pointer w-full">
                                     <option value="재직">재직</option>
                                     <option value="휴직">휴직</option>
                                     <option value="퇴사">퇴사</option>
@@ -297,37 +297,37 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
 
                 <div className="p-6 bg-slate-50 flex-1 overflow-y-auto max-h-[70vh] custom-scrollbar">
                     <form onSubmit={handleSave} className="space-y-4">
-                        {errorMsg && <div className="bg-red-50 text-red-600 text-xs font-bold p-3 rounded border border-red-100">{errorMsg}</div>}
+                        {errorMsg && <div className="bg-red-50 text-red-600 text-[11px] font-bold p-3 rounded border border-red-100">{errorMsg}</div>}
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">이름 <span className="text-red-500">*</span></label>
-                                <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" />
+                                <label className="text-[11px] font-bold text-gray-700">이름 <span className="text-red-500">*</span></label>
+                                <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white" />
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">연락처</label>
-                                <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" />
+                                <label className="text-[11px] font-bold text-gray-700">연락처</label>
+                                <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">소속 구분 <span className="text-red-500">*</span></label>
-                                <select value={companyType} onChange={(e) => setCompanyType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
+                                <label className="text-[11px] font-bold text-gray-700">소속 구분 <span className="text-red-500">*</span></label>
+                                <select value={companyType} onChange={(e) => setCompanyType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
                                     <option value="사내협력사">사내협력사</option>
                                     <option value="외주도급사">외주도급사</option>
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">업체명 <span className="text-red-500">*</span></label>
-                                <input type="text" value={vendorName} onChange={(e) => setVendorName(e.target.value)} required className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white" />
+                                <label className="text-[11px] font-bold text-gray-700">업체명 <span className="text-red-500">*</span></label>
+                                <input type="text" value={vendorName} onChange={(e) => setVendorName(e.target.value)} required className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">근무지</label>
-                                <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
+                                <label className="text-[11px] font-bold text-gray-700">근무지</label>
+                                <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
                                     <option value="">선택 안함</option>
                                     <option value="양지1센터">양지1센터</option><option value="양지2센터">양지2센터</option><option value="양지3센터">양지3센터</option>
                                     <option value="안성센터">안성센터</option><option value="평택센터">평택센터</option><option value="음성센터">음성센터</option>
@@ -335,8 +335,8 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">근로 형태</label>
-                                <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
+                                <label className="text-[11px] font-bold text-gray-700">근로 형태</label>
+                                <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white cursor-pointer">
                                     <option value="현장직">현장직</option>
                                     <option value="사무직">사무직</option>
                                 </select>
@@ -344,7 +344,7 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-bold text-gray-700">담당 브랜드 및 업무 관리</label>
+                            <label className="text-[11px] font-bold text-gray-700">담당 브랜드 및 업무 관리</label>
                             <div className="min-h-[64px] border border-gray-300 rounded bg-white px-3 py-2.5 flex flex-col gap-2.5">
                                 <div className="flex flex-wrap gap-1.5 items-center">
                                     <span className="text-[9px] font-black text-orange-400 bg-orange-50 px-1 rounded">BRAND</span>
@@ -367,8 +367,8 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
 
                         <div className="grid grid-cols-2 gap-4 border-t border-gray-200 pt-3 mt-1">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">지원 여부</label>
-                                <select value={supportStatus} onChange={(e) => setSupportStatus(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-green-500 bg-white cursor-pointer w-full text-gray-700">
+                                <label className="text-[11px] font-bold text-gray-700">지원 여부</label>
+                                <select value={supportStatus} onChange={(e) => setSupportStatus(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-green-500 bg-white cursor-pointer w-full text-gray-700">
                                     <option value="미지원">미지원</option>
                                     {vendorList.map(vendor => (
                                         <option key={vendor} value={vendor}>{vendor}</option>
@@ -376,8 +376,8 @@ const WorkerEditModal = ({ worker, vendorList, onClose, onReload }) => {
                                 </select>
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold text-gray-700">근무 상태</label>
-                                <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-letusBlue bg-white cursor-pointer w-full">
+                                <label className="text-[11px] font-bold text-gray-700">근무 상태</label>
+                                <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-gray-300 rounded px-3.5 py-2 text-[11px] focus:outline-none focus:border-letusBlue bg-white cursor-pointer w-full">
                                     <option value="재직">재직</option>
                                     <option value="휴직">휴직</option>
                                     <option value="퇴사">퇴사</option>
@@ -488,11 +488,11 @@ const WorkerBulkUploadModal = ({ onClose, onReload }) => {
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><CloseIcon /></button>
                 </div>
                 <div className="p-6 bg-slate-50 flex-1 space-y-4">
-                    <button onClick={handleDownloadTemplate} className="w-full flex justify-center gap-2 py-2.5 border border-green-500 text-green-600 text-xs font-bold rounded-lg hover:bg-green-50 shadow-sm">
+                    <button onClick={handleDownloadTemplate} className="w-full flex justify-center gap-2 py-2.5 border border-green-500 text-green-600 text-[11px] font-bold rounded-lg hover:bg-green-50 shadow-sm">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         엑셀 업로드 양식 다운로드
                     </button>
-                    <input type="file" accept=".xlsx, .xls" onChange={handleFileChange} className="block w-full text-xs text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded file:border-0 file:font-bold file:bg-blue-50 file:text-letusBlue hover:file:bg-blue-100 border border-gray-300 rounded-lg bg-white cursor-pointer" />
+                    <input type="file" accept=".xlsx, .xls" onChange={handleFileChange} className="block w-full text-[11px] text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded file:border-0 file:font-bold file:bg-blue-50 file:text-letusBlue hover:file:bg-blue-100 border border-gray-300 rounded-lg bg-white cursor-pointer" />
                 </div>
                 <div className="p-4 border-t bg-white flex justify-end gap-2">
                     <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 text-[11px] font-bold rounded hover:bg-gray-50">취소</button>
@@ -556,7 +556,7 @@ const WorkerBulkEditModal = ({ selectedIds, workers, vendorList, onClose, onRelo
                 </div>
 
                 <div className="p-6 bg-slate-50 flex-1 flex flex-col overflow-hidden">
-                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs font-bold text-letusBlue text-center shrink-0 mb-4">
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-[11px] font-bold text-letusBlue text-center shrink-0 mb-4">
                         현재 <span className="text-lg mx-1">{selectedIds.length}</span>명의 근무자가 선택되었습니다.
                     </div>
 
@@ -569,15 +569,15 @@ const WorkerBulkEditModal = ({ selectedIds, workers, vendorList, onClose, onRelo
                             {updateTarget.vendorGroup && (
                                 <div className="px-4 pb-4 pt-1 animate-fade-in flex flex-col gap-3">
                                     <div className="flex gap-2">
-                                        <select value={companyType} onChange={(e) => setCompanyType(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none w-28 bg-white">
+                                        <select value={companyType} onChange={(e) => setCompanyType(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-[11px] outline-none w-28 bg-white">
                                             <option value="사내협력사">사내협력사</option>
                                             <option value="외주도급사">외주도급사</option>
                                         </select>
-                                        <input type="text" value={vendorName} onChange={(e) => setVendorName(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none flex-1" placeholder="업체명 입력" />
+                                        <input type="text" value={vendorName} onChange={(e) => setVendorName(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-[11px] outline-none flex-1" placeholder="업체명 입력" />
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-gray-600 w-[60px]">지원 여부</span>
-                                        <select value={supportStatus} onChange={(e) => setSupportStatus(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none flex-1 bg-white cursor-pointer text-gray-700">
+                                        <span className="text-[11px] font-bold text-gray-600 w-[60px]">지원 여부</span>
+                                        <select value={supportStatus} onChange={(e) => setSupportStatus(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-[11px] outline-none flex-1 bg-white cursor-pointer text-gray-700">
                                             <option value="미지원">미지원</option>
                                             {vendorList.map(vendor => (
                                                 <option key={vendor} value={vendor}>{vendor}</option>
@@ -595,13 +595,13 @@ const WorkerBulkEditModal = ({ selectedIds, workers, vendorList, onClose, onRelo
                             </label>
                             {updateTarget.locationGroup && (
                                 <div className="px-4 pb-4 pt-1 animate-fade-in flex gap-2">
-                                    <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none flex-1 bg-white cursor-pointer">
+                                    <select value={workplace} onChange={(e) => setWorkplace(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-[11px] outline-none flex-1 bg-white cursor-pointer">
                                         <option value="">선택 안함</option>
                                         <option value="양지1센터">양지1센터</option><option value="양지2센터">양지2센터</option><option value="양지3센터">양지3센터</option>
                                         <option value="안성센터">안성센터</option><option value="평택센터">평택센터</option><option value="음성센터">음성센터</option>
                                         <option value="동부센터">동부센터</option><option value="서부센터">서부센터</option>
                                     </select>
-                                    <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none flex-1 bg-white cursor-pointer">
+                                    <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-[11px] outline-none flex-1 bg-white cursor-pointer">
                                         <option value="현장직">현장직</option>
                                         <option value="사무직">사무직</option>
                                     </select>
@@ -645,7 +645,7 @@ const WorkerBulkEditModal = ({ selectedIds, workers, vendorList, onClose, onRelo
                             </label>
                             {updateTarget.statusGroup && (
                                 <div className="px-4 pb-4 pt-1 animate-fade-in">
-                                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs outline-none w-full bg-white cursor-pointer text-gray-700">
+                                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-[11px] outline-none w-full bg-white cursor-pointer text-gray-700">
                                         <option value="재직">🟢 재직</option>
                                         <option value="휴직">🟡 휴직</option>
                                         <option value="퇴사">⚫ 퇴사</option>
@@ -834,14 +834,14 @@ const WorkerManagement = () => {
                     {/* 왼쪽 기본 검색 영역 */}
                     <div className="flex items-center gap-6 flex-1 flex-wrap">
                         <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-bold text-gray-700">소속 구분</span>
-                            <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)} className="border border-gray-200 rounded px-2 h-[30px] text-xs outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
+                            <span className="text-[11px] font-bold text-gray-700">소속 구분</span>
+                            <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)} className="border border-gray-200 rounded px-2 h-[30px] text-[11px] outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
                                 <option value="">전체</option><option value="사내협력사">사내협력사</option><option value="외주도급사">외주도급사</option>
                             </select>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-bold text-gray-700">근무지</span>
-                            <select value={filterWorkplace} onChange={e => setFilterWorkplace(e.target.value)} className="border border-gray-200 rounded px-2 h-[30px] text-xs outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
+                            <span className="text-[11px] font-bold text-gray-700">근무지</span>
+                            <select value={filterWorkplace} onChange={e => setFilterWorkplace(e.target.value)} className="border border-gray-200 rounded px-2 h-[30px] text-[11px] outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
                                 <option value="">전체</option>
                                 <option value="양지1센터">양지1센터</option><option value="양지2센터">양지2센터</option><option value="양지3센터">양지3센터</option>
                                 <option value="안성센터">안성센터</option><option value="평택센터">평택센터</option><option value="음성센터">음성센터</option>
@@ -849,8 +849,8 @@ const WorkerManagement = () => {
                             </select>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-bold text-gray-700">검색어</span>
-                            <input type="text" value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="이름 또는 업체명 입력" className="border border-gray-200 rounded px-3 h-[30px] text-xs outline-none focus:border-letusOrange w-48 text-gray-700" />
+                            <span className="text-[11px] font-bold text-gray-700">검색어</span>
+                            <input type="text" value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="이름 또는 업체명 입력" className="border border-gray-200 rounded px-3 h-[30px] text-[11px] outline-none focus:border-letusOrange w-48 text-gray-700" />
                         </div>
                     </div>
 
@@ -861,8 +861,8 @@ const WorkerManagement = () => {
                             상세 조회
                         </button>
                         <div className="w-px h-4 bg-gray-200 mx-1"></div>
-                        <button onClick={handleReset} className="px-4 h-[30px] bg-white border border-gray-300 text-gray-600 text-xs font-bold rounded-[3px] hover:bg-gray-50 transition-colors">초기화</button>
-                        <button onClick={handleSearch} className="px-5 h-[30px] bg-orange-500 text-white text-xs font-bold rounded-[3px] hover:bg-orange-600 transition-colors flex items-center gap-1.5 shadow-sm">
+                        <button onClick={handleReset} className="px-4 h-[30px] bg-white border border-gray-300 text-gray-600 text-[11px] font-bold rounded-[3px] hover:bg-gray-50 transition-colors">초기화</button>
+                        <button onClick={handleSearch} className="px-5 h-[30px] bg-orange-500 text-white text-[11px] font-bold rounded-[3px] hover:bg-orange-600 transition-colors flex items-center gap-1.5 shadow-sm">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                             조회하기
                         </button>
@@ -877,7 +877,7 @@ const WorkerManagement = () => {
 
                                 <div className="flex items-center shrink-0">
                                     <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">지원 여부</label>
-                                    <select value={filterSupport} onChange={e => setFilterSupport(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
+                                    <select value={filterSupport} onChange={e => setFilterSupport(e.target.value)} className="border border-gray-200 rounded-[3px] text-[11px] px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
                                         <option value="">전체</option><option value="미지원">미지원</option>
                                         {uniqueVendorList.map(v => <option key={v} value={v}>{v}</option>)}
                                     </select>
@@ -885,7 +885,7 @@ const WorkerManagement = () => {
 
                                 <div className="flex items-center shrink-0">
                                     <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 브랜드</label>
-                                    <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
+                                    <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className="border border-gray-200 rounded-[3px] text-[11px] px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
                                         <option value="">전체</option>
                                         {brandList.map(b => <option key={b} value={b}>{b}</option>)}
                                     </select>
@@ -893,7 +893,7 @@ const WorkerManagement = () => {
 
                                 <div className="flex items-center shrink-0">
                                     <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 업무</label>
-                                    <select value={filterTask} onChange={e => setFilterTask(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
+                                    <select value={filterTask} onChange={e => setFilterTask(e.target.value)} className="border border-gray-200 rounded-[3px] text-[11px] px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
                                         <option value="">전체</option>
                                         {taskList.map(t => <option key={t} value={t}>{t}</option>)}
                                     </select>
@@ -901,14 +901,14 @@ const WorkerManagement = () => {
 
                                 <div className="flex items-center shrink-0">
                                     <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근로 형태</label>
-                                    <select value={filterEmpType} onChange={e => setFilterEmpType(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 w-28 font-medium">
+                                    <select value={filterEmpType} onChange={e => setFilterEmpType(e.target.value)} className="border border-gray-200 rounded-[3px] text-[11px] px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 w-28 font-medium">
                                         <option value="">전체</option><option value="현장직">현장직</option><option value="사무직">사무직</option>
                                     </select>
                                 </div>
 
                                 <div className="flex items-center shrink-0">
                                     <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근무 상태</label>
-                                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 w-28 font-medium">
+                                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-[3px] text-[11px] px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 w-28 font-medium">
                                         <option value="">전체</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option>
                                     </select>
                                 </div>
@@ -922,20 +922,20 @@ const WorkerManagement = () => {
             {/* ⚙️ 선택 실행 도구 모음 (상단 고정, shrink-0) */}
             <div className="flex justify-end w-full px-2 z-20 shrink-0 mt-[-4px]">
                 <div className="relative">
-                    <button onClick={() => setIsActionMenuOpen(!isActionMenuOpen)} className="flex items-center justify-between text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded shadow-sm px-3 py-[7px] hover:bg-gray-50 transition-all w-[90px]">
+                    <button onClick={() => setIsActionMenuOpen(!isActionMenuOpen)} className="flex items-center justify-between text-[11px] font-bold text-gray-700 bg-white border border-gray-300 rounded shadow-sm px-3 py-[7px] hover:bg-gray-50 transition-all w-[90px]">
                         선택실행 <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </button>
                     {isActionMenuOpen && (
                         <>
                             <div className="fixed inset-0 z-40" onClick={() => setIsActionMenuOpen(false)}></div>
                             <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 py-1.5 slide-down">
-                                <button onClick={() => { setIsActionMenuOpen(false); setIsAddModalOpen(true); }} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">근무자 추가</button>
-                                <button onClick={() => { setIsActionMenuOpen(false); setIsBulkUploadModalOpen(true); }} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">엑셀 일괄 등록</button>
-                                <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) alert('근무자를 체크해주세요.'); else setIsBulkEditModalOpen(true); }} className={`w-full text-left px-4 py-2 text-xs font-medium ${selectedIds.length > 0 ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}>일괄 변경 {selectedIds.length > 0 && `(${selectedIds.length})`}</button>
+                                <button onClick={() => { setIsActionMenuOpen(false); setIsAddModalOpen(true); }} className="w-full text-left px-4 py-2 text-[11px] font-medium text-gray-700 hover:bg-gray-50">근무자 추가</button>
+                                <button onClick={() => { setIsActionMenuOpen(false); setIsBulkUploadModalOpen(true); }} className="w-full text-left px-4 py-2 text-[11px] font-medium text-gray-700 hover:bg-gray-50">엑셀 일괄 등록</button>
+                                <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) alert('근무자를 체크해주세요.'); else setIsBulkEditModalOpen(true); }} className={`w-full text-left px-4 py-2 text-[11px] font-medium ${selectedIds.length > 0 ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}>일괄 변경 {selectedIds.length > 0 && `(${selectedIds.length})`}</button>
                                 <div className="h-px bg-gray-100 my-1"></div>
-                                <button onClick={() => { setIsActionMenuOpen(false); handleExportExcel(); }} className="w-full text-left px-4 py-2 text-xs font-bold text-green-600 hover:bg-green-50 flex items-center justify-between">엑셀 추출 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg></button>
+                                <button onClick={() => { setIsActionMenuOpen(false); handleExportExcel(); }} className="w-full text-left px-4 py-2 text-[11px] font-bold text-green-600 hover:bg-green-50 flex items-center justify-between">엑셀 추출 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg></button>
                                 <div className="h-px bg-gray-100 my-1"></div>
-                                <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) alert('근무자를 체크해주세요.'); else handleDeleteSelected(); }} className={`w-full text-left px-4 py-2 text-xs font-medium ${selectedIds.length > 0 ? 'text-red-600 hover:bg-red-50' : 'text-gray-300 cursor-not-allowed'}`}>영구 삭제</button>
+                                <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) alert('근무자를 체크해주세요.'); else handleDeleteSelected(); }} className={`w-full text-left px-4 py-2 text-[11px] font-medium ${selectedIds.length > 0 ? 'text-red-600 hover:bg-red-50' : 'text-gray-300 cursor-not-allowed'}`}>영구 삭제</button>
                             </div>
                         </>
                     )}
@@ -946,7 +946,7 @@ const WorkerManagement = () => {
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-10 min-h-0">
                 <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap min-w-max">
-                        <thead className="bg-slate-50/90 backdrop-blur-sm border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
+                        <thead className="bg-slate-50/90 backdrop-blur-sm border-b border-gray-200 text-[11px] text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             {/* 🔥 헤더 전체 가운데 정렬 & 클릭 정렬 로직 적용 */}
                             <tr>
                                 <th className="p-4 pl-5 w-10 text-center"><input type="checkbox" checked={isAllSelected} onChange={toggleAll} className="w-4 h-4 accent-letusBlue cursor-pointer" /></th>
