@@ -84,8 +84,14 @@
         window.supabaseUrl = 'https://kbbkodmighrrgwtwrgdp.supabase.co';
         window.supabaseAnonKey = 'sb_publishable_2yOkLjobrM_oMlncJFqL3A_gbuU9eAr';
         window.SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiYmtvZG1pZ2hycmd3dHdyZ2RwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDA2Nzk1OSwiZXhwIjoyMDg5NjQzOTU5fQ.p32oIw0vCr9DfwZ2ifnAjZDM0tiU23UbMgRtXFQ4aeU";
-        window.supabase = window.supabasejs.createClient(window.supabaseUrl, window.supabaseAnonKey);
-        window.adminSupabase = window.supabasejs.createClient(window.supabaseUrl, window.SUPABASE_SERVICE_ROLE_KEY);
+
+        // 🔥 오타 수정 및 안전하게 클라이언트 생성!
+        const client = window.supabase.createClient(window.supabaseUrl, window.supabaseAnonKey);
+        const adminClient = window.supabase.createClient(window.supabaseUrl, window.SUPABASE_SERVICE_ROLE_KEY);
+
+        // 다른 파일들(useAppLogic 등)에서 바로 쓸 수 있도록 전역에 덮어씌웁니다.
+        window.supabase = client;
+        window.adminSupabase = adminClient;
     </script>
 
     <script type="text/babel" src="./SharedUI.jsx"></script>
