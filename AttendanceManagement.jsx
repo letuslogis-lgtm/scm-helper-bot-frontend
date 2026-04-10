@@ -109,18 +109,18 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
             const { data: workerMaster, error: masterError } = await supabaseClient
                 .from('workers')
                 .select('name, support_status, managed_brand');
-            
+
             // 이름(name)을 키값으로 하는 빠른 검색용 사전(Map) 만들기
             const workerMap = {};
             if (workerMaster) {
                 workerMaster.forEach(w => {
-                    workerMap[w.name.replace(/\s/g, '')] = { 
-                        supportVendor: w.support_vendor, 
-                        brand: w.assigned_brand 
+                    workerMap[w.name.replace(/\s/g, '')] = {
+                        supportVendor: w.support_vendor,
+                        brand: w.assigned_brand
                     };
                 });
             }
-            
+
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 const vendorType = (files.length === 1 && manualVendor) ? manualVendor : detectVendor(file.name);
@@ -140,7 +140,7 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                         failedFiles.push(`${file.name} (IPC는 엑셀 양식만 지원)`);
                         continue;
                     }
-                    
+
                     let wb = XLSX.read(data, { type: 'binary' });
                     let sheetName = wb.SheetNames[0];
                     const raw2D = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: false, defval: '' });
@@ -157,12 +157,12 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
 
                     let parsedCountInFile = 0;
                     // 👇 변수명을 satData에서 nonWorkingTemp(쉬는 날 묶음)으로 변경했습니다.
-                    let nonWorkingTemp = null; 
+                    let nonWorkingTemp = null;
 
                     dateRowArr.forEach((dateStr, colIdx) => {
-                        const val = String(dateStr).replace(/\s+/g, ''); 
+                        const val = String(dateStr).replace(/\s+/g, '');
                         const match = val.match(/(\d+)월(\d+)일/);
-                        if (!match) return; 
+                        if (!match) return;
 
                         const manpower = safeParse(manpowerRowArr[colIdx]);
                         const overtime = overtimeRowArr ? safeParse(overtimeRowArr[colIdx]) : 0;
@@ -174,7 +174,7 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                         const m = parseInt(match[1], 10);
                         const d = parseInt(match[2], 10);
                         const dateObj = new Date(currYear, m - 1, d);
-                        const dayOfWeek = dateObj.getDay(); 
+                        const dayOfWeek = dateObj.getDay();
                         const formattedDate = `${currYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
                         // 👇👇 [핵심 로직] 주말(토, 일)이거나 Supabase에 등록된 휴일인지 판별!
@@ -226,8 +226,8 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
 
                     if (parsedCountInFile > 0) successFiles.push(file.name);
                     else failedFiles.push(`${file.name} (데이터 0건)`);
-                    
-                    continue; 
+
+                    continue;
                 }
 
                 // --- 🚩 여기서부터는 기존 일반 업체 (협력사, 도급사2) 로직 ---
@@ -280,55 +280,34 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     // 💡 [핵심] 여기서 딱 한 번만 이름을 검색해둡니다!
                     const cleanName = nameVal.replace(/\s/g, '');
                     const masterInfo = workerMap[cleanName];
-                    
+
                     // 마스터에 지원 여부(support_status)가 있으면 1순위, 없으면 엑셀 업체명(exactVendor)
                     const actualWorkedVendor = masterInfo?.supportVendor ? masterInfo.supportVendor : exactVendor;
                     const assignedBrand = masterInfo?.brand || '';
 
                     // 1️⃣ 도급사2 로직
+                    // 1️⃣ 도급사2 로직 시작
                     if (vendorType === '도급사2') {
                         const dateColumns = Object.keys(row).filter(key => key.includes('월') && key.includes('일'));
                         dateColumns.forEach(dateCol => {
                             const workValue = row[dateCol];
                             if (workValue) {
                                 allStandardData.push({
-                                    work_date: dateCol, 
-                                    company_type: companyType, 
-                                    vendor_name: exactVendor, 
-                                    worked_vendor: actualWorkedVendor, // 👈 지원업체 적용!
-                                    worker_name: nameVal, 
+                                    work_date: dateCol,
+                                    company_type: companyType,
+                                    vendor_name: exactVendor,
+                                    worked_vendor: actualWorkedVendor, // 👈 지원업체 정상 적용!
+                                    worker_name: nameVal,
                                     start_time: '', end_time: '',
-                                    work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8, 
-                                    remark: assignedBrand ? `[${assignedBrand}] 기록: ${workValue}` : `기록: ${workValue}` // 👈 브랜드 적용!
+                                    work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8,
+                                    remark: assignedBrand ? `[${assignedBrand}] 기록: ${workValue}` : `기록: ${workValue}`
                                 });
                                 parsedCount++;
                             }
-                        });
-                    } 
-                    // 2️⃣ 그 외 (사내협력사 등) 로직
-                    else if (dateVal) {
-                        let startTime = row['출근시간'] || row['출근'] || '';
-                        let endTime = row['퇴근시간'] || row['퇴근'] || '';
-                        let remarkStr = row['이상유무'] || row['비고'] || '';
-
-                        // (중간 시간 계산 로직 p_over, calcDiff 등은 기존 코드 그대로 유지... 생략)
-
-                        // 👇 [주의] 이 부분은 기존 기훈님의 if (gubun === '정상') 등 시간 계산 로직이 끝난 직후, 맨 마지막에 push 하는 부분입니다.
-                        if (startTime || endTime || w_hours > 0) {
-                            allStandardData.push({
-                                work_date: dateVal.replace(/\./g, '-'), 
-                                company_type: companyType, 
-                                vendor_name: exactVendor, 
-                                worked_vendor: actualWorkedVendor, // 👈 지원업체 적용!
-                                worker_name: nameVal, 
-                                start_time: startTime, end_time: endTime,
-                                work_hours: w_hours, normal_hours: n_hours, overtime_hours: o_hours, weighted_hours: weight_hours,
-                                remark: assignedBrand ? `[${assignedBrand}] ${remarkStr}` : remarkStr // 👈 브랜드 적용!
-                            });
-                        }
-                        parsedCount++;
+                        }); // ⭐ 범인 1 해결: dateColumns.forEach는 }); 로 닫혀야 합니다!
                     }
-                    } else if (dateVal) {
+                    // 2️⃣ 그 외 업체(협력사 등) 로직 시작
+                    else if (dateVal) {
                         let startTime = row['출근시간'] || row['출근'] || '';
                         let endTime = row['퇴근시간'] || row['퇴근'] || '';
                         let remarkStr = row['이상유무'] || row['비고'] || '';
@@ -378,20 +357,25 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
 
                         if (startTime || endTime || w_hours > 0) {
                             allStandardData.push({
-                                work_date: dateVal.replace(/\./g, '-'), company_type: companyType, vendor_name: exactVendor, worked_vendor: exactVendor,
-                                worker_name: nameVal, start_time: startTime, end_time: endTime,
+                                work_date: dateVal.replace(/\./g, '-'),
+                                company_type: companyType,
+                                vendor_name: exactVendor,
+                                worked_vendor: actualWorkedVendor, // ⭐ 범인 3 해결: 여기도 지원업체 변수(actualWorkedVendor) 적용!
+                                worker_name: nameVal,
+                                start_time: startTime, end_time: endTime,
                                 work_hours: w_hours, normal_hours: n_hours, overtime_hours: o_hours, weighted_hours: weight_hours,
-                                remark: remarkStr
+                                remark: assignedBrand ? `[${assignedBrand}] ${remarkStr}` : remarkStr // ⭐ 범인 3 해결: 여기도 담당 브랜드 추가 적용!
                             });
                         }
                         parsedCount++;
                     }
-                });
+                }); // ⭐ 범인 2 해결: rows.forEach 반복문은 여기서 깔끔하게 닫힙니다!
 
                 if (parsedCount > 0) successFiles.push(file.name);
                 else failedFiles.push(`${file.name} (양식 불일치)`);
-            }
+            } // 👈 엑셀 파일(files) 반복문 종료
 
+            // --- 엑셀 파싱 완료, DB 저장 시작 ---
             if (allStandardData.length === 0) throw new Error('추출된 데이터가 0건입니다. 엑셀 파일 형식을 확인해 주세요.');
 
             const { error } = await supabaseClient.from('worker_attendance').insert(allStandardData);
@@ -646,13 +630,13 @@ const AttendanceManagement = () => {
     const [chartFilterType, setChartFilterType] = useState('M');
 
     React.useEffect(() => {
-    const timer = setTimeout(() => {
-        setSearchTerm(inputValue);
-    }, 300); // 300ms = 0.3초 대기
+        const timer = setTimeout(() => {
+            setSearchTerm(inputValue);
+        }, 300); // 300ms = 0.3초 대기
 
-    // 타자를 계속 치고 있으면 이전 타이머를 취소시켜서 렌더링을 막습니다!
-    return () => clearTimeout(timer); 
-}, [inputValue]);
+        // 타자를 계속 치고 있으면 이전 타이머를 취소시켜서 렌더링을 막습니다!
+        return () => clearTimeout(timer);
+    }, [inputValue]);
 
     const getFilterDates = (type) => {
         const now = new Date();
@@ -825,14 +809,14 @@ const AttendanceManagement = () => {
         const actualCompanyType = isPartner ? '사내협력사' : '외주도급사';
 
         if (!vendorSummaryMap[row.worked_vendor]) {
-            vendorSummaryMap[row.worked_vendor] = { 
+            vendorSummaryMap[row.worked_vendor] = {
                 type: actualCompanyType, // 원 소속(row.company_type) 버리고 실투입 기준 적용!
-                vendor: row.worked_vendor, 
-                normal: 0, 
-                overtime: 0, 
-                total: 0, 
-                weighted: 0, 
-                monthsMap: {} 
+                vendor: row.worked_vendor,
+                normal: 0,
+                overtime: 0,
+                total: 0,
+                weighted: 0,
+                monthsMap: {}
             };
         }
 
@@ -873,33 +857,33 @@ const AttendanceManagement = () => {
 
     // 선택된 데이터를 바탕으로 지표를 실시간 계산 (IPC 통합 인원 완벽 대응)
     // 선택된 데이터를 바탕으로 지표를 실시간 계산 (실투입업체 1순위 기준)
-const currentStats = useMemo(() => {
-    const targetData = activeTab === 'summary' ? filteredChartData : filteredDetailData;
-    
-    return targetData.reduce((acc, curr) => {
-        // 1. IPC 통합 인원 추출 로직 (유지)
-        let actualHeadcount = 1; 
-        if (curr.worker_name === 'IPC_통합') {
-            const match = curr.remark?.match(/총 (\d+)명/);
-            if (match) actualHeadcount = parseInt(match[1], 10);
-        }
+    const currentStats = useMemo(() => {
+        const targetData = activeTab === 'summary' ? filteredChartData : filteredDetailData;
 
-        // 2. 🚩 [핵심 수정] 원 소속이 아닌 '실투입업체(worked_vendor)' 기준으로 구분!
-        // 실투입업체가 아래 3개 중 하나면 무조건 '협력사 투입'으로 잡습니다.
-        const isPartner = ['바로서비스', '하나물류', '에프스토리'].includes(curr.worked_vendor);
-        
-        if (isPartner) {
-            acc.partnerCount += actualHeadcount;
-        } else {
-            acc.contractorCount += actualHeadcount;
-        }
+        return targetData.reduce((acc, curr) => {
+            // 1. IPC 통합 인원 추출 로직 (유지)
+            let actualHeadcount = 1;
+            if (curr.worker_name === 'IPC_통합') {
+                const match = curr.remark?.match(/총 (\d+)명/);
+                if (match) actualHeadcount = parseInt(match[1], 10);
+            }
 
-        // 3. 총 근무시간 합산
-        acc.totalHours += (Number(curr.work_hours) || 0);
-        
-        return acc;
-    }, { partnerCount: 0, contractorCount: 0, totalHours: 0 });
-}, [activeTab, filteredChartData, filteredDetailData]);
+            // 2. 🚩 [핵심 수정] 원 소속이 아닌 '실투입업체(worked_vendor)' 기준으로 구분!
+            // 실투입업체가 아래 3개 중 하나면 무조건 '협력사 투입'으로 잡습니다.
+            const isPartner = ['바로서비스', '하나물류', '에프스토리'].includes(curr.worked_vendor);
+
+            if (isPartner) {
+                acc.partnerCount += actualHeadcount;
+            } else {
+                acc.contractorCount += actualHeadcount;
+            }
+
+            // 3. 총 근무시간 합산
+            acc.totalHours += (Number(curr.work_hours) || 0);
+
+            return acc;
+        }, { partnerCount: 0, contractorCount: 0, totalHours: 0 });
+    }, [activeTab, filteredChartData, filteredDetailData]);
 
     return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-6 max-w-[1600px] mx-auto">
