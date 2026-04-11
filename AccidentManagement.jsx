@@ -1376,9 +1376,8 @@ const AccidentList = ({ userProfile, initialFilter }) => {
     };
 
     return (
-        <div className="p-6 bg-slate-100 h-[calc(100vh-64px)] flex flex-col gap-4 slide-up">
-
-            <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)]">
+        // 🚩 [수정 완료] 맨 위에 두 겹으로 겹쳐있던 div를 완벽한 템플릿 하나로 합쳤습니다!
+        <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)] slide-up bg-slate-100">
             
             {/* 1. 검색 박스 구역 (사용자 관리 스타일로 통일) */}
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex flex-col gap-3 z-30 shrink-0 transition-all duration-300">
@@ -1451,14 +1450,12 @@ const AccidentList = ({ userProfile, initialFilter }) => {
             {/* 2. 선택실행 (드롭다운) 구역 (사용자 관리 스타일로 통일) */}
             <div className="flex justify-end w-full px-2 z-30 -mt-1 mb-1 shrink-0 gap-3">
                 
-                {/* 데이터 통합 업로드 버튼 (원래 있던 것 유지) */}
                 {userProfile?.role === '관리자' && (
                     <button onClick={() => setIsUploadModalOpen(true)} className="bg-white border border-green-600 text-green-600 px-4 py-[7px] rounded-[3px] text-[11px] font-bold flex items-center cursor-pointer hover:bg-green-50 transition-colors shadow-sm h-[32px]">
                         <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg> 데이터 통합 업로드 (Excel)
                     </button>
                 )}
 
-                {/* 선택실행 드롭다운 */}
                 <div className="relative z-50">
                     <button
                         onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
@@ -1511,10 +1508,8 @@ const AccidentList = ({ userProfile, initialFilter }) => {
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20 min-h-0">
                 <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1420px] text-[13px]">
-                        {/* 🚩 [수정] 헤더 배경색과 그림자를 사용자 관리 메뉴와 동일하게 맞춤 */}
                         <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             <tr>
-                                {/* 🚩 [수정] 체크박스 너비와 패딩을 사용자 관리와 동일하게 (p-4 pl-6 w-10 text-center) */}
                                 <th className="p-4 pl-6 w-10 text-center">
                                     <input type="checkbox" checked={sortedItems.length > 0 && selectedIds.length === sortedItems.length} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer accent-letusBlue" />
                                 </th>
@@ -1527,7 +1522,6 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                 ))}
                             </tr>
                         </thead>
-                        {/* 🚩 [수정] 본문 텍스트 색상 통일 (text-gray-700) */}
                         <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
                             {isLoading ? (
                                 <tr><td colSpan="13" className="py-32 text-center"><div className="flex flex-col items-center gap-3"><div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div><p className="text-gray-500 font-bold">데이터 로딩 중...</p></div></td></tr>
@@ -1545,7 +1539,6 @@ const AccidentList = ({ userProfile, initialFilter }) => {
 
                                     {sortedItems.slice(0, 300).map(row => (
                                         <tr key={row.id} onDoubleClick={() => { window.getSelection()?.removeAllRanges(); setActiveRow(row); }} className={`cursor-pointer transition-colors ${selectedIds.includes(row.id) ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-blue-50/30'}`}>
-                                            {/* 🚩 [수정] 본문 체크박스 너비와 패딩을 사용자 관리와 동일하게 (p-4 pl-6 text-center) */}
                                             <td className="p-4 pl-6 text-center" onClick={e => e.stopPropagation()}>
                                                 <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer accent-letusBlue" />
                                             </td>
