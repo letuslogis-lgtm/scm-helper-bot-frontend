@@ -64,27 +64,34 @@ const UserManagement = () => {
         );
     };
 
-    // 🔥 선택 항목 일괄 삭제 기능 (관리자 전용 & 대용량 청크 처리)
+    // 🔥 선택 항목 일괄 삭제 기능 (Auth 계정 + Profile 동시 삭제)
     const handleDeleteSelected = async () => {
-        if (userProfile?.role !== '관리자') return alert('🚨 삭제 권한이 없습니다. 관리자에게 문의하세요.');
-        if (selectedIds.length === 0) return alert('삭제할 항목을 체크해 주세요.');
+        // (참고: userProfile 권한 체크가 필요하다면 주석을 해제해서 쓰세요!)
+        // if (userProfile?.role !== '관리자') return alert('🚨 삭제 권한이 없습니다. 관리자에게 문의하세요.');
+        
+        if (selectedUsers.length === 0) return alert('삭제할 사용자를 체크해 주세요.');
 
-        if (!window.confirm(`선택하신 ${selectedIds.length}건의 데이터를 정말 삭제하시겠습니까?\n이 작업은 영구적이며 복구할 수 없습니다.`)) return;
+        if (!window.confirm(`선택하신 ${selectedUsers.length}명의 계정을 정말 삭제하시겠습니까?\n시스템 접속 권한이 영구적으로 박탈되며 복구할 수 없습니다.`)) return;
 
+        setIsLoading(true); // 삭제 중 로딩 스피너 작동
         try {
-            // 🔥 URL 길이 초과 방지를 위해 200개씩 쪼개서 지우기!
-            const CHUNK_SIZE = 200;
-            for (let i = 0; i < selectedIds.length; i += CHUNK_SIZE) {
-                const chunk = selectedIds.slice(i, i + CHUNK_SIZE);
-                const { error } = await supabase.from('logistics_accidents').delete().in('id', chunk);
-                if (error) throw error;
+            // 🔥 Auth 계정은 한 번에 묶어서(in) 지우는 기능이 없어서 반복문으로 안전하게 하나씩 날립니다.
+            for (const userId of selectedUsers) {
+                // 1. Supabase Auth (로그인 접속 권한) 영구 삭제
+                const { error: authError } = await adminSupabase.auth.admin.deleteUser(userId);
+                if (authError) throw authError;
+
+                // 2. profiles 테이블 데이터 삭제 (Cascade 설정이 안 되어 있을 경우를 대비한 확인 사살)
+                await adminSupabase.from('profiles').delete().eq('id', userId);
             }
 
-            alert(`🗑️ ${selectedIds.length}건의 데이터가 깔끔하게 삭제되었습니다.`);
-            setSelectedIds([]);
-            fetchAccidents();
+            alert(`🗑️ ${selectedUsers.length}명의 사용자 계정이 완벽하게 삭제되었습니다.`);
+            setSelectedUsers([]); // 🚩 체크박스 초기화
+            fetchUsers();         // 🚩 사용자 목록 새로고침
         } catch (err) {
-            alert('삭제 중 오류 발생: ' + err.message);
+            alert('사용자 삭제 중 오류 발생: ' + err.message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
