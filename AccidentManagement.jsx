@@ -21,6 +21,8 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
     // 🔥 사용자인 경우 본인의 소속팀(team)으로 초기값 강제 고정!
     const [dept, setDept] = useState(row.responsible_dept || (isUser ? userProfile?.team : ''));
 
+    const [actionContent, setActionContent] = useState(row.action_content || '');
+
     const [actionResult, setActionResult] = useState(row.action_result || '미확인');
     const [isSaving, setIsSaving] = useState(false);
 
@@ -99,26 +101,27 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><CloseIcon /></button>
                 </div>
 
-                <div className="p-6 space-y-5 overflow-y-auto max-h-[80vh] custom-scrollbar">
+                <div className="p-6 space-y-6 overflow-y-auto max-h-[80vh] custom-scrollbar">
+
                     {/* 1. 기본 정보 (Read-Only) 영역 개편 */}
                     <div className="bg-slate-50 rounded-lg p-5 border border-slate-200">
                         <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
                             <span className="w-1 h-3 bg-slate-300 rounded-full"></span> 기본 정보 (Read-Only)
                         </h4>
                         <div className="flex flex-col gap-3 text-[13px]">
-                            {/* 🚩 1행: 브랜드 / 등록자(시공팀) */}
+                            {/* 🚩 1행: 브랜드 / 등록자 (폰트 크기 통일) */}
                             <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                                 <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
                                     <span className="text-gray-500 font-medium">브랜드</span>
                                     <span className="font-bold text-gray-800">{row.brand}</span>
                                 </div>
                                 <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
-                                    <span className="text-gray-500 font-medium">등록자 (시공팀)</span>
+                                    <span className="text-gray-500 font-medium">등록자</span>
                                     <span className="font-black text-letusBlue">{row.installer_team || '-'}</span>
                                 </div>
                             </div>
 
-                            {/* 🚩 2행: 수주번호 / 수주건명 */}
+                            {/* 🚩 2행: 수주번호 / 수주건명 (폰트 크기 통일) */}
                             <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                                 <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
                                     <span className="text-gray-500 font-medium">수주번호</span>
@@ -130,7 +133,19 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                                 </div>
                             </div>
 
-                            {/* 3/4행: 기존 기타 정보들 3열 배치로 압축 */}
+                            {/* 🚩 3행: 품목코드 / 이슈수량 (1,2행과 동일한 레이아웃/폰트) */}
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                                    <span className="text-gray-500 font-medium">품목코드</span>
+                                    <span className="font-bold text-gray-800">{row.item_code}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                                    <span className="text-gray-500 font-medium">이슈수량</span>
+                                    <span className="font-bold text-red-500">{row.issue_qty}개</span>
+                                </div>
+                            </div>
+
+                            {/* 4행: 기타 상세 정보 (작은 폰트로 하단 배치) */}
                             <div className="grid grid-cols-3 gap-x-4 gap-y-3 mt-1">
                                 <div className="flex justify-between border-b border-slate-200/60 pb-1">
                                     <span className="text-gray-500 text-xs">ZONE</span><span className="font-bold text-xs text-letusBlue">{row.zone || '-'}</span>
@@ -142,140 +157,140 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                                     <span className="text-gray-500 text-xs">주/야</span><span className="font-bold text-xs text-gray-800">{row.shift_type || '-'}</span>
                                 </div>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-3 mt-1">
-                                <div className="flex justify-between border-b border-slate-200/60 pb-1">
-                                    <span className="text-gray-500 text-xs">이슈수량</span><span className="font-bold text-xs text-red-500">{row.issue_qty}개</span>
-                                </div>
-                                <div className="flex justify-between border-b border-slate-200/60 pb-1">
-                                    <span className="text-gray-500 text-xs">품목코드</span><span className="font-medium text-xs text-gray-700">{row.item_code}</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
-                    {/* 2. 조치 등록 폼 영역 */}
-                    <div className="space-y-5 pt-2">
+                    {/* 2. 조치 등록 폼 전체 영역 */}
+                    <div className="flex flex-col gap-6">
 
-                        {/* 1열: 발생 원인 / 귀책 부서 */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                                    <span className="text-letusOrange">*</span> 발생 원인 선택
-                                </label>
-                                <select value={causeType} onChange={e => setCauseType(e.target.value)} className="w-full border border-gray-300 rounded-[4px] p-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue transition-all cursor-pointer bg-white text-gray-800">
-                                    <option value="">원인을 선택해 주세요</option>
-                                    <option value="작업자 귀책">작업자 귀책</option>
-                                    <option value="시공팀 귀책">시공팀 귀책</option>
-                                    <option value="전산/시스템 오류">전산/시스템 오류</option>
-                                    <option value="서류/정보 불일치">서류/정보 불일치</option>
-                                    <option value="재고/수량 이슈">재고/수량 이슈</option>
-                                    <option value="프로세스 미준수">프로세스 미준수</option>
-                                    <option value="기타">기타</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                                    <span className="text-letusOrange">*</span> 귀책 부서 선택 {isUser && <span className="text-gray-400 font-normal ml-1">(소속팀 고정)</span>}
-                                </label>
-                                <select
-                                    value={dept}
-                                    onChange={e => setDept(e.target.value)}
-                                    disabled={isUser}
-                                    className={`w-full border rounded-[4px] p-2.5 text-xs font-bold outline-none transition-all ${isUser ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'border-gray-300 focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-white text-gray-800'}`}
-                                >
-                                    <option value="">부서를 선택해 주세요</option>
-                                    {isUser && dept && !['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타'].includes(dept) && (
-                                        <option value={dept}>{dept}</option>
-                                    )}
-                                    <option value="물류사업1팀">물류사업1팀</option>
-                                    <option value="물류사업2팀">물류사업2팀</option>
-                                    <option value="운송사업팀">운송사업팀</option>
-                                    <option value="컨택센터">컨택센터</option>
-                                    <option value="라스트마일1팀">라스트마일1팀</option>
-                                    <option value="라스트마일2팀">라스트마일2팀</option>
-                                    <option value="기타">기타</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* 🚩 2열: 조치 결과 반영 / 조치 수행처 (신규 추가!) */}
-                        <div className="grid grid-cols-2 gap-4">
-                            {/* 관리자만 조치 결과를 반영할 수 있도록 유지 */}
-                            {userProfile?.role === '관리자' ? (
+                        {/* 🔼 상단: 보고자 공통 구역 (모두에게 보임) */}
+                        <div className="flex flex-col gap-4">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                                        <span className="text-letusOrange">*</span> 조치 결과 반영
+                                        <span className="text-letusOrange">*</span> 발생 원인 선택
+                                    </label>
+                                    <select value={causeType} onChange={e => setCauseType(e.target.value)} className="w-full border border-gray-300 rounded-[4px] p-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue transition-all cursor-pointer bg-white text-gray-800">
+                                        <option value="">원인을 선택해 주세요</option>
+                                        <option value="작업자 귀책">작업자 귀책</option>
+                                        <option value="시공팀 귀책">시공팀 귀책</option>
+                                        <option value="전산/시스템 오류">전산/시스템 오류</option>
+                                        <option value="서류/정보 불일치">서류/정보 불일치</option>
+                                        <option value="재고/수량 이슈">재고/수량 이슈</option>
+                                        <option value="프로세스 미준수">프로세스 미준수</option>
+                                        <option value="기타">기타</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                                        <span className="text-letusOrange">*</span> 귀책 부서 선택 {isUser && <span className="text-gray-400 font-normal ml-1">(소속팀 고정)</span>}
                                     </label>
                                     <select
-                                        value={actionResult}
-                                        onChange={e => setActionResult(e.target.value)}
-                                        className="w-full border border-blue-300 rounded-[4px] p-2.5 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-blue-50/30 text-letusBlue"
+                                        value={dept}
+                                        onChange={e => setDept(e.target.value)}
+                                        disabled={isUser}
+                                        className={`w-full border rounded-[4px] p-2.5 text-xs font-bold outline-none transition-all ${isUser ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'border-gray-300 focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-white text-gray-800'}`}
                                     >
-                                        <option value="미확인">미확인 (빈칸)</option>
-                                        <option value="정상출고">정상출고</option>
-                                        <option value="미출고">미출고</option>
-                                        <option value="오출고">오출고</option>
-                                        <option value="과출고">과출고</option>
-                                        <option value="물류파손">물류파손</option>
-                                        <option value="시공파손">시공파손</option>
-                                        <option value="현장직출">현장직출</option>
-                                        <option value="센터직출">센터직출</option>
-                                        <option value="납기연기(건)">납기연기(건)</option>
-                                        <option value="납기연기(품목)">납기연기(품목)</option>
-                                        <option value="제품분실">제품분실</option>
+                                        <option value="">부서를 선택해 주세요</option>
+                                        {isUser && dept && !['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타'].includes(dept) && (
+                                            <option value={dept}>{dept}</option>
+                                        )}
+                                        <option value="물류사업1팀">물류사업1팀</option>
+                                        <option value="물류사업2팀">물류사업2팀</option>
+                                        <option value="운송사업팀">운송사업팀</option>
+                                        <option value="컨택센터">컨택센터</option>
+                                        <option value="라스트마일1팀">라스트마일1팀</option>
+                                        <option value="라스트마일2팀">라스트마일2팀</option>
+                                        <option value="기타">기타</option>
                                     </select>
-                                    {actionResult === '미확인' && <p className="text-[10px] text-red-500 mt-1 font-bold">⚠️ 현재 엑셀에 조치결과가 누락되어 '미확인' 상태입니다.</p>}
                                 </div>
-                            ) : (
-                                <div className="opacity-0 pointer-events-none"></div> /* 빈 공간 유지용 */
-                            )}
+                            </div>
 
-                            {/* 🚩 조치 수행처 드롭다운 (관리자 전용) */}
                             <div>
-                                <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center justify-between">
-                                    <span className="flex items-center gap-1.5"><span className="text-letusOrange">*</span> 조치 수행처</span>
-                                    {userProfile?.role !== '관리자' && <span className="text-[9px] text-red-400 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">🔒 관리자 전용</span>}
+                                <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                                    발생 원인 및 조치 상세 내역
                                 </label>
-                                {/* ❗️ 이 드롭다운의 value와 onChange에 연결할 state (handlerTeam 등)를 컴포넌트 상단에 꼭 추가하셔야 합니다! */}
-                                <select
-                                    value={row.handler_team || ''} /* 임시 바인딩, 실제 상태 변수로 교체 권장 */
-                                    onChange={e => console.log('핸들러 변경', e.target.value)} /* 실제 setState 함수로 교체 권장 */
-                                    disabled={userProfile?.role !== '관리자'}
-                                    className={`w-full border rounded-[4px] p-2.5 text-xs font-bold outline-none transition-all ${userProfile?.role === '관리자' ? 'border-gray-300 bg-white text-gray-800 cursor-pointer focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue' : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-                                >
-                                    <option value="">수행처 선택 (미지정)</option>
-                                    {/* 🚩 [근무자 관리]에서 가져온 업체 리스트를 동적으로 렌더링합니다 */}
-                                    {vendorList.map(vendor => (
-                                        <option key={vendor} value={vendor}>{vendor}</option>
-                                    ))}
-
-                                    <option value="현장 자체 해결">현장 자체 해결</option>
-                                    <option value="기타">기타 (직접 입력 필요 시)</option>
-                                </select>
+                                <textarea
+                                    value={causeDetail}
+                                    onChange={e => setCauseDetail(e.target.value)}
+                                    rows={3}
+                                    className="w-full border border-gray-300 rounded-[4px] p-3 text-xs outline-none focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue resize-none transition-all placeholder:text-gray-300"
+                                    placeholder="사고 발생의 구체적인 원인과 현장 상황을 자유롭게 입력해 주세요."
+                                ></textarea>
+                                {row.handler_name && (
+                                    <div className="text-right text-[11px] text-gray-400 font-bold mt-1.5 pr-1 tracking-wide">
+                                        {formatModalTime(row.updated_at || row.created_at)} / {row.handler_name}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        {/* 3열: 발생 원인 상세 (텍스트 에어리어) */}
-                        <div>
-                            <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                                발생 원인 및 조치 상세 내역
-                            </label>
-                            <textarea
-                                value={causeDetail}
-                                onChange={e => setCauseDetail(e.target.value)}
-                                rows={3}
-                                className="w-full border border-gray-300 rounded-[4px] p-3 text-xs outline-none focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue resize-none transition-all placeholder:text-gray-300"
-                                placeholder="사고 발생의 구체적인 원인과 향후 조치 방향을 자유롭게 입력해 주세요."
-                            ></textarea>
+                        {/* 🔽 하단: 관리자 전용 구역 (3열 그리드 적용) */}
+                        {userProfile?.role === '관리자' && (
+                            <div className="pt-5 border-t border-slate-200 slide-up">
+                                <h5 className="text-[12px] font-black text-letusOrange mb-3 flex items-center gap-1.5">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                    관리자 전용 마감
+                                </h5>
+                                <div className="grid grid-cols-3 gap-4 bg-orange-50/40 p-4 rounded-lg border border-orange-100">
 
-                            {row.handler_name && (
-                                <div className="text-right text-[11px] text-gray-400 font-bold mt-1.5 pr-1 tracking-wide">
-                                    {formatModalTime(row.updated_at || row.created_at)} / {row.handler_name}
+                                    {/* 1. 확인 결과 (구 조치 결과 반영) */}
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-gray-700 mb-2 flex items-center gap-1">
+                                            <span className="text-letusOrange">*</span> 확인 결과
+                                        </label>
+                                        <select value={actionResult} onChange={e => setActionResult(e.target.value)} className="w-full border border-blue-300 bg-blue-50/30 text-letusBlue rounded-[4px] p-2.5 text-xs font-bold outline-none cursor-pointer focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue">
+                                            <option value="미확인">미확인 (빈칸)</option>
+                                            <option value="정상출고">정상출고</option>
+                                            <option value="미출고">미출고</option>
+                                            <option value="오출고">오출고</option>
+                                            <option value="과출고">과출고</option>
+                                            <option value="물류파손">물류파손</option>
+                                            <option value="시공파손">시공파손</option>
+                                            <option value="현장직출">현장직출</option>
+                                            <option value="센터직출">센터직출</option>
+                                            <option value="납기연기(건)">납기연기(건)</option>
+                                            <option value="납기연기(품목)">납기연기(품목)</option>
+                                            <option value="제품분실">제품분실</option>
+                                        </select>
+                                    </div>
+
+                                    {/* 2. 수행처 (구 조치 수행처) */}
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-gray-700 mb-2 flex items-center gap-1">
+                                            <span className="text-letusOrange">*</span> 수행처
+                                        </label>
+                                        <select value={handlerTeam} onChange={e => setHandlerTeam(e.target.value)} className="w-full border border-gray-300 bg-white text-gray-800 rounded-[4px] p-2.5 text-xs font-bold outline-none cursor-pointer focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue">
+                                            <option value="">수행처 선택 (미지정)</option>
+                                            {vendorList.map(vendor => (
+                                                <option key={vendor} value={vendor}>{vendor}</option>
+                                            ))}
+                                            <option value="현장 자체 해결">현장 자체 해결</option>
+                                            <option value="기타">기타</option>
+                                        </select>
+                                    </div>
+
+                                    {/* 🚩 3. 조치 내용 (신규 추가) */}
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-gray-700 mb-2 flex items-center gap-1">
+                                            <span className="text-letusOrange">*</span> 조치 내용
+                                        </label>
+                                        <select value={actionContent} onChange={e => setActionContent(e.target.value)} className="w-full border border-gray-300 bg-white text-gray-800 rounded-[4px] p-2.5 text-xs font-bold outline-none cursor-pointer focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue">
+                                            <option value="">조치 내용 선택</option>
+                                            <option value="출차 전 조치">출차 전 조치</option>
+                                            <option value="선조치">선조치</option>
+                                            <option value="당일 배차">당일 배차</option>
+                                            <option value="일정 연기">일정 연기</option>
+                                            <option value="과출고 회수">과출고 회수</option>
+                                            <option value="추가 수주/AS 접수">추가 수주/AS 접수</option>
+                                            <option value="기타">기타 (직접 입력)</option>
+                                        </select>
+                                    </div>
+
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
