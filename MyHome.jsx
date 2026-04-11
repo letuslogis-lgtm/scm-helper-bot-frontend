@@ -406,10 +406,10 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                         isDone: t.is_done,
                         repeat: t.repeat_days || [],
                         createdAt: (() => {
-    const d = t.created_at ? new Date(t.created_at) : new Date();
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-})()
+                            const d = t.created_at ? new Date(t.created_at) : new Date();
+                            const pad = n => String(n).padStart(2, '0');
+                            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                        })()
                     }));
                     setTodos(formattedTodos);
                 }
@@ -437,29 +437,31 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
     // --- TODO 핸들러 ---
     const handleSaveTodo = async (savedTodo) => {
         try {
+            const pad = n => String(n).padStart(2, '0');
+            const targetDateStr = `${selectedTodoDate.getFullYear()}-${pad(selectedTodoDate.getMonth() + 1)}-${pad(selectedTodoDate.getDate())}`;
+
             const todoPayload = {
                 text: savedTodo.text,
                 priority: savedTodo.priority,
                 repeat_days: savedTodo.repeat,
                 is_done: savedTodo.isDone,
-                creator_id: userProfile.id
+                creator_id: userProfile.id,
+                // ⭐ 신규 등록일 때만 우리가 선택한 날짜(targetDateStr)를 '생성일'로 보냅니다!
+                // (T12:00:00를 붙여서 낮 12시로 고정해야 시차 오류가 안 생깁니다.)
+                created_at: editingTodo ? undefined : `${targetDateStr}T12:00:00Z`
             };
 
             if (editingTodo) {
                 const { error } = await supabase.from('todos').update(todoPayload).eq('id', savedTodo.id);
                 if (error) throw error;
-                // 기존 createdAt 유지
                 setTodos(todos.map(t => t.id === savedTodo.id ? { ...savedTodo, createdAt: t.createdAt } : t));
             } else {
                 const { data, error } = await supabase.from('todos').insert([todoPayload]).select();
                 if (error) throw error;
-                // 새롭게 생성된 createdAt 추출
+                // 🚩 [수정 2] 화면(State)에도 우리가 선택한 날짜가 즉시 반영되도록 처리!
                 if (data && data.length > 0) {
-    const d = data[0].created_at ? new Date(data[0].created_at) : new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const localDateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    setTodos([{ ...savedTodo, id: data[0].id, createdAt: localDateStr }, ...todos]);
-}
+                    setTodos([{ ...savedTodo, id: data[0].id, createdAt: targetDateStr }, ...todos]);
+                }
             }
             setIsTodoModalOpen(false);
             setEditingTodo(null);
@@ -501,7 +503,7 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
     const padDate = n => String(n).padStart(2, '0');
     const selectedDateStr = `${selectedTodoDate.getFullYear()}-${padDate(selectedTodoDate.getMonth() + 1)}-${padDate(selectedTodoDate.getDate())}`;
     const dayOfWeekStrForSelected = ['일', '월', '화', '수', '목', '금', '토'][selectedTodoDate.getDay()];
-    
+
     const priorityWeight = { '긴급': 0, '1': 1, '2': 2, '3': 3, '4': 4 };
 
     // 1. 선택된 날짜에 보이는 TODO 필터링
@@ -516,8 +518,9 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
         const aCompleted = !!todoDoneLogs[`${a.id}_${selectedDateStr}`];
         const bCompleted = !!todoDoneLogs[`${b.id}_${selectedDateStr}`];
 
-        if (aCompleted !== bCompleted) return aCompleted ? 1 : -1; // 완료된 건 맨 뒤로
+        if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
 
+        // 1순위: 중요도 정렬
         const pA = priorityWeight[a.priority] ?? 4;
         const pB = priorityWeight[b.priority] ?? 4;
         if (pA !== pB) return pA - pB;
@@ -798,7 +801,7 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                 const dayOfWeekStr = ['일', '월', '화', '수', '목', '금', '토'][new Date(currentDate.getFullYear(), currentDate.getMonth(), day).getDay()];
 
                                 const dayEvents = calendarEvents.filter(e => dateStr >= e.startDate && dateStr <= e.endDate);
-                                
+
                                 // 🔥 달력 점 찍기 최적화: 반복 아니면 생성일에만 표시!
                                 const dayTodos = todos.filter(t => {
                                     if (!t.repeat || t.repeat.length === 0) return t.createdAt === dateStr;
@@ -981,7 +984,7 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                     <h4 className="text-sm font-black text-gray-500 border-b pb-1 mb-1">📝 해당 일자 TODO</h4>
                                     {dayEventsModalData.todos.map(todo => {
                                         const pad = n => String(n).padStart(2, '0');
-const dateStr = `${selectedTodoDate.getFullYear()}-${pad(selectedTodoDate.getMonth() + 1)}-${pad(selectedTodoDate.getDate())}`;
+                                        const dateStr = `${selectedTodoDate.getFullYear()}-${pad(selectedTodoDate.getMonth() + 1)}-${pad(selectedTodoDate.getDate())}`;
                                         const isCompleted = !!todoDoneLogs[`${todo.id}_${dateStr}`];
                                         return (
                                             <div key={todo.id} className={`p-2.5 rounded-lg border flex items-center gap-2 ${isCompleted ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-gray-50 border-gray-200'}`}>
