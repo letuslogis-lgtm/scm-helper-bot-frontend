@@ -1378,6 +1378,9 @@ const AccidentList = ({ userProfile, initialFilter }) => {
     return (
         <div className="p-6 bg-slate-100 h-[calc(100vh-64px)] flex flex-col gap-4 slide-up">
 
+            <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)]">
+            
+            {/* 1. 검색 박스 구역 (사용자 관리 스타일로 통일) */}
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex flex-col gap-3 z-30 shrink-0 transition-all duration-300">
                 <div className="flex items-center gap-5 w-full flex-wrap">
                     <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소']} selected={draftFilters.brands} onChange={(val) => setDraftFilters({ ...draftFilters, brands: val })} />
@@ -1385,39 +1388,41 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">서비스예약일</label>
                         <div className="flex items-center">
-                            <input type="date" value={draftFilters.startDate} onChange={e => setDraftFilters({ ...draftFilters, startDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
-                            <span className="mx-1 text-gray-400 text-xs">~</span>
-                            <input type="date" value={draftFilters.endDate} onChange={e => setDraftFilters({ ...draftFilters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
+                            <input type="date" value={draftFilters.startDate} onChange={e => setDraftFilters({ ...draftFilters, startDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] w-[110px] focus:outline-none focus:border-letusOrange cursor-pointer text-gray-700" />
+                            <span className="mx-1 text-gray-400 text-xs font-bold">~</span>
+                            <input type="date" value={draftFilters.endDate} onChange={e => setDraftFilters({ ...draftFilters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] w-[110px] focus:outline-none focus:border-letusOrange cursor-pointer text-gray-700" />
                         </div>
                     </div>
 
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">검색어</label>
-                        <div className="flex gap-0.5 h-[30px]">
-                            <select value={draftFilters.searchType} onChange={e => setDraftFilters({ ...draftFilters, searchType: e.target.value })} className="border border-gray-200 rounded-l-[3px] text-xs px-2 text-gray-700 bg-gray-50 focus:outline-none cursor-pointer">
+                        <div className="flex gap-0 h-[30px]">
+                            <select value={draftFilters.searchType} onChange={e => setDraftFilters({ ...draftFilters, searchType: e.target.value })} className="border border-gray-200 border-r-0 rounded-l-[3px] text-xs px-2 text-gray-700 bg-gray-50 focus:outline-none cursor-pointer h-full">
                                 <option>수주건명</option>
                                 <option>수주번호</option>
                                 <option>품목코드</option>
                             </select>
-                            <input type="text" value={draftFilters.searchValue} onChange={e => setDraftFilters({ ...draftFilters, searchValue: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleSearchClick()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-36 focus:outline-none focus:border-letusOrange" placeholder="검색어 입력" />
+                            <input type="text" value={draftFilters.searchValue} onChange={e => setDraftFilters({ ...draftFilters, searchValue: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleSearchClick()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-36 focus:outline-none focus:border-letusOrange h-full" placeholder="검색어 입력" />
                         </div>
                     </div>
 
-                    <div className="flex items-center shrink-0 bg-blue-50/50 px-3 py-1.5 rounded border border-blue-100">
-                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-letusBlue">
+                    <div className="flex items-center shrink-0 bg-blue-50/50 px-3 h-[30px] rounded-[3px] border border-blue-100">
+                        <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-bold text-letusBlue h-full">
                             <input type="checkbox" checked={draftFilters.excludeNormal} onChange={e => setDraftFilters({ ...draftFilters, excludeNormal: e.target.checked })} className="w-3.5 h-3.5 accent-letusBlue cursor-pointer" />
                             '정상출고' 제외
                         </label>
                     </div>
 
-                    <div className="ml-auto flex items-center gap-2 shrink-0">
+                    <div className="ml-auto shrink-0 flex items-center gap-2">
                         <button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)} className={`text-[11px] font-bold border px-3 h-[30px] rounded-[3px] transition-colors flex items-center gap-1 shadow-sm ${isAdvancedOpen ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
                             <svg className={`w-3.5 h-3.5 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
                             상세 조회
                         </button>
                         <div className="w-px h-4 bg-gray-200 mx-1"></div>
-                        <button onClick={handleResetClick} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] text-xs">초기화</button>
-                        <button onClick={handleSearchClick} className="bg-letusOrange text-white hover:bg-orange-500 font-bold px-6 h-[30px] rounded-[3px] text-xs shadow-sm flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> 조회하기</button>
+                        <button onClick={handleResetClick} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] transition-colors text-xs">초기화</button>
+                        <button onClick={handleSearchClick} className="bg-letusOrange text-white hover:bg-orange-600 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center shadow-sm gap-1.5">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> 조회하기
+                        </button>
                     </div>
                 </div>
 
@@ -1432,7 +1437,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
 
                             <div className="flex items-center shrink-0">
                                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">지연판별</label>
-                                <select value={draftFilters.isDelayed} onChange={e => setDraftFilters({ ...draftFilters, isDelayed: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusBlue cursor-pointer bg-white text-gray-700 w-32 font-medium">
+                                <select value={draftFilters.isDelayed} onChange={e => setDraftFilters({ ...draftFilters, isDelayed: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 w-32 font-medium">
                                     <option value="전체">전체 (All)</option>
                                     <option value="지연">재일정(지연)</option>
                                     <option value="정상">정상(지연없음)</option>
@@ -1443,41 +1448,54 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                 )}
             </div>
 
-            <div className="flex justify-end gap-3 z-30 px-2 -mb-2 shrink-0">
-                {/* 🔥 신규: 클릭 방식의 선택실행 드롭다운 */}
+            {/* 2. 선택실행 (드롭다운) 구역 (사용자 관리 스타일로 통일) */}
+            <div className="flex justify-end w-full px-2 z-30 -mt-1 mb-1 shrink-0 gap-3">
+                
+                {/* 데이터 통합 업로드 버튼 (원래 있던 것 유지) */}
+                {userProfile?.role === '관리자' && (
+                    <button onClick={() => setIsUploadModalOpen(true)} className="bg-white border border-green-600 text-green-600 px-4 py-[7px] rounded-[3px] text-[11px] font-bold flex items-center cursor-pointer hover:bg-green-50 transition-colors shadow-sm h-[32px]">
+                        <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg> 데이터 통합 업로드 (Excel)
+                    </button>
+                )}
+
+                {/* 선택실행 드롭다운 */}
                 <div className="relative z-50">
                     <button
                         onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
-                        className="flex items-center text-[11px] font-bold text-slate-700 bg-white border border-slate-300 rounded px-3 py-1.5 hover:bg-slate-50 min-w-[100px] justify-between shadow-sm transition-all"
+                        className="flex items-center justify-between text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded shadow-sm px-3 py-[7px] hover:bg-gray-50 transition-all min-w-[90px] h-[32px]"
                     >
-                        <span>선택실행 {selectedIds.length > 0 && `(${selectedIds.length})`}</span>
-                        <svg className={`w-3.5 h-3.5 ml-2 text-slate-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        선택실행 {selectedIds.length > 0 && `(${selectedIds.length})`}
+                        <svg className={`w-3.5 h-3.5 ml-2 text-gray-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </button>
 
                     {isActionMenuOpen && (
                         <>
                             <div className="fixed inset-0" onClick={() => setIsActionMenuOpen(false)}></div>
-                            <div className="absolute right-0 top-[110%] w-[130px] bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5 slide-down z-50">
+                            <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 py-1.5 slide-down">
+                                
                                 <button
                                     onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) return alert('항목을 체크해 주세요.'); setIsBulkEditModalOpen(true); }}
-                                    className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] transition-colors ${selectedIds.length > 0 ? 'text-letusBlue hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                    className={`w-full text-left px-4 py-2 text-xs font-medium transition-colors ${selectedIds.length > 0 ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}
                                 >
                                     일괄 마감 (수정)
                                 </button>
-                                <div className="h-px bg-slate-100 my-0.5"></div>
+                                
+                                <div className="h-px bg-gray-100 my-1"></div>
+                                
                                 <button
                                     onClick={() => { setIsActionMenuOpen(false); handleExportExcel(); }}
-                                    className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] transition-colors ${selectedIds.length > 0 ? 'text-green-700 hover:bg-green-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                    className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors flex items-center justify-between ${selectedIds.length > 0 ? 'text-green-600 hover:bg-green-50' : 'text-gray-300 cursor-not-allowed'}`}
                                 >
                                     엑셀 추출
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                 </button>
 
                                 {userProfile?.role === '관리자' && (
                                     <>
-                                        <div className="h-px bg-slate-100 my-0.5"></div>
+                                        <div className="h-px bg-gray-100 my-1"></div>
                                         <button
                                             onClick={() => { setIsActionMenuOpen(false); handleDeleteSelected(); }}
-                                            className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] transition-colors flex justify-between items-center ${selectedIds.length > 0 ? 'text-red-600 hover:bg-red-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                            className={`w-full text-left px-4 py-2 text-xs font-medium transition-colors flex justify-between items-center ${selectedIds.length > 0 ? 'text-red-600 hover:bg-red-50' : 'text-gray-300 cursor-not-allowed'}`}
                                         >
                                             삭제
                                             {selectedIds.length > 0 && <svg className="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>}
@@ -1488,12 +1506,6 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                         </>
                     )}
                 </div>
-
-                {userProfile?.role === '관리자' && (
-                    <button onClick={() => setIsUploadModalOpen(true)} className="bg-white border border-green-600 text-green-600 px-4 py-1.5 rounded-[4px] text-[11px] font-bold flex items-center cursor-pointer hover:bg-green-50 transition-colors shadow-sm">
-                        <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg> 데이터 통합 업로드 (Excel)
-                    </button>
-                )}
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20 min-h-0">
