@@ -219,10 +219,14 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
                 {/* 🔥 포인트 3: h-[600px] 제거! 부모 컨테이너에 맞춰서 자동으로 스크롤바가 생깁니다. */}
                 <div className="overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1480px]">
-                        {/* 헤더는 sticky top-0으로 고정 */}
-                        <thead className="bg-gray-50/90 backdrop-blur-sm border-b border-gray-200 text-xs text-gray-500 font-bold sticky top-0 z-10">
+                        {/* 🚩 [수정] 헤더 디자인을 사용자 관리와 완벽하게 동일하게 맞춤 (bg-slate-50, shadow-sm 추가 등) */}
+                        <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th className="p-4 w-[60px] text-center"><input type="checkbox" checked={sortedIssues.length > 0 && selectedIds.length === sortedIssues.length} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer" /></th>
+                                {/* 🚩 [수정] 체크박스 너비와 패딩을 사용자 관리와 동일하게 (p-4 pl-6 w-10 text-center) */}
+                                <th className="p-4 pl-6 w-10 text-center">
+                                    <input type="checkbox" checked={sortedIssues.length > 0 && selectedIds.length === sortedIssues.length} onChange={handleSelectAll} className="w-4 h-4 accent-letusBlue cursor-pointer" title="전체 선택" />
+                                </th>
+                                {/* 나머지 컬럼 매핑 로직 유지 */}
                                 {[{ label: '접수번호', key: 'reception_no', w: '200px' }, { label: '소속 브랜드', key: 'brand', w: '100px' }, { label: '품목코드', key: 'product_code', w: 'auto' }, { label: '유형', key: 'issue_type', w: '160px' }, { label: '접수자', key: 'reporter', w: '90px' }, { label: '공급업체', key: 'vendor', w: '120px' }, { label: '처리상태', key: 'status', w: '100px' }, { label: '알림톡', key: 'is_notified', w: '80px' }, { label: '요청내용', key: null, w: '110px' }, { label: '처리 내용', key: null, w: '110px' }, { label: '최종 처리자', key: 'final_handler', w: '120px' }, { label: '최종 처리일시', key: 'resolved_at', w: '150px' }].map((col, idx) => (
                                     <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
                                         <div className="flex items-center justify-center">{col.label} {col.key && getSortIcon(col.key)}</div>
@@ -230,8 +234,8 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 text-[13px]">
-                            {/* 🔥 로딩 중일 때 colSpan="13"으로 전체 너비 차지 & 정중앙 정렬! */}
+                        {/* 🚩 [수정] 본문 텍스트 색상 통일 (text-gray-700) */}
+                        <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
                             {isLoading ? (
                                 <tr>
                                     <td colSpan="13" className="py-32 text-center align-middle">
@@ -244,23 +248,29 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
                             ) : sortedIssues.length === 0 ? (
                                 <tr><td colSpan="13" className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
                             ) : sortedIssues.map((row) => (
-                                <tr key={row.id} className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${selectedIds.includes(row.id) ? 'bg-blue-50/50' : ''}`} onClick={() => handleSelectOne(row.id)}>
-                                    <td className="p-4 text-center" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer" /></td>
-                                    <td className="p-4 pl-6 font-bold text-gray-800">{row.reception_no}</td>
-                                    <td className="p-4 font-semibold text-gray-700">{row.brand}</td>
-                                    <td className="p-4 text-gray-600 truncate max-w-[200px]" title={row.product_code}>{row.product_code}</td>
-                                    <td className="p-4"><CategoryBadge category={row.issue_type} /></td>
-                                    <td className="p-4 text-gray-600">{row.reporter || '물류담당자'}</td>
-                                    <td className="p-4 text-gray-700 font-semibold">{row.vendor || '-'}</td>
+                                <tr key={row.id} className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${selectedIds.includes(row.id) ? 'bg-blue-50' : ''}`} onClick={() => handleSelectOne(row.id)}>
+                                    {/* 🚩 [수정] 본문 체크박스 너비와 패딩을 사용자 관리와 동일하게 (p-4 pl-6 text-center) */}
+                                    <td className="p-4 pl-6 text-center" onClick={e => e.stopPropagation()}>
+                                        <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 accent-letusBlue cursor-pointer" />
+                                    </td>
+                                    <td className="p-4 font-bold text-gray-800 text-center">{row.reception_no}</td>
+                                    <td className="p-4 font-semibold text-gray-700 text-center">{row.brand}</td>
+                                    <td className="p-4 text-gray-600 truncate text-center" title={row.product_code}>{row.product_code}</td>
+                                    <td className="p-4 text-center"><CategoryBadge category={row.issue_type} /></td>
+                                    <td className="p-4 text-gray-600 text-center">{row.reporter || '물류담당자'}</td>
+                                    <td className="p-4 text-gray-700 font-semibold text-center">{row.vendor || '-'}</td>
                                     <td className="p-4 text-center"><StatusBadge status={row.status} category={row.issue_type} /></td>
                                     <td className="p-4 text-center">{row.is_notified ? (<div className="flex justify-center"><span className="flex items-center justify-center w-5 h-5 bg-blue-100 text-blue-600 border border-blue-200 rounded-full shadow-sm" title={`전송완료: ${formatDateTime(row.feedback_sent_at)}`}><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg></span></div>) : <span className="text-gray-300 font-bold">-</span>}</td>
                                     <td className="p-4 text-center" onClick={e => e.stopPropagation()}><button onClick={() => setActiveModalRow(row)} className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${row.status === '조치대기' ? 'bg-gray-50 text-gray-500' : 'bg-white text-letusBlue border-blue-200 hover:bg-blue-50'}`}>{row.status === '조치대기' ? '요청등록' : '요청확인'}</button></td>
                                     <td className="p-4 text-center" onClick={e => e.stopPropagation()}>{['처리 중', '조치완료'].includes(row.status) ? (<button onClick={() => setActiveHandleRow(row)} className={`text-xs font-bold border px-3 py-1.5 rounded transition-colors shadow-sm w-[76px] ${row.status === '조치완료' ? 'bg-white text-green-600 border-green-200 hover:bg-green-50' : 'bg-yellow-50 text-yellow-600 border-yellow-300 hover:bg-yellow-100'}`}>{row.status === '조치완료' ? '조치 확인' : '조치 등록'}</button>) : <span className="text-gray-300">-</span>}</td>
-                                    <td className="p-4 text-gray-600 font-medium">{row.final_handler || '-'}</td>
-                                    <td className="p-4 text-gray-500 font-mono text-xs">{formatDateTime(row.resolved_at)}</td>
+                                    <td className="p-4 text-gray-600 font-medium text-center">{row.final_handler || '-'}</td>
+                                    <td className="p-4 text-gray-500 font-mono text-xs text-center">{formatDateTime(row.resolved_at)}</td>
                                 </tr>
                             ))}
                         </tbody>
+                    </table>
+                </div>
+            </div>
                     </table>
                 </div>
             </div>
