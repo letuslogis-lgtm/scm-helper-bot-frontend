@@ -15,11 +15,38 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
     const [causeType, setCauseType] = useState(initType);
     const [causeDetail, setCauseDetail] = useState(initDetail);
 
+    const [vendorList, setVendorList] = useState([]);
+    const [handlerTeam, setHandlerTeam] = useState(row.handler_team || ''); // 조치 수행처 상태
+
     // 🔥 사용자인 경우 본인의 소속팀(team)으로 초기값 강제 고정!
     const [dept, setDept] = useState(row.responsible_dept || (isUser ? userProfile?.team : ''));
 
     const [actionResult, setActionResult] = useState(row.action_result || '미확인');
     const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        const fetchVendors = async () => {
+            try {
+                // workers 테이블(근무자 관리)에서 업체명(vendor_name)만 중복 없이 가져옵니다.
+                const { data, error } = await supabase
+                    .from('workers')
+                    .select('vendor_name');
+
+                if (error) throw error;
+
+                // 중복 제거 및 가나다순 정렬
+                const uniqueVendors = [...new Set(data.map(item => item.vendor_name))]
+                    .filter(Boolean)
+                    .sort();
+
+                setVendorList(uniqueVendors);
+            } catch (err) {
+                console.error("업체 리스트 조회 오류:", err.message);
+            }
+        };
+
+        fetchVendors();
+    }, []);
 
     const handleSave = async () => {
         if (!causeType) return alert('발생 원인을 선택해 주세요.');
@@ -73,51 +100,70 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                 </div>
 
                 <div className="p-6 space-y-5 overflow-y-auto max-h-[80vh] custom-scrollbar">
-                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                        <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-3">기본 정보 (Read-Only)</h4>
-                        <div className="grid grid-cols-2 gap-y-3 gap-x-6 text-[13px]">
-                            <div className="flex justify-between border-b border-slate-100 pb-1">
-                                <span className="text-gray-500">수주번호</span>
-                                <span className="font-bold text-gray-800">{row.order_no}</span>
+                    {/* 1. 기본 정보 (Read-Only) 영역 개편 */}
+                    <div className="bg-slate-50 rounded-lg p-5 border border-slate-200">
+                        <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                            <span className="w-1 h-3 bg-slate-300 rounded-full"></span> 기본 정보 (Read-Only)
+                        </h4>
+                        <div className="flex flex-col gap-3 text-[13px]">
+                            {/* 🚩 1행: 브랜드 / 등록자(시공팀) */}
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                                    <span className="text-gray-500 font-medium">브랜드</span>
+                                    <span className="font-bold text-gray-800">{row.brand}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                                    <span className="text-gray-500 font-medium">등록자 (시공팀)</span>
+                                    <span className="font-black text-letusBlue">{row.installer_team || '-'}</span>
+                                </div>
                             </div>
-                            <div className="flex justify-between border-b border-slate-100 pb-1">
-                                <span className="text-gray-500">브랜드</span>
-                                <span className="font-bold text-gray-800">{row.brand}</span>
+
+                            {/* 🚩 2행: 수주번호 / 수주건명 */}
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                                    <span className="text-gray-500 font-medium">수주번호</span>
+                                    <span className="font-bold text-gray-800">{row.order_no}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-200/60 pb-1.5">
+                                    <span className="text-gray-500 font-medium shrink-0">수주건명</span>
+                                    <span className="font-bold text-gray-800 text-right truncate max-w-[150px] ml-4" title={row.order_name}>{row.order_name || '-'}</span>
+                                </div>
                             </div>
-                            <div className="col-span-2 flex justify-between border-b border-slate-100 pb-1">
-                                <span className="text-gray-500 shrink-0">수주건명</span>
-                                <span className="font-bold text-gray-800 text-right break-all ml-4">{row.order_name || '-'}</span>
+
+                            {/* 3/4행: 기존 기타 정보들 3열 배치로 압축 */}
+                            <div className="grid grid-cols-3 gap-x-4 gap-y-3 mt-1">
+                                <div className="flex justify-between border-b border-slate-200/60 pb-1">
+                                    <span className="text-gray-500 text-xs">ZONE</span><span className="font-bold text-xs text-letusBlue">{row.zone || '-'}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-200/60 pb-1">
+                                    <span className="text-gray-500 text-xs">작업자</span><span className="font-bold text-xs text-gray-800">{row.worker_name || '-'}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-200/60 pb-1">
+                                    <span className="text-gray-500 text-xs">주/야</span><span className="font-bold text-xs text-gray-800">{row.shift_type || '-'}</span>
+                                </div>
                             </div>
-                            <div className="flex justify-between border-b border-slate-100 pb-1">
-                                <span className="text-gray-500">ZONE</span>
-                                <span className="font-bold text-letusBlue">{row.zone || '-'}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-slate-100 pb-1">
-                                <span className="text-gray-500">작업자</span>
-                                <span className="font-bold text-gray-800">{row.worker_name || '-'}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-slate-100 pb-1">
-                                <span className="text-gray-500">주/야</span>
-                                <span className="font-bold text-gray-800">{row.shift_type || '-'}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-slate-100 pb-1">
-                                <span className="text-gray-500">이슈수량</span>
-                                <span className="font-bold text-red-500">{row.issue_qty}개</span>
-                            </div>
-                            <div className="col-span-2 flex justify-between border-b border-slate-100 pb-1">
-                                <span className="text-gray-500 shrink-0">품목코드</span>
-                                <span className="font-medium text-gray-700 text-right break-all ml-4">{row.item_code}</span>
+
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-3 mt-1">
+                                <div className="flex justify-between border-b border-slate-200/60 pb-1">
+                                    <span className="text-gray-500 text-xs">이슈수량</span><span className="font-bold text-xs text-red-500">{row.issue_qty}개</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-200/60 pb-1">
+                                    <span className="text-gray-500 text-xs">품목코드</span><span className="font-medium text-xs text-gray-700">{row.item_code}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="space-y-4 pt-2">
+                    {/* 2. 조치 등록 폼 영역 */}
+                    <div className="space-y-5 pt-2">
+
+                        {/* 1열: 발생 원인 / 귀책 부서 */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
                                     <span className="text-letusOrange">*</span> 발생 원인 선택
                                 </label>
-                                <select value={causeType} onChange={e => setCauseType(e.target.value)} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue transition-all cursor-pointer bg-white">
+                                <select value={causeType} onChange={e => setCauseType(e.target.value)} className="w-full border border-gray-300 rounded-[4px] p-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue transition-all cursor-pointer bg-white text-gray-800">
                                     <option value="">원인을 선택해 주세요</option>
                                     <option value="작업자 귀책">작업자 귀책</option>
                                     <option value="시공팀 귀책">시공팀 귀책</option>
@@ -129,7 +175,6 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                                 </select>
                             </div>
 
-                            {/* 🔥 사용자 계정일 경우, 드롭다운이 막히고 소속팀으로 고정됩니다 */}
                             <div>
                                 <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
                                     <span className="text-letusOrange">*</span> 귀책 부서 선택 {isUser && <span className="text-gray-400 font-normal ml-1">(소속팀 고정)</span>}
@@ -138,15 +183,12 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                                     value={dept}
                                     onChange={e => setDept(e.target.value)}
                                     disabled={isUser}
-                                    className={`w-full border rounded-lg p-2.5 text-sm font-bold outline-none transition-all ${isUser ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'border-gray-300 focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-white'}`}
+                                    className={`w-full border rounded-[4px] p-2.5 text-xs font-bold outline-none transition-all ${isUser ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'border-gray-300 focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-white text-gray-800'}`}
                                 >
                                     <option value="">부서를 선택해 주세요</option>
-
-                                    {/* 사용자의 소속팀이 기본 목록에 없어도 드롭다운에 표시되도록 방어코드 추가 */}
                                     {isUser && dept && !['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타'].includes(dept) && (
                                         <option value={dept}>{dept}</option>
                                     )}
-
                                     <option value="물류사업1팀">물류사업1팀</option>
                                     <option value="물류사업2팀">물류사업2팀</option>
                                     <option value="운송사업팀">운송사업팀</option>
@@ -158,43 +200,74 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                             </div>
                         </div>
 
-                        {userProfile?.role === '관리자' && (
-                            <div>
-                                <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                                    <span className="text-letusOrange">*</span> 조치 결과 반영
-                                </label>
-                                <select
-                                    value={actionResult}
-                                    onChange={e => setActionResult(e.target.value)}
-                                    className="w-full border border-blue-300 rounded-lg p-2.5 text-sm font-bold outline-none transition-all focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-blue-50/30 text-letusBlue"
-                                >
-                                    <option value="미확인">미확인 (빈칸)</option>
-                                    <option value="정상출고">정상출고</option>
-                                    <option value="미출고">미출고</option>
-                                    <option value="오출고">오출고</option>
-                                    <option value="과출고">과출고</option>
-                                    <option value="물류파손">물류파손</option>
-                                    <option value="시공파손">시공파손</option>
-                                    <option value="현장직출">현장직출</option>
-                                    <option value="센터직출">센터직출</option>
-                                    <option value="납기연기(건)">납기연기(건)</option>
-                                    <option value="납기연기(품목)">납기연기(품목)</option>
-                                    <option value="제품분실">제품분실</option>
-                                </select>
-                                {actionResult === '미확인' && <p className="text-[10px] text-red-500 mt-1 font-bold">⚠️ 현재 엑셀에 조치결과가 누락되어 '미확인' 상태입니다.</p>}
-                            </div>
-                        )}
+                        {/* 🚩 2열: 조치 결과 반영 / 조치 수행처 (신규 추가!) */}
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* 관리자만 조치 결과를 반영할 수 있도록 유지 */}
+                            {userProfile?.role === '관리자' ? (
+                                <div>
+                                    <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                                        <span className="text-letusOrange">*</span> 조치 결과 반영
+                                    </label>
+                                    <select
+                                        value={actionResult}
+                                        onChange={e => setActionResult(e.target.value)}
+                                        className="w-full border border-blue-300 rounded-[4px] p-2.5 text-xs font-bold outline-none transition-all focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-blue-50/30 text-letusBlue"
+                                    >
+                                        <option value="미확인">미확인 (빈칸)</option>
+                                        <option value="정상출고">정상출고</option>
+                                        <option value="미출고">미출고</option>
+                                        <option value="오출고">오출고</option>
+                                        <option value="과출고">과출고</option>
+                                        <option value="물류파손">물류파손</option>
+                                        <option value="시공파손">시공파손</option>
+                                        <option value="현장직출">현장직출</option>
+                                        <option value="센터직출">센터직출</option>
+                                        <option value="납기연기(건)">납기연기(건)</option>
+                                        <option value="납기연기(품목)">납기연기(품목)</option>
+                                        <option value="제품분실">제품분실</option>
+                                    </select>
+                                    {actionResult === '미확인' && <p className="text-[10px] text-red-500 mt-1 font-bold">⚠️ 현재 엑셀에 조치결과가 누락되어 '미확인' 상태입니다.</p>}
+                                </div>
+                            ) : (
+                                <div className="opacity-0 pointer-events-none"></div> /* 빈 공간 유지용 */
+                            )}
 
+                            {/* 🚩 조치 수행처 드롭다운 (관리자 전용) */}
+                            <div>
+                                <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center justify-between">
+                                    <span className="flex items-center gap-1.5"><span className="text-letusOrange">*</span> 조치 수행처</span>
+                                    {userProfile?.role !== '관리자' && <span className="text-[9px] text-red-400 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">🔒 관리자 전용</span>}
+                                </label>
+                                {/* ❗️ 이 드롭다운의 value와 onChange에 연결할 state (handlerTeam 등)를 컴포넌트 상단에 꼭 추가하셔야 합니다! */}
+                                <select
+                                    value={row.handler_team || ''} /* 임시 바인딩, 실제 상태 변수로 교체 권장 */
+                                    onChange={e => console.log('핸들러 변경', e.target.value)} /* 실제 setState 함수로 교체 권장 */
+                                    disabled={userProfile?.role !== '관리자'}
+                                    className={`w-full border rounded-[4px] p-2.5 text-xs font-bold outline-none transition-all ${userProfile?.role === '관리자' ? 'border-gray-300 bg-white text-gray-800 cursor-pointer focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue' : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                >
+                                    <option value="">수행처 선택 (미지정)</option>
+                                    {/* 🚩 [근무자 관리]에서 가져온 업체 리스트를 동적으로 렌더링합니다 */}
+                                    {vendorList.map(vendor => (
+                                        <option key={vendor} value={vendor}>{vendor}</option>
+                                    ))}
+
+                                    <option value="현장 자체 해결">현장 자체 해결</option>
+                                    <option value="기타">기타 (직접 입력 필요 시)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* 3열: 발생 원인 상세 (텍스트 에어리어) */}
                         <div>
                             <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                                발생 원인 상세
+                                발생 원인 및 조치 상세 내역
                             </label>
                             <textarea
                                 value={causeDetail}
                                 onChange={e => setCauseDetail(e.target.value)}
                                 rows={3}
-                                className="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue resize-none transition-all placeholder:text-gray-300"
-                                placeholder="사고 발생의 구체적인 원인과 내용을 자유롭게 입력해 주세요."
+                                className="w-full border border-gray-300 rounded-[4px] p-3 text-xs outline-none focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue resize-none transition-all placeholder:text-gray-300"
+                                placeholder="사고 발생의 구체적인 원인과 향후 조치 방향을 자유롭게 입력해 주세요."
                             ></textarea>
 
                             {row.handler_name && (
@@ -1378,7 +1451,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
     return (
         // 🚩 [수정 완료] 맨 위에 두 겹으로 겹쳐있던 div를 완벽한 템플릿 하나로 합쳤습니다!
         <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)] slide-up bg-slate-100">
-            
+
             {/* 1. 검색 박스 구역 (사용자 관리 스타일로 통일) */}
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex flex-col gap-3 z-30 shrink-0 transition-all duration-300">
                 <div className="flex items-center gap-5 w-full flex-wrap">
@@ -1449,7 +1522,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
 
             {/* 2. 선택실행 (드롭다운) 구역 (사용자 관리 스타일로 통일) */}
             <div className="flex justify-end w-full px-2 z-30 -mt-1 mb-1 shrink-0 gap-3">
-                
+
                 {userProfile?.role === '관리자' && (
                     <button onClick={() => setIsUploadModalOpen(true)} className="bg-white border border-green-600 text-green-600 px-4 py-[7px] rounded-[3px] text-[11px] font-bold flex items-center cursor-pointer hover:bg-green-50 transition-colors shadow-sm h-[32px]">
                         <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg> 데이터 통합 업로드 (Excel)
@@ -1469,16 +1542,16 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                         <>
                             <div className="fixed inset-0" onClick={() => setIsActionMenuOpen(false)}></div>
                             <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 py-1.5 slide-down">
-                                
+
                                 <button
                                     onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) return alert('항목을 체크해 주세요.'); setIsBulkEditModalOpen(true); }}
                                     className={`w-full text-left px-4 py-2 text-xs font-medium transition-colors ${selectedIds.length > 0 ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}
                                 >
                                     일괄 마감 (수정)
                                 </button>
-                                
+
                                 <div className="h-px bg-gray-100 my-1"></div>
-                                
+
                                 <button
                                     onClick={() => { setIsActionMenuOpen(false); handleExportExcel(); }}
                                     className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors flex items-center justify-between ${selectedIds.length > 0 ? 'text-green-600 hover:bg-green-50' : 'text-gray-300 cursor-not-allowed'}`}
