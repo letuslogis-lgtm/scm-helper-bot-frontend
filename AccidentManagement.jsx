@@ -1496,12 +1496,16 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                 )}
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex-1 flex flex-col min-h-0 relative z-20 overflow-hidden">
-                <div className="overflow-auto flex-1 custom-scrollbar">
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20 min-h-0">
+                <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1420px] text-[13px]">
-                        <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 font-bold sticky top-0 z-10">
+                        {/* 🚩 [수정] 헤더 배경색과 그림자를 사용자 관리 메뉴와 동일하게 맞춤 */}
+                        <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th className="p-4 w-[50px] text-center"><input type="checkbox" checked={sortedItems.length > 0 && selectedIds.length === sortedItems.length} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer accent-letusBlue" /></th>
+                                {/* 🚩 [수정] 체크박스 너비와 패딩을 사용자 관리와 동일하게 (p-4 pl-6 w-10 text-center) */}
+                                <th className="p-4 pl-6 w-10 text-center">
+                                    <input type="checkbox" checked={sortedItems.length > 0 && selectedIds.length === sortedItems.length} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer accent-letusBlue" />
+                                </th>
                                 {[
                                     { label: '서비스예약일', key: 'service_date', w: '110px' }, { label: '브랜드', key: 'brand', w: '90px' }, { label: '서비스센터', key: 'service_center', w: '90px' }, { label: '시공/AS', key: 'service_type', w: '80px' }, { label: '수주번호', key: 'order_no', w: '150px' }, { label: '수주건명', key: 'order_name', w: 'auto' }, { label: '품목코드', key: 'item_code', w: '180px' }, { label: '수량', key: 'issue_qty', w: '70px' }, { label: '처리상태', key: 'status', w: '120px' }, { label: '귀책부서', key: 'responsible_dept', w: '120px' }, { label: '조치결과구분', key: 'action_result', w: '130px' }, { label: '납기지연판별', key: 'is_delayed', w: '110px' }
                                 ].map((col, idx) => (
@@ -1511,14 +1515,14 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        {/* 🚩 [수정] 본문 텍스트 색상 통일 (text-gray-700) */}
+                        <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
                             {isLoading ? (
                                 <tr><td colSpan="13" className="py-32 text-center"><div className="flex flex-col items-center gap-3"><div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div><p className="text-gray-500 font-bold">데이터 로딩 중...</p></div></td></tr>
                             ) : sortedItems.length === 0 ? (
                                 <tr><td colSpan="13" className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
                             ) : (
                                 <>
-                                    {/* 🔥 렉 방지: 데이터가 300건을 넘어가면 안내 문구를 띄웁니다 */}
                                     {sortedItems.length > 300 && (
                                         <tr>
                                             <td colSpan="13" className="bg-yellow-50 text-yellow-700 text-[11px] font-bold text-center py-2 border-b border-yellow-100">
@@ -1527,10 +1531,12 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                         </tr>
                                     )}
 
-                                    {/* 🔥 핵심: .slice(0, 300)을 붙여서 딱 300줄까지만 렌더링합니다! */}
                                     {sortedItems.slice(0, 300).map(row => (
                                         <tr key={row.id} onDoubleClick={() => { window.getSelection()?.removeAllRanges(); setActiveRow(row); }} className={`cursor-pointer transition-colors ${selectedIds.includes(row.id) ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-blue-50/30'}`}>
-                                            <td className="p-4 text-center" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer accent-letusBlue" /></td>
+                                            {/* 🚩 [수정] 본문 체크박스 너비와 패딩을 사용자 관리와 동일하게 (p-4 pl-6 text-center) */}
+                                            <td className="p-4 pl-6 text-center" onClick={e => e.stopPropagation()}>
+                                                <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer accent-letusBlue" />
+                                            </td>
                                             <td className="p-4 text-center text-gray-700">{row.service_date}</td>
                                             <td className="p-4 text-center font-semibold">{row.brand}</td>
                                             <td className="p-4 text-center text-gray-600">{row.service_center}</td>
