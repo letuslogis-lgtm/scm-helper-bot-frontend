@@ -1623,6 +1623,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                         <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             <tr className="bg-slate-50 border-b border-slate-200"></tr>
                             <tr>
+                                {/* 🚩 체크 박스 열: 기훈님 원본 그대로 원복! (w-10, pl-6, text-center) */}
                                 <th className="p-4 pl-6 w-10 text-center">
                                     <input type="checkbox" checked={sortedItems.length > 0 && selectedIds.length === sortedItems.length} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer accent-letusBlue" />
                                 </th>
@@ -1632,7 +1633,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                     { label: '서비스센터', key: 'service_center', w: '90px' },
                                     { label: '시공/AS', key: 'service_type', w: '80px' },
                                     { label: '수주번호', key: 'order_no', w: '150px' },
-                                    { label: '수주건명', key: 'order_name', w: 'auto' },
+                                    { label: '수주건명', key: 'order_name', w: 'auto' }, // auto 비율 유지
                                     { label: '품목코드', key: 'item_code', w: '180px' },
                                     { label: '수량', key: 'issue_qty', w: '70px' },
                                     { label: '처리상태', key: 'status', w: '120px' },
@@ -1646,8 +1647,9 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                         ]
                                     )
                                 ].map((col, idx) => (
+                                    /* 🚩 데이터 헤더: 기훈님 원본 그대로 원복! (p-4, text-center, justify-center) */
                                     <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
-                                        <div className="flex items-center justify-center">{col.label} {col.key && getSortIcon(col.key)}</div>
+                                        <div className="flex items-center justify-centergap-1">{col.label} {col.key && getSortIcon(col.key)}</div>
                                     </th>
                                 ))}
                             </tr>
@@ -1669,16 +1671,19 @@ const AccidentList = ({ userProfile, initialFilter }) => {
 
                                     {sortedItems.slice(0, 300).map(row => (
                                         <tr key={row.id} onDoubleClick={() => { window.getSelection()?.removeAllRanges(); setActiveRow(row); }} className={`cursor-pointer transition-colors ${selectedIds.includes(row.id) ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-blue-50/30'}`}>
+                                            {/* 🚩 데이터 행 체크 박스: 기훈님 원본 원복 (p-4, pl-6, text-center) */}
                                             <td className="p-4 pl-6 text-center" onClick={e => e.stopPropagation()}>
                                                 <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer accent-letusBlue" />
                                             </td>
+
+                                            {/* 🚩 데이터 행 스타일: 기훈님 원본 원복 (text-center,truncate 등) */}
                                             <td className="p-4 text-center text-gray-700">{row.service_date}</td>
                                             <td className="p-4 text-center font-semibold">{row.brand}</td>
                                             <td className="p-4 text-center text-gray-600">{row.service_center}</td>
                                             <td className="p-4 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${row.service_type === '시공' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>{row.service_type}</span></td>
                                             <td className="p-4 text-center font-mono text-gray-500">{row.order_no}</td>
 
-                                            {/* 🚩 제가 임의로 넣었던 max-w-[200px] 등 제거 완료! 원래 코드로 원복 */}
+                                            {/* 제가 임의로 넣었던 max-w-[200px] 등 제거 완료! 원래 코드로 원복 */}
                                             <td className="p-4 font-bold text-gray-800 truncate">{row.order_name}</td>
                                             <td className="p-4 text-gray-600 truncate">{row.item_code}</td>
 
@@ -1693,13 +1698,13 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                                     <td className={`p-4 font-black text-center ${row.is_delayed !== '-' ? 'text-red-500' : 'text-gray-400'}`}>{row.is_delayed}</td>
                                                 </>
                                             ) : (
-                                                <td className="p-4 text-center bg-purple-50/20">
+                                                <td className="p-4 text-center bg-purple-50/20 animate-fade-in">
                                                     {row.ai_analyzed_cause ? (
                                                         <span className="px-3 py-1 rounded-full text-[11px] font-black bg-purple-100 text-purple-700 border border-purple-200 shadow-sm inline-block">
                                                             {row.ai_analyzed_cause}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[11px] font-bold text-slate-400 italic">대기중</span>
+                                                        <span className="text-[11px] font-bold text-slate-400 italic">대기중...</span>
                                                     )}
                                                 </td>
                                             )}
