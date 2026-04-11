@@ -112,7 +112,7 @@ const TodoModal = ({ todo, onClose, onSave, onDelete }) => {
 };
 
 // 2. 캘린더 일정 등록/수정 모달
-const CalendarEventModal = ({ selectedDate, onClose, onSave }) => {
+const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
     const [startDate, setStartDate] = useState(eventToEdit ? eventToEdit.startDate : selectedDate || '');
     const [endDate, setEndDate] = useState(eventToEdit ? eventToEdit.endDate : selectedDate || '');
     const [startTime, setStartTime] = useState(eventToEdit ? eventToEdit.startTime : '08:30');
