@@ -113,6 +113,7 @@ const TodoModal = ({ todo, onClose, onSave, onDelete }) => {
 
 // 2. 캘린더 일정 등록/수정 모달
 const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
+    // 🔥 eventToEdit가 있으면 그 값을 기본으로 쫙 깔아줍니다.
     const [startDate, setStartDate] = useState(eventToEdit ? eventToEdit.startDate : selectedDate || '');
     const [endDate, setEndDate] = useState(eventToEdit ? eventToEdit.endDate : selectedDate || '');
     const [startTime, setStartTime] = useState(eventToEdit ? eventToEdit.startTime : '08:30');
@@ -141,7 +142,7 @@ const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
             return alert('종료일이 시작일보다 빠를 수 없습니다.');
         }
         onSave({
-            id: eventToEdit ? eventToEdit.id : null, // 🔥 수정일 땐 기존 ID를 넘깁니다!
+            id: eventToEdit ? eventToEdit.id : null, // 수정일 땐 기존 ID 유지!
             startDate, endDate, startTime, endTime,
             title: title.trim(), isImportant, description, collabTeams
         });
@@ -154,17 +155,70 @@ const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
                 <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
                     <h3 className="font-bold text-sm text-gray-800 flex items-center gap-2">
                         <span className="w-1.5 h-3.5 bg-letusBlue rounded-full"></span>
-                        {/* 🔥 타이틀 동적 변경 */}
                         {eventToEdit ? '일정 수정' : '새로운 일정 등록'}
                     </h3>
                     <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600"><CloseIcon /></button>
                 </div>
 
-                {/* ... (중간 입력 폼들은 기존과 동일하게 쭉 유지) ... */}
+                {/* 🔥 아까 날아갔던 본문(알맹이)들이 무사히 돌아왔습니다! */}
+                <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold text-gray-700">시작일 <span className="text-red-500">*</span></label>
+                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-letusBlue" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold text-gray-700">종료일 <span className="text-red-500">*</span></label>
+                            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-letusBlue" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold text-gray-700">시작 시간</label>
+                            <select value={startTime} onChange={e => setStartTime(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-letusBlue cursor-pointer bg-white font-medium">
+                                {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold text-gray-700">종료 시간</label>
+                            <select value={endTime} onChange={e => setEndTime(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-letusBlue cursor-pointer bg-white font-medium">
+                                {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                        <div className="flex justify-between items-end">
+                            <label className="text-xs font-bold text-gray-700">일정명 <span className="text-red-500">*</span></label>
+                            <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-bold text-red-500 hover:bg-red-50 px-2 py-0.5 rounded transition-colors border border-transparent hover:border-red-200">
+                                <input type="checkbox" checked={isImportant} onChange={e => setIsImportant(e.target.checked)} className="w-3.5 h-3.5 accent-red-500" />
+                                🚨 중요(긴급) 일정
+                            </label>
+                        </div>
+                        <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="일정 제목을 입력하세요" className="border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-letusBlue w-full" />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-gray-700">협업 부서 추가</label>
+                        <div className="min-h-[42px] border border-gray-300 rounded-lg bg-gray-50 px-3 py-2 flex items-center justify-between">
+                            <div className="flex flex-wrap gap-1.5">
+                                {collabTeams ? collabTeams.split(',').map((team, i) => (
+                                    <span key={i} className="bg-blue-100 text-letusBlue border border-blue-200 px-2 py-0.5 rounded-full text-[10px] font-bold">{team.trim()}</span>
+                                )) : <span className="text-xs text-gray-400 font-medium">선택된 부서 없음</span>}
+                            </div>
+                            <button onClick={() => setIsTeamModalOpen(true)} className="text-[10px] font-bold text-white bg-slate-700 hover:bg-slate-800 px-2.5 py-1.5 rounded transition-colors shrink-0 shadow-sm">부서 검색</button>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-gray-700">상세 내용</label>
+                        <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="회의 안건, 장소 등 세부사항을 입력하세요." className="border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-letusBlue resize-none w-full"></textarea>
+                    </div>
+                </div>
 
                 <div className="p-4 border-t bg-gray-50 flex justify-end gap-2 shrink-0">
                     <button onClick={onClose} className="px-5 py-2 border border-gray-300 text-gray-600 bg-white text-xs font-bold rounded-lg hover:bg-gray-50 shadow-sm">취소</button>
-                    {/* 🔥 버튼 이름 동적 변경 */}
                     <button onClick={handleSave} className="px-6 py-2 bg-letusBlue text-white text-xs font-bold rounded-lg shadow-sm hover:bg-blue-600">
                         {eventToEdit ? '일정 수정' : '일정 등록'}
                     </button>
