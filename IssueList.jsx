@@ -246,7 +246,7 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
 
             {/* 3. 표 구역 */}
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20 min-h-0">
-                <div className="p-0 overflow-auto flex-1 custom-scrollbar">
+                <div className="p-0 overflow-auto flex-1 custom-scrollbar outline-none">
                     <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1480px]">
                         <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             <tr>
