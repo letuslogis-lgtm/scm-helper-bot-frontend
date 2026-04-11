@@ -122,7 +122,8 @@ const UserManagement = () => {
     }, []);
 
     return (
-        <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-140px)] overflow-hidden min-h-[600px]">
+        // 🚩 문제 1 해결: h-[calc(100vh-140px)] -> h-[calc(100vh-64px)] 로 늘리고, min-h-[600px] 제거하여 화면 꽉 채움!
+        <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)]">
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex items-center z-30 shrink-0">
                 <div className="flex items-center gap-5 w-full flex-wrap">
 
@@ -147,24 +148,16 @@ const UserManagement = () => {
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">이름</label>
                         <input
-                            type="text"
-                            value={filterKeyword}
-                            onChange={e => setFilterKeyword(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                            placeholder="이름 검색..."
-                            className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-32 text-gray-700"
+                            type="text" value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                            placeholder="이름 검색..." className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-32 text-gray-700"
                         />
                     </div>
 
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 업체</label>
                         <input
-                            type="text"
-                            value={filterVendor}
-                            onChange={e => setFilterVendor(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                            placeholder="업체명 검색..."
-                            className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-32 text-gray-700"
+                            type="text" value={filterVendor} onChange={e => setFilterVendor(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                            placeholder="업체명 검색..." className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-32 text-gray-700"
                         />
                     </div>
 
@@ -175,16 +168,16 @@ const UserManagement = () => {
                         >
                             초기화
                         </button>
-                        <button onClick={handleSearch} className="border border-letusOrange text-letusOrange hover:bg-orange-50 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center">
+                        {/* 🚩 문제 3 해결: 조회 버튼을 bg-letusOrange text-white 로 채워서 강조! */}
+                        <button onClick={handleSearch} className="bg-letusOrange text-white hover:bg-orange-600 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center shadow-sm">
                             조회하기
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="flex justify-end w-full px-2 z-30 -mt-1 mb-1">
+            <div className="flex justify-end w-full px-2 z-30 -mt-1 mb-1 shrink-0">
                 <div className="flex items-center gap-3">
-                    {/* 🔥 3단계: 지저분한 버튼들 싹 지우고 '선택실행' 드롭다운으로 통합! */}
                     <div className="relative">
                         <button
                             onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
@@ -199,18 +192,11 @@ const UserManagement = () => {
                                 <div className="fixed inset-0 z-40" onClick={() => setIsActionMenuOpen(false)}></div>
                                 <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 py-1.5 slide-down">
 
-                                    <button onClick={() => { setIsActionMenuOpen(false); setIsModalOpen(true); }} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                                        사용자 추가
-                                    </button>
-
-                                    <button onClick={() => { setIsActionMenuOpen(false); setIsBulkUploadModalOpen(true); }} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                                        일괄 등록
-                                    </button>
-
+                                    <button onClick={() => { setIsActionMenuOpen(false); setIsModalOpen(true); }} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">사용자 추가</button>
+                                    <button onClick={() => { setIsActionMenuOpen(false); setIsBulkUploadModalOpen(true); }} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">일괄 등록</button>
                                     <button
                                         onClick={() => {
                                             setIsActionMenuOpen(false);
-                                            // 기훈님 코드의 selectedUsers 또는 selectedUserIds 배열 길이 확인
                                             if (selectedUsers.length === 0 && selectedUserIds.length === 0) alert('일괄 변경할 사용자를 먼저 체크박스로 선택해 주세요.');
                                             else setIsBulkEditModalOpen(true);
                                         }}
@@ -219,7 +205,6 @@ const UserManagement = () => {
                                         일괄 변경 {(selectedUsers.length > 0 || selectedUserIds.length > 0) && `(${Math.max(selectedUsers.length, selectedUserIds.length)})`}
                                     </button>
 
-                                    {/* 첫 번째 구분선 */}
                                     <div className="h-px bg-gray-100 my-1"></div>
 
                                     <button onClick={() => { setIsActionMenuOpen(false); handleExportExcel(); }} className="w-full text-left px-4 py-2 text-xs font-bold text-green-600 hover:bg-green-50 flex items-center justify-between">
@@ -227,14 +212,13 @@ const UserManagement = () => {
                                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                     </button>
 
-                                    {/* 두 번째 구분선 */}
                                     <div className="h-px bg-gray-100 my-1"></div>
 
                                     <button
                                         onClick={() => {
                                             setIsActionMenuOpen(false);
                                             if (selectedUsers.length === 0 && selectedUserIds.length === 0) alert('삭제할 사용자를 먼저 선택해 주세요.');
-                                            else handleDeleteSelected(); // 기훈님 코드에 있던 삭제 함수 연결 완료!
+                                            else handleDeleteSelected();
                                         }}
                                         className={`w-full text-left px-4 py-2 text-xs font-medium ${(selectedUsers.length > 0 || selectedUserIds.length > 0) ? 'text-red-600 hover:bg-red-50' : 'text-gray-300 cursor-not-allowed'}`}
                                     >
@@ -248,19 +232,16 @@ const UserManagement = () => {
                 </div>
             </div>
 
+            {/* 🚩 문제 1 해결: 표 컨테이너에 flex-1 을 주어 남은 공간을 꽉 채우도록 만듦! */}
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20">
-                <div className="p-0 overflow-auto flex-1 h-[600px] custom-scrollbar">
+                {/* 🚩 문제 2 해결: 표 안쪽 스크롤 영역 설정 (h-[600px] 고정값 제거) */}
+                <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap">
-                        <thead className="bg-slate-50/70 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10">
+                        {/* 🚩 문제 2 해결: <thead>에 bg-slate-50 을 줘서 글자 겹침 방지 (투명도 /70 제거) */}
+                        <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             <tr>
                                 <th className="p-4 pl-6 w-10 text-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={isAllSelected}
-                                        onChange={toggleAll}
-                                        className="w-4 h-4 accent-letusBlue cursor-pointer"
-                                        title="전체 선택"
-                                    />
+                                    <input type="checkbox" checked={isAllSelected} onChange={toggleAll} className="w-4 h-4 accent-letusBlue cursor-pointer" title="전체 선택" />
                                 </th>
                                 <th className="p-4 w-10 text-center">No</th>
                                 <th className="p-4">사용자명</th>
@@ -274,7 +255,7 @@ const UserManagement = () => {
                             </tr>
                         </thead>
                         {isLoading ? (
-                            <TableSkeleton rowCount={8} colCount={9} />
+                            <TableSkeleton rowCount={8} colCount={10} />
                         ) : users.length === 0 ? (
                             <tbody>
                                 <tr>
@@ -294,12 +275,7 @@ const UserManagement = () => {
                                         title="더블클릭하면 정보를 수정할 수 있습니다"
                                     >
                                         <td className="p-4 pl-6 text-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedUsers.includes(user.id)}
-                                                onChange={() => toggleOne(user.id)}
-                                                className="w-4 h-4 accent-letusBlue cursor-pointer"
-                                            />
+                                            <input type="checkbox" checked={selectedUsers.includes(user.id)} onChange={() => toggleOne(user.id)} className="w-4 h-4 accent-letusBlue cursor-pointer" onClick={e => e.stopPropagation()} />
                                         </td>
                                         <td className="p-4 text-center text-gray-400 font-medium">{idx + 1}</td>
                                         <td className="p-4 font-black text-gray-800 text-sm tracking-tight">{user.name}</td>
