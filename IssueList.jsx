@@ -9,6 +9,7 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
     const [isSendingFeedback, setIsSendingFeedback] = useState(false);
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'none' });
     const [draftFilters, setDraftFilters] = useState({ ...savedFilters });
+    const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
 
     useEffect(() => { setDraftFilters({ ...savedFilters }); }, [savedFilters]);
     const handleSearch = () => { setSavedFilters({ ...draftFilters }); };
@@ -167,13 +168,13 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
     return (
         // 🚩 [수정] 껍데기가 두 겹이던 것을 완벽한 하나의 레이아웃으로 합쳤습니다!
         <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)] slide-up bg-slate-100">
-            
+
             {/* 1. 검색 박스 구역 (사용자 관리 스타일로 통일) */}
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex items-center z-30 shrink-0">
                 <div className="flex items-center gap-5 w-full flex-wrap">
-                    
+
                     <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소']} selected={draftFilters.brand} onChange={(val) => setDraftFilters({ ...draftFilters, brand: val })} />
-                    
+
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">등록일자</label>
                         <div className="flex items-center">
@@ -183,9 +184,9 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
                             <input type="date" value={draftFilters.endDate} onChange={e => setDraftFilters({ ...draftFilters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] w-[110px] focus:outline-none focus:border-letusOrange cursor-pointer text-gray-700" />
                         </div>
                     </div>
-                    
+
                     <MultiSelect label="처리상태" options={['조치대기', '처리 중', '조치완료']} selected={draftFilters.status} onChange={(val) => setDraftFilters({ ...draftFilters, status: val })} />
-                    
+
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">검색어</label>
                         <div className="flex gap-0 h-[30px]">
@@ -198,14 +199,14 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
                             <input type="text" value={draftFilters.searchValue} onChange={e => setDraftFilters({ ...draftFilters, searchValue: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleSearch()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-36 focus:outline-none focus:border-letusOrange h-full" placeholder="검색어 입력" />
                         </div>
                     </div>
-                    
+
                     {/* 🚩 [수정] 버튼 스타일을 사용자 관리와 완벽하게 동일하게 (주황색 강조, 둥글기 맞춤) */}
                     <div className="ml-auto flex items-center gap-2 shrink-0">
                         <button onClick={() => { const todayStr = new Date().toISOString().split('T')[0]; setDraftFilters({ brand: '전체', status: '전체', startDate: todayStr, endDate: todayStr, searchType: '품목코드', searchValue: '' }); setSavedFilters({ brand: '전체', status: '전체', startDate: todayStr, endDate: todayStr, searchType: '품목코드', searchValue: '' }); }} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] text-xs transition-colors">
                             초기화
                         </button>
                         <button onClick={handleSearch} className="bg-letusOrange text-white hover:bg-orange-600 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center shadow-sm gap-1.5">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> 
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                             조회하기
                         </button>
                     </div>
@@ -220,7 +221,7 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
                             선택실행
                             <svg className={`w-3.5 h-3.5 ml-2 text-gray-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                         </button>
-                        
+
                         {isActionMenuOpen && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsActionMenuOpen(false)}></div>
