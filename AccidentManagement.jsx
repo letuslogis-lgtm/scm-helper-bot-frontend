@@ -186,11 +186,12 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                                     <label className="block text-[12px] font-bold text-gray-700 mb-2 flex items-center gap-1.5">
                                         <span className="text-letusOrange">*</span> 귀책 부서 선택 {isUser && <span className="text-gray-400 font-normal ml-1">(소속팀 고정)</span>}
                                     </label>
+                                    {/* 🚩 [수정] font-bold를 제거하여 일반 굵기로 부드럽게 변경 */}
                                     <select
                                         value={dept}
                                         onChange={e => setDept(e.target.value)}
                                         disabled={isUser}
-                                        className={`w-full border rounded-[4px] p-2.5 text-xs font-bold outline-none transition-all ${isUser ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'border-gray-300 focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-white text-gray-800'}`}
+                                        className={`w-full border rounded-[4px] p-2.5 text-xs outline-none transition-all ${isUser ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' : 'border-gray-300 focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue cursor-pointer bg-white text-gray-800'}`}
                                     >
                                         <option value="">부서를 선택해 주세요</option>
                                         {isUser && dept && !['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타'].includes(dept) && (
@@ -235,12 +236,13 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                                 </h5>
                                 <div className="grid grid-cols-3 gap-4 bg-orange-50/40 p-4 rounded-lg border border-orange-100">
 
-                                    {/* 1. 확인 결과 (구 조치 결과 반영) */}
+                                    {/* 1. 확인 결과 */}
                                     <div>
                                         <label className="block text-[11px] font-bold text-gray-700 mb-2 flex items-center gap-1">
                                             <span className="text-letusOrange">*</span> 확인 결과
                                         </label>
-                                        <select value={actionResult} onChange={e => setActionResult(e.target.value)} className="w-full border border-blue-300 bg-blue-50/30 text-letusBlue rounded-[4px] p-2.5 text-xs font-bold outline-none cursor-pointer focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue">
+                                        {/* 🚩 [수정] text-xs -> text-[11px] 로 1포인트 축소 */}
+                                        <select value={actionResult} onChange={e => setActionResult(e.target.value)} className="w-full border border-blue-300 bg-blue-50/30 text-letusBlue rounded-[4px] p-2.5 text-[11px] font-bold outline-none cursor-pointer focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue">
                                             <option value="미확인">미확인 (빈칸)</option>
                                             <option value="정상출고">정상출고</option>
                                             <option value="미출고">미출고</option>
@@ -256,27 +258,28 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                                         </select>
                                     </div>
 
-                                    {/* 2. 수행처 (구 조치 수행처) */}
+                                    {/* 2. 수행처 */}
                                     <div>
                                         <label className="block text-[11px] font-bold text-gray-700 mb-2 flex items-center gap-1">
                                             <span className="text-letusOrange">*</span> 수행처
                                         </label>
-                                        <select value={handlerTeam} onChange={e => setHandlerTeam(e.target.value)} className="w-full border border-gray-300 bg-white text-gray-800 rounded-[4px] p-2.5 text-xs font-bold outline-none cursor-pointer focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue">
+                                        {/* 🚩 [수정] text-xs -> text-[11px] 로 1포인트 축소 / '현장 자체 해결' 옵션 삭제 */}
+                                        <select value={handlerTeam} onChange={e => setHandlerTeam(e.target.value)} className="w-full border border-gray-300 bg-white text-gray-800 rounded-[4px] p-2.5 text-[11px] font-bold outline-none cursor-pointer focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue">
                                             <option value="">수행처 선택 (미지정)</option>
                                             {vendorList.map(vendor => (
                                                 <option key={vendor} value={vendor}>{vendor}</option>
                                             ))}
-                                            <option value="현장 자체 해결">현장 자체 해결</option>
                                             <option value="기타">기타</option>
                                         </select>
                                     </div>
 
-                                    {/* 🚩 3. 조치 내용 (신규 추가) */}
+                                    {/* 3. 조치 내용 */}
                                     <div>
                                         <label className="block text-[11px] font-bold text-gray-700 mb-2 flex items-center gap-1">
                                             <span className="text-letusOrange">*</span> 조치 내용
                                         </label>
-                                        <select value={actionContent} onChange={e => setActionContent(e.target.value)} className="w-full border border-gray-300 bg-white text-gray-800 rounded-[4px] p-2.5 text-xs font-bold outline-none cursor-pointer focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue">
+                                        {/* 🚩 [수정] text-xs -> text-[11px] 로 1포인트 축소 / '기타 (직접 입력)' 옵션 삭제 */}
+                                        <select value={actionContent} onChange={e => setActionContent(e.target.value)} className="w-full border border-gray-300 bg-white text-gray-800 rounded-[4px] p-2.5 text-[11px] font-bold outline-none cursor-pointer focus:ring-2 focus:ring-letusBlue/20 focus:border-letusBlue">
                                             <option value="">조치 내용 선택</option>
                                             <option value="출차 전 조치">출차 전 조치</option>
                                             <option value="선조치">선조치</option>
@@ -284,7 +287,6 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                                             <option value="일정 연기">일정 연기</option>
                                             <option value="과출고 회수">과출고 회수</option>
                                             <option value="추가 수주/AS 접수">추가 수주/AS 접수</option>
-                                            <option value="기타">기타 (직접 입력)</option>
                                         </select>
                                     </div>
 
