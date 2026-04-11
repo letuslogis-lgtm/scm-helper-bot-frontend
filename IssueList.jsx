@@ -271,9 +271,6 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
                     </table>
                 </div>
             </div>
-                    </table>
-                </div>
-            </div>
             {activeModalRow && <RequestModal row={activeModalRow} onClose={() => setActiveModalRow(null)} onReload={onReload} userProfile={userProfile} />}
             {activeHandleRow && <HandleModal row={activeHandleRow} onClose={() => setActiveHandleRow(null)} onReload={onReload} userProfile={userProfile} />}
         </div>
