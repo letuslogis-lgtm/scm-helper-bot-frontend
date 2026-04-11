@@ -165,68 +165,93 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
     };
 
     return (
-        // 🔥 포인트 1: min-h-[] 대신 h-[]를 사용하여 브라우저 창 크기로 컴포넌트 높이를 강력하게 고정!
-        <div className="p-6 bg-slate-100 h-[calc(100vh-64px)] flex flex-col gap-4 slide-up">
-
-            <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 h-[54px] flex items-center z-30 shrink-0">
-                <div className="flex items-center gap-6 w-full">
+        // 🚩 [수정] 껍데기가 두 겹이던 것을 완벽한 하나의 레이아웃으로 합쳤습니다!
+        <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)] slide-up bg-slate-100">
+            
+            {/* 1. 검색 박스 구역 (사용자 관리 스타일로 통일) */}
+            <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex items-center z-30 shrink-0">
+                <div className="flex items-center gap-5 w-full flex-wrap">
+                    
                     <MultiSelect label="브랜드" options={['퍼시스', '일룸', '슬로우베드', '데스커', '시디즈', '알로소']} selected={draftFilters.brand} onChange={(val) => setDraftFilters({ ...draftFilters, brand: val })} />
+                    
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">등록일자</label>
                         <div className="flex items-center">
-                            <input type="date" value={draftFilters.startDate} onChange={e => setDraftFilters({ ...draftFilters, startDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
-                            <span className="mx-1 text-gray-400 text-xs">~</span>
-                            <input type="date" value={draftFilters.endDate} onChange={e => setDraftFilters({ ...draftFilters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2 h-[30px] w-[110px] focus:outline-none focus:border-letusBlue" />
+                            {/* 🚩 [수정] 인풋 포커스 색상과 높이(h-[30px]) 통일 */}
+                            <input type="date" value={draftFilters.startDate} onChange={e => setDraftFilters({ ...draftFilters, startDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] w-[110px] focus:outline-none focus:border-letusOrange cursor-pointer text-gray-700" />
+                            <span className="mx-1 text-gray-400 text-xs font-bold">~</span>
+                            <input type="date" value={draftFilters.endDate} onChange={e => setDraftFilters({ ...draftFilters, endDate: e.target.value })} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] w-[110px] focus:outline-none focus:border-letusOrange cursor-pointer text-gray-700" />
                         </div>
                     </div>
+                    
                     <MultiSelect label="처리상태" options={['조치대기', '처리 중', '조치완료']} selected={draftFilters.status} onChange={(val) => setDraftFilters({ ...draftFilters, status: val })} />
+                    
                     <div className="flex items-center shrink-0">
                         <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">검색어</label>
-                        <div className="flex gap-0.5 h-[30px]">
-                            <select value={draftFilters.searchType} onChange={e => setDraftFilters({ ...draftFilters, searchType: e.target.value })} className="border border-gray-200 rounded-l-[3px] text-xs px-2 text-gray-700 bg-gray-50 focus:outline-none">
-                                <option>품목코드</option><option>공급업체</option><option>처리자</option>
+                        <div className="flex gap-0 h-[30px]">
+                            {/* 🚩 [수정] 검색 드롭다운과 입력칸 높이 및 보더 통일 */}
+                            <select value={draftFilters.searchType} onChange={e => setDraftFilters({ ...draftFilters, searchType: e.target.value })} className="border border-gray-200 border-r-0 rounded-l-[3px] text-xs px-2 text-gray-700 bg-gray-50 focus:outline-none cursor-pointer h-full">
+                                <option>품목코드</option>
+                                <option>공급업체</option>
+                                <option>처리자</option>
                             </select>
-                            <input type="text" value={draftFilters.searchValue} onChange={e => setDraftFilters({ ...draftFilters, searchValue: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleSearch()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-32 focus:outline-none focus:border-letusOrange" placeholder="검색어 입력" />
+                            <input type="text" value={draftFilters.searchValue} onChange={e => setDraftFilters({ ...draftFilters, searchValue: e.target.value })} onKeyDown={e => e.key === 'Enter' && handleSearch()} className="border border-gray-200 rounded-r-[3px] text-xs px-2.5 w-36 focus:outline-none focus:border-letusOrange h-full" placeholder="검색어 입력" />
                         </div>
                     </div>
-                    <div className="ml-auto flex items-center gap-2">
-                        <button onClick={() => { const todayStr = new Date().toISOString().split('T')[0]; setDraftFilters({ brand: '전체', status: '전체', startDate: todayStr, endDate: todayStr, searchType: '품목코드', searchValue: '' }); setSavedFilters({ brand: '전체', status: '전체', startDate: todayStr, endDate: todayStr, searchType: '품목코드', searchValue: '' }); }} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] text-xs transition-colors">초기화</button>
-                        <button onClick={handleSearch} className="bg-letusOrange text-white hover:bg-orange-500 font-bold px-6 h-[30px] rounded-[3px] text-xs shadow-sm transition-all flex items-center gap-1.5">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> 조회하기
+                    
+                    {/* 🚩 [수정] 버튼 스타일을 사용자 관리와 완벽하게 동일하게 (주황색 강조, 둥글기 맞춤) */}
+                    <div className="ml-auto flex items-center gap-2 shrink-0">
+                        <button onClick={() => { const todayStr = new Date().toISOString().split('T')[0]; setDraftFilters({ brand: '전체', status: '전체', startDate: todayStr, endDate: todayStr, searchType: '품목코드', searchValue: '' }); setSavedFilters({ brand: '전체', status: '전체', startDate: todayStr, endDate: todayStr, searchType: '품목코드', searchValue: '' }); }} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] text-xs transition-colors">
+                            초기화
+                        </button>
+                        <button onClick={handleSearch} className="bg-letusOrange text-white hover:bg-orange-600 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center shadow-sm gap-1.5">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> 
+                            조회하기
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="flex justify-end gap-3 z-30 px-2 -mb-2 shrink-0">
-                <div className="relative group">
-                    <button className="flex items-center text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded px-3 py-1.5 hover:bg-slate-50 min-w-[100px] justify-between shadow-sm transition-all">
-                        <span>선택실행</span><svg className="w-3.5 h-3.5 ml-2 text-slate-400 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                    </button>
-                    <div className="absolute right-0 top-[110%] w-[130px] hidden group-hover:block z-50">
-                        <div className="bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5">
-                            <button onClick={handleExportExcel} className="w-full text-left px-2.5 py-2 text-green-700 hover:text-green-800 hover:bg-green-50 font-bold rounded text-[11px] flex items-center justify-between transition-colors">엑셀 추출 <svg className="w-3.5 h-3.5 opacity-70" fill="currentColor" viewBox="0 0 24 24"><path d="M21.17 3.25q.33 0 .59.25q.24.26.24.59v15.82q0 .33-.24.59q-.26.25-.59.25H2.83q-.33 0-.59-.25q-.24-.26-.24-.59V4.09q0-.33.24-.59q.26-.25.59-.25h18.34zm-8.25 10.9l3.52 4.67h2.7l-4.9-6.07 4.65-5.94h-2.65l-3.23 4.48-3.32-4.48H7.07l4.76 5.94-5 6.07h2.72l3.37-4.67z" /></svg></button>
-                            <div className="h-px bg-slate-100 my-0.5"></div>
-                            <button onClick={handleRevertSelectedIssues} className="w-full text-left px-2.5 py-2 text-slate-600 hover:text-orange-600 hover:bg-orange-50 font-bold rounded text-[11px] transition-colors">원복</button>
-                            <button onClick={handleSendFeedback} disabled={isSendingFeedback} className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] transition-colors ${isSendingFeedback ? 'text-gray-400 cursor-not-allowed bg-gray-50' : 'text-slate-600 hover:text-letusBlue hover:bg-blue-50'}`}>{isSendingFeedback ? '전송 중...' : '피드백 전송'}</button>
-                        </div>
+            {/* 2. 선택실행 (드롭다운) 구역 (사용자 관리 스타일로 통일) */}
+            <div className="flex justify-end w-full px-2 z-30 -mt-1 mb-1 shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <button onClick={() => setIsActionMenuOpen(!isActionMenuOpen)} className="flex items-center justify-between text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded shadow-sm px-3 py-[7px] hover:bg-gray-50 transition-all min-w-[90px] h-[32px]">
+                            선택실행
+                            <svg className={`w-3.5 h-3.5 ml-2 text-gray-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                        
+                        {isActionMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsActionMenuOpen(false)}></div>
+                                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 py-1.5 slide-down">
+                                    <button onClick={() => { setIsActionMenuOpen(false); handleExportExcel(); }} className="w-full text-left px-4 py-2 text-xs font-bold text-green-600 hover:bg-green-50 flex items-center justify-between transition-colors">
+                                        엑셀 추출
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                    </button>
+                                    <div className="h-px bg-gray-100 my-1"></div>
+                                    <button onClick={() => { setIsActionMenuOpen(false); handleRevertSelectedIssues(); }} className="w-full text-left px-4 py-2 text-xs font-medium text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition-colors">
+                                        원복
+                                    </button>
+                                    <button onClick={() => { setIsActionMenuOpen(false); handleSendFeedback(); }} disabled={isSendingFeedback} className={`w-full text-left px-4 py-2 text-xs font-medium transition-colors ${isSendingFeedback ? 'text-gray-400 cursor-not-allowed bg-gray-50' : 'text-gray-700 hover:text-letusBlue hover:bg-blue-50'}`}>
+                                        {isSendingFeedback ? '전송 중...' : '피드백 전송'}
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* 🔥 포인트 2: min-h-0 속성 추가! 남은 공간만 꽉 채우고 표가 부모를 뚫고 나가지 못하게 막습니다. */}
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex-1 flex flex-col min-h-0 relative z-20">
-                {/* 🔥 포인트 3: h-[600px] 제거! 부모 컨테이너에 맞춰서 자동으로 스크롤바가 생깁니다. */}
-                <div className="overflow-auto flex-1 custom-scrollbar">
+            {/* 3. 표 구역 */}
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20 min-h-0">
+                <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1480px]">
-                        {/* 🚩 [수정] 헤더 디자인을 사용자 관리와 완벽하게 동일하게 맞춤 (bg-slate-50, shadow-sm 추가 등) */}
                         <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             <tr>
-                                {/* 🚩 [수정] 체크박스 너비와 패딩을 사용자 관리와 동일하게 (p-4 pl-6 w-10 text-center) */}
                                 <th className="p-4 pl-6 w-10 text-center">
                                     <input type="checkbox" checked={sortedIssues.length > 0 && selectedIds.length === sortedIssues.length} onChange={handleSelectAll} className="w-4 h-4 accent-letusBlue cursor-pointer" title="전체 선택" />
                                 </th>
-                                {/* 나머지 컬럼 매핑 로직 유지 */}
                                 {[{ label: '접수번호', key: 'reception_no', w: '200px' }, { label: '소속 브랜드', key: 'brand', w: '100px' }, { label: '품목코드', key: 'product_code', w: 'auto' }, { label: '유형', key: 'issue_type', w: '160px' }, { label: '접수자', key: 'reporter', w: '90px' }, { label: '공급업체', key: 'vendor', w: '120px' }, { label: '처리상태', key: 'status', w: '100px' }, { label: '알림톡', key: 'is_notified', w: '80px' }, { label: '요청내용', key: null, w: '110px' }, { label: '처리 내용', key: null, w: '110px' }, { label: '최종 처리자', key: 'final_handler', w: '120px' }, { label: '최종 처리일시', key: 'resolved_at', w: '150px' }].map((col, idx) => (
                                     <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
                                         <div className="flex items-center justify-center">{col.label} {col.key && getSortIcon(col.key)}</div>
@@ -234,7 +259,6 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
                                 ))}
                             </tr>
                         </thead>
-                        {/* 🚩 [수정] 본문 텍스트 색상 통일 (text-gray-700) */}
                         <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
                             {isLoading ? (
                                 <tr>
@@ -249,7 +273,6 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
                                 <tr><td colSpan="13" className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
                             ) : sortedIssues.map((row) => (
                                 <tr key={row.id} className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${selectedIds.includes(row.id) ? 'bg-blue-50' : ''}`} onClick={() => handleSelectOne(row.id)}>
-                                    {/* 🚩 [수정] 본문 체크박스 너비와 패딩을 사용자 관리와 동일하게 (p-4 pl-6 text-center) */}
                                     <td className="p-4 pl-6 text-center" onClick={e => e.stopPropagation()}>
                                         <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 accent-letusBlue cursor-pointer" />
                                     </td>
@@ -271,6 +294,7 @@ const IssueList = ({ issues = [], isLoading = false, onReload, savedFilters, set
                     </table>
                 </div>
             </div>
+
             {activeModalRow && <RequestModal row={activeModalRow} onClose={() => setActiveModalRow(null)} onReload={onReload} userProfile={userProfile} />}
             {activeHandleRow && <HandleModal row={activeHandleRow} onClose={() => setActiveHandleRow(null)} onReload={onReload} userProfile={userProfile} />}
         </div>
