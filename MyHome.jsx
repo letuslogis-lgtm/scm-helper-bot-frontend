@@ -111,9 +111,9 @@ const TodoModal = ({ todo, onClose, onSave, onDelete }) => {
     );
 };
 
-// 2. 캘린더 일정 등록/수정 모달
+// 2. 캘린더 일정 등록/수정 모달 (전체 덮어쓰기용 완성본)
 const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
-    // 🔥 eventToEdit가 있으면 그 값을 기본으로 쫙 깔아줍니다.
+    // 👇 기존 상태들
     const [startDate, setStartDate] = useState(eventToEdit ? eventToEdit.startDate : selectedDate || '');
     const [endDate, setEndDate] = useState(eventToEdit ? eventToEdit.endDate : selectedDate || '');
     const [startTime, setStartTime] = useState(eventToEdit ? eventToEdit.startTime : '08:30');
@@ -123,6 +123,10 @@ const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
     const [description, setDescription] = useState(eventToEdit ? eventToEdit.description : '');
     const [collabTeams, setCollabTeams] = useState(eventToEdit ? eventToEdit.collabTeams : '');
     const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+
+    // 🚩 [Step 3 핵심] 협업 인원 상태와 인원 검색 모달 스위치 추가!
+    const [collaborators, setCollaborators] = useState(eventToEdit ? eventToEdit.collaborators : '');
+    const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
     const timeOptions = useMemo(() => {
         const opts = [];
@@ -142,9 +146,10 @@ const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
             return alert('종료일이 시작일보다 빠를 수 없습니다.');
         }
         onSave({
-            id: eventToEdit ? eventToEdit.id : null, // 수정일 땐 기존 ID 유지!
+            id: eventToEdit ? eventToEdit.id : null,
             startDate, endDate, startTime, endTime,
-            title: title.trim(), isImportant, description, collabTeams
+            title: title.trim(), isImportant, description, collabTeams,
+            collaborators // 🚩 저장할 때 인원 정보도 같이 묶어서 부모(MyDashboard)로 보냅니다!
         });
     };
 
@@ -160,8 +165,8 @@ const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
                     <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600"><CloseIcon /></button>
                 </div>
 
-                {/* 🔥 아까 날아갔던 본문(알맹이)들이 무사히 돌아왔습니다! */}
                 <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                    {/* 날짜 */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-bold text-gray-700">시작일 <span className="text-red-500">*</span></label>
@@ -173,6 +178,7 @@ const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
                         </div>
                     </div>
 
+                    {/* 시간 */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-bold text-gray-700">시작 시간</label>
@@ -188,6 +194,7 @@ const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
                         </div>
                     </div>
 
+                    {/* 일정명 */}
                     <div className="flex flex-col gap-1.5">
                         <div className="flex justify-between items-end">
                             <label className="text-xs font-bold text-gray-700">일정명 <span className="text-red-500">*</span></label>
@@ -199,6 +206,7 @@ const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
                         <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="일정 제목을 입력하세요" className="border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-letusBlue w-full" />
                     </div>
 
+                    {/* 부서 추가 */}
                     <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-bold text-gray-700">협업 부서 추가</label>
                         <div className="min-h-[42px] border border-gray-300 rounded-lg bg-gray-50 px-3 py-2 flex items-center justify-between">
@@ -211,6 +219,20 @@ const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
                         </div>
                     </div>
 
+                    {/* 🚩 [Step 3 핵심] 인원 추가 UI 블록 (초록색 테마로 만들었습니다) */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-gray-700">협업 인원 추가 (태그)</label>
+                        <div className="min-h-[42px] border border-gray-300 rounded-lg bg-green-50/30 px-3 py-2 flex items-center justify-between hover:border-green-300 transition-colors">
+                            <div className="flex flex-wrap gap-1.5">
+                                {collaborators ? collaborators.split(',').map((user, i) => (
+                                    <span key={i} className="bg-green-100 text-green-700 border border-green-200 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">👤 {user.trim()}</span>
+                                )) : <span className="text-xs text-gray-400 font-medium">선택된 인원 없음</span>}
+                            </div>
+                            <button onClick={() => setIsUserModalOpen(true)} className="text-[10px] font-bold text-white bg-green-600 hover:bg-green-700 px-2.5 py-1.5 rounded transition-colors shrink-0 shadow-sm">인원 검색</button>
+                        </div>
+                    </div>
+
+                    {/* 상세 내용 */}
                     <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-bold text-gray-700">상세 내용</label>
                         <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="회의 안건, 장소 등 세부사항을 입력하세요." className="border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-letusBlue resize-none w-full"></textarea>
@@ -225,11 +247,21 @@ const CalendarEventModal = ({ selectedDate, eventToEdit, onClose, onSave }) => {
                 </div>
             </div>
 
+            {/* 부서 검색 모달 */}
             {isTeamModalOpen && (
                 <TeamSearchModal
                     initialTeams={collabTeams}
                     onApply={setCollabTeams}
                     onClose={() => setIsTeamModalOpen(false)}
+                />
+            )}
+
+            {/* 🚩 [Step 3 핵심] 인원 검색 모달 렌더링! */}
+            {isUserModalOpen && (
+                <UserSearchModal
+                    initialUsers={collaborators}
+                    onApply={setCollaborators}
+                    onClose={() => setIsUserModalOpen(false)}
                 />
             )}
         </div>
@@ -309,6 +341,72 @@ const TeamSearchModal = ({ initialTeams, onApply, onClose }) => {
         </div>
     );
 };
+// 4. 인원 검색 모달 (profiles 테이블에서 이름 검색)
+const UserSearchModal = ({ initialUsers, onApply, onClose }) => {
+    const [query, setQuery] = useState('');
+    const [userList, setUserList] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [checkedUsers, setCheckedUsers] = useState(() => {
+        if (!initialUsers) return [];
+        return initialUsers.split(',').map(s => s.trim()).filter(Boolean);
+    });
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            setIsLoading(true);
+            try {
+                // profiles 테이블에서 이름(name)만 싹 가져옵니다.
+                const { data, error } = await supabase.from('profiles').select('name');
+                if (error) throw error;
+                const uniqueUsers = [...new Set(data.map(d => d.name).filter(Boolean))].sort();
+                setUserList(uniqueUsers);
+            } catch (err) {
+                console.error('인원 목록 조회 오류:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchUsers();
+    }, []);
+
+    const filteredUsers = userList.filter(u => u.includes(query));
+    const toggleUser = (user) => setCheckedUsers(prev => prev.includes(user) ? prev.filter(u => u !== user) : [...prev, user]);
+
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[250] backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col slide-up h-[500px]">
+                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+                    <h4 className="text-sm font-bold text-gray-800 flex items-center">
+                        <span className="w-1.5 h-3.5 bg-green-500 rounded-full mr-2"></span>
+                        협업 인원 선택
+                    </h4>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><CloseIcon /></button>
+                </div>
+                <div className="px-4 py-3 border-b border-gray-100 bg-slate-50">
+                    <div className="relative">
+                        <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="이름 검색..." className="w-full pl-3 pr-3 py-2 text-xs border border-gray-200 rounded-[4px] focus:outline-none focus:border-green-500 bg-white" autoFocus />
+                    </div>
+                </div>
+                <div className="overflow-y-auto flex-1">
+                    {isLoading ? <div className="py-10 text-center text-xs text-gray-400">인원 목록 로딩 중...</div> : (
+                        <div className="divide-y divide-gray-100">
+                            {filteredUsers.map(user => (
+                                <div key={user} className={`flex items-center gap-3 px-5 py-3 cursor-pointer transition-colors ${checkedUsers.includes(user) ? 'bg-green-50' : 'hover:bg-gray-50'}`} onClick={() => toggleUser(user)}>
+                                    <input type="checkbox" readOnly checked={checkedUsers.includes(user)} className="w-4 h-4 accent-green-500 cursor-pointer" />
+                                    <span className="text-xs font-bold text-gray-700">{user}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <div className="px-4 py-3 border-t border-gray-100 bg-white flex justify-end gap-2">
+                    <button onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-500 text-[11px] font-bold rounded-[3px] hover:bg-gray-50">취소</button>
+                    <button onClick={() => { onApply(checkedUsers.join(', ')); onClose(); }} className="px-5 py-2 bg-green-500 text-white text-[11px] font-bold rounded-[3px] hover:bg-green-600">적용하기</button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // ---------------------------------------------------------
 // 🏠 메인 홈 컴포넌트
@@ -375,23 +473,22 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
 
                 setStats({ todoIssues: issueCount || 0, todoAccidents: accCount || 0, doneIssues: doneIssueCount || 0, doneAccidents: doneAccCount || 0 });
 
-                // 📅 캘린더 일정 불러오기
+                // 📅 캘린더 일정 불러오기 
+                // 🚩 [핵심 수정] 내가 작성했거나, 협업자에 내 이름이 포함된 일정만 가져오도록 필터(.or)를 걸어줍니다!
                 const { data: eventsData, error: eventsError } = await supabase
                     .from('calendar_events')
                     .select('*')
+                    .or(`creator_name.eq.${userProfile.name},collaborators.ilike.%${userProfile.name}%`)
                     .order('start_date', { ascending: true });
 
                 if (!eventsError && eventsData) {
                     const formattedEvents = eventsData.map(ev => ({
-                        id: ev.id,
-                        title: ev.title,
-                        startDate: ev.start_date,
-                        endDate: ev.end_date,
+                        id: ev.id, title: ev.title, startDate: ev.start_date, endDate: ev.end_date,
                         startTime: ev.start_time ? ev.start_time.substring(0, 5) : '00:00',
                         endTime: ev.end_time ? ev.end_time.substring(0, 5) : '23:30',
-                        isImportant: ev.is_important,
-                        description: ev.description,
-                        collabTeams: ev.collab_teams
+                        isImportant: ev.is_important, description: ev.description,
+                        collabTeams: ev.collab_teams,
+                        collaborators: ev.collaborators // 👈 데이터 파싱 추가!
                     }));
                     setCalendarEvents(formattedEvents);
                 }
@@ -544,7 +641,8 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
             const payload = {
                 title: savedEvent.title, start_date: savedEvent.startDate, end_date: savedEvent.endDate,
                 start_time: savedEvent.startTime, end_time: savedEvent.endTime, is_important: savedEvent.isImportant,
-                description: savedEvent.description, collab_teams: savedEvent.collabTeams
+                description: savedEvent.description, collab_teams: savedEvent.collabTeams,
+                collaborators: savedEvent.collaborators // 👈 DB에 같이 저장!
             };
 
             if (editingEvent) {
@@ -1005,7 +1103,11 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                                 <span className={`text-xs font-black px-1.5 py-0.5 rounded ${ev.isImportant ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-letusBlue'}`}>
                                                     {ev.startTime} ~ {ev.endTime}
                                                 </span>
-                                                {ev.collabTeams && <span className="text-[11px] text-gray-500 font-bold truncate max-w-[100px] mr-8">협업: {ev.collabTeams}</span>}
+                                                <div className="flex gap-2">
+                                                    {ev.collabTeams && <span className="text-[11px] text-gray-500 font-bold truncate max-w-[80px]">팀: {ev.collabTeams}</span>}
+                                                    {/* 🚩 태그된 사람 표시 */}
+                                                    {ev.collaborators && <span className="text-[11px] text-green-600 font-bold truncate max-w-[100px]">👤 {ev.collaborators}</span>}
+                                                </div>
                                             </div>
                                             <span className="text-sm font-bold text-gray-800 mt-1 pr-6">{ev.title}</span>
                                             {ev.description && <span className="text-xs text-gray-600 mt-0.5">{ev.description}</span>}
