@@ -642,119 +642,107 @@ const UserBulkUploadModal = ({ onClose, onReload }) => {
 
     const handleUpload = async () => {
         if (!file) return alert('업로드할 엑셀 파일을 선택해 주세요.');
-        if (!vendorType) return alert('업체 양식을 선택해 주세요.');
         setIsUploading(true);
 
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
-                // 🔥 1. 호환성을 위해 다시 Binary 문자열로 읽기
                 const data = e.target.result;
                 let wb = XLSX.read(data, { type: 'binary' });
+                const sheetName = wb.SheetNames[0];
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
 
-                // 시트 탐색
-                let rows = [];
-                for (let i = 0; i < wb.SheetNames.length; i++) {
-                    const sheetName = wb.SheetNames[i];
-                    const tempRows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
-                    if (tempRows.length > 0) {
-                        rows = tempRows;
-                        console.log(`✅ [${sheetName}] 시트 파싱 성공!`);
-                        break;
+                if (rows.length === 0) throw new Error('엑셀 파일에 데이터가 없습니다.');
+
+                let stats = { insert: 0, update: 0, fail: 0, logs: [] };
+
+                // 🚩 1. 기존 유저 목록 가져오기 (신규 가입 vs 덮어쓰기 판별용)
+                const { data: existingProfiles } = await adminSupabase.from('profiles').select('id, login_id');
+                const existingMap = {};
+                if (existingProfiles) {
+                    existingProfiles.forEach(p => { existingMap[p.login_id] = p.id; });
+                }
+
+                // 🚩 2. 엑셀 데이터를 한 줄씩 읽으며 처리
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    // 공백 없는 키 생성 (오타 방지)
+                    const cleanRow = {};
+                    for (let key in row) cleanRow[key.replace(/\s/g, '')] = row[key];
+
+                    const name = cleanRow['이름(필수)'];
+                    const loginId = cleanRow['아이디(필수)'];
+                    let password = cleanRow['비밀번호(필수/선택)'];
+                    if (password) password = String(password); // 숫자로 입력된 비번을 문자로 변환
+
+                    if (!name || !loginId) {
+                        stats.fail++;
+                        stats.logs.push(`${i + 2}행: 필수 정보(이름, 아이디) 누락`);
+                        continue;
                     }
-                }
 
-                // 🔥 2. [가짜 엑셀 방어 로직] 일반 파싱에 실패했는데 HTML 태그가 보인다면? 강제 추출!
-                if (rows.length === 0 && (data.includes('<table') || data.includes('<TABLE'))) {
-                    console.log('🚨 HTML 기반 가짜 엑셀 파일 감지! 시스템이 강제 추출을 시도합니다.');
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(data, 'text/html');
-                    const table = doc.querySelector('table');
-                    if (table) {
-                        wb = XLSX.utils.table_to_book(table);
-                        rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
-                    }
-                }
+                    // DB에 넣을 형태 정리
+                    const payload = {
+                        name: name,
+                        login_id: loginId,
+                        team: cleanRow['소속팀(필수)'] || '',
+                        brands: cleanRow['소속브랜드'] || '',
+                        role: cleanRow['권한그룹'] || '사용자',
+                        status: cleanRow['상태'] || '정상',
+                        managed_brands: cleanRow['담당브랜드'] || '',
+                        managed_vendors: cleanRow['담당업체'] || '',
+                        accessible_menus: cleanRow['허용메뉴(ID)'] || 'dashboard,list,accident_dashboard,accident_list'
+                    };
 
-                // 그래도 없으면 진짜 데이터가 없는 것
-                if (rows.length === 0) {
-                    throw new Error('데이터를 추출할 수 없습니다. (ERP 양식 호환성 오류)');
-                }
-
-                const standardData = [];
-
-                if (vendorType.startsWith('협력사_')) {
-                    const exactVendorName = vendorType.replace('협력사_', '');
-                    rows.forEach(rawRow => {
-                        const row = {};
-                        for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
-
-                        if (!row['사원명'] || !row['근무일자']) return;
-
-                        standardData.push({
-                            work_date: row['근무일자'].replace(/\./g, '-'), // "2026.02.02" -> "2026-02-02" 형식 맞추기
-                            company_type: '사내협력사', vendor_name: exactVendorName, worked_vendor: exactVendorName,
-                            worker_name: row['사원명'], start_time: row['출근시간'] || '', end_time: row['퇴근시간'] || '',
-                            work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8,
-                            remark: row['이상유무'] || row['구분'] || ''
-                        });
-                    });
-                } else if (vendorType === '도급사1') {
-                    rows.forEach(rawRow => {
-                        const row = {};
-                        for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
-
-                        if (!row['근로자명'] || !row['날짜']) return;
-                        standardData.push({
-                            work_date: row['날짜'].replace(/\./g, '-'),
-                            company_type: '외주도급사', vendor_name: '도급사1', worked_vendor: '도급사1',
-                            worker_name: row['근로자명'], start_time: '', end_time: '',
-                            work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8,
-                            remark: row['비고'] || `단가: ${row['단가']}, 식대: ${row['식대']}`
-                        });
-                    });
-                } else if (vendorType === '도급사2') {
-                    rows.forEach(rawRow => {
-                        const row = {};
-                        for (let key in rawRow) row[key.replace(/\s/g, '')] = rawRow[key];
-
-                        const workerName = row['구분'];
-                        if (!workerName || workerName === '계') return;
-                        const dateColumns = Object.keys(row).filter(key => key.includes('월') && key.includes('일'));
-                        dateColumns.forEach(dateCol => {
-                            const workValue = row[dateCol];
-                            if (workValue) {
-                                standardData.push({
-                                    work_date: dateCol,
-                                    company_type: '외주도급사', vendor_name: '도급사2', worked_vendor: '도급사2',
-                                    worker_name: workerName, start_time: '', end_time: '',
-                                    work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8,
-                                    remark: `근무기록: ${workValue}`
-                                });
+                    try {
+                        if (existingMap[loginId]) {
+                            // 🔄 [기존 사용자] 프로필 업데이트
+                            const userId = existingMap[loginId];
+                            const { error } = await adminSupabase.from('profiles').update(payload).eq('id', userId);
+                            if (error) throw error;
+                            
+                            // 엑셀에 비번이 적혀있으면 비번도 변경해줌
+                            if (password && password.length >= 6) {
+                                await adminSupabase.auth.admin.updateUserById(userId, { password: password });
                             }
-                        });
-                    });
+                            stats.update++;
+                        } else {
+                            // ✨ [신규 사용자] 로그인 계정 생성 후 프로필 등록
+                            if (!password || password.length < 6) {
+                                throw new Error('신규 계정은 6자리 이상의 비밀번호가 필수입니다.');
+                            }
+                            const targetEmail = loginId.includes('@') ? loginId : `${loginId}@letus.com`;
+                            
+                            const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
+                                email: targetEmail,
+                                password: password,
+                                email_confirm: true
+                            });
+                            if (authError) throw authError;
+
+                            payload.id = authData.user.id;
+                            payload.created_at = new Date().toISOString();
+                            
+                            const { error: profileError } = await adminSupabase.from('profiles').insert([payload]);
+                            if (profileError) throw profileError;
+                            
+                            stats.insert++;
+                        }
+                    } catch (rowErr) {
+                        stats.fail++;
+                        stats.logs.push(`[${loginId}] ${rowErr.message}`);
+                    }
                 }
 
-                if (standardData.length === 0) {
-                    alert('❌ 엑셀 구조가 맞지 않습니다.\n\n[필수 확인]\n엑셀의 첫 줄이 "사원번호", "사원명" 등의 제목으로 시작하는지 확인해주세요.');
-                    setIsUploading(false);
-                    return;
-                }
+                setUploadStats(stats);
+                if (stats.insert > 0 || stats.update > 0) onReload();
 
-                // DB에 데이터 통째로 저장 (Supabase 연동)
-                const { error } = await supabase.from('worker_attendance').insert(standardData);
-                if (error) throw error;
-
-                alert(`🎉 [${vendorType.replace('협력사_', '')}] 총 ${standardData.length}건의 근태 데이터가 성공적으로 DB에 등록되었습니다!`);
-
-                if (onReload) onReload();
-                onClose();
-
-            } catch (err) { alert('업로드 중 오류 발생: ' + err.message); }
-            finally { setIsUploading(false); }
+            } catch (err) {
+                alert('업로드 중 오류 발생: ' + err.message);
+            } finally {
+                setIsUploading(false);
+            }
         };
-        // 🔥 ArrayBuffer 대신 BinaryString으로 다시 원복 (HTML 파싱을 위해)
         reader.readAsBinaryString(file);
     };
 
