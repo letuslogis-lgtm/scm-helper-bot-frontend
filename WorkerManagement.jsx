@@ -944,14 +944,15 @@ const WorkerManagement = () => {
                 </div>
             </div>
 
-            {/* 📋 데이터 테이블 영역 (표 본문 영역만 스크롤 되도록 구조 완벽 고정) */}
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-10 min-h-0">
+            {/* 🚩 [수정] z-10을 z-20으로 맞춰서 다른 메뉴와 통일 */}
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20 min-h-0">
                 <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap min-w-max">
-                        <thead className="bg-slate-50/90 backdrop-blur-sm border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
-                            {/* 🔥 헤더 전체 가운데 정렬 & 클릭 정렬 로직 적용 */}
+                        {/* 🚩 [수정] 투명도(/90)와 backdrop-blur-sm을 제거하여 스크롤 시 글자 겹침 완벽 차단 */}
+                        <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th className="p-4 pl-5 w-10 text-center"><input type="checkbox" checked={isAllSelected} onChange={toggleAll} className="w-4 h-4 accent-letusBlue cursor-pointer" /></th>
+                                {/* 🚩 [수정] 체크박스 여백을 pl-5 -> pl-6으로 변경하여 완벽한 줄맞춤 */}
+                                <th className="p-4 pl-6 w-10 text-center"><input type="checkbox" checked={isAllSelected} onChange={toggleAll} className="w-4 h-4 accent-letusBlue cursor-pointer" /></th>
                                 <th className="p-4 w-10 text-center">No</th>
                                 <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('name')}>근무자명<SortIcon columnKey="name" /></th>
                                 <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('company_type')}>소속 구분<SortIcon columnKey="company_type" /></th>
@@ -980,7 +981,8 @@ const WorkerManagement = () => {
                             <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
                                 {sortedWorkers.map((worker, idx) => (
                                     <tr key={worker.id} className={`transition-colors cursor-pointer ${selectedIds.includes(worker.id) ? 'bg-blue-50' : 'hover:bg-blue-50/30'}`} onDoubleClick={() => setEditTarget(worker)}>
-                                        <td className="p-4 pl-5 text-center"><input type="checkbox" checked={selectedIds.includes(worker.id)} onChange={() => toggleOne(worker.id)} className="w-4 h-4 accent-letusBlue cursor-pointer" /></td>
+                                        {/* 🚩 [수정] 본문 체크박스 여백도 pl-5 -> pl-6으로 동일하게 맞춤! */}
+                                        <td className="p-4 pl-6 text-center"><input type="checkbox" checked={selectedIds.includes(worker.id)} onChange={() => toggleOne(worker.id)} className="w-4 h-4 accent-letusBlue cursor-pointer" onClick={e => e.stopPropagation()} /></td>
                                         <td className="p-4 text-center text-gray-400 font-medium">{idx + 1}</td>
                                         <td className="p-4 text-center font-black text-gray-800 text-sm">{worker.name}</td>
                                         <td className="p-4 text-center">
