@@ -1040,6 +1040,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+    const [isAiView, setIsAiView] = useState(false); // AI 분석 뷰 토글 상태
 
     // 🔥 신규: 누락되었던 모달 오픈용 상태값 추가
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
@@ -1523,7 +1524,9 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                             <MultiSelect label="시공/AS" options={['시공', 'AS']} selected={draftFilters.serviceTypes} onChange={(val) => setDraftFilters({ ...draftFilters, serviceTypes: val })} width="w-24" />
                             <MultiSelect label="처리상태" options={['원인 파악 중', '등록 완료']} selected={draftFilters.statuses} onChange={(val) => setDraftFilters({ ...draftFilters, statuses: val })} width="w-32" />
                             <MultiSelect label="귀책부서" options={['물류사업1팀', '물류사업2팀', '운송사업팀', '컨택센터', '라스트마일1팀', '라스트마일2팀', '기타']} selected={draftFilters.depts} onChange={(val) => setDraftFilters({ ...draftFilters, depts: val })} width="w-40" />
-                            <MultiSelect label="조치결과" options={['정상출고', '미출고', '오출고', '과출고', '물류파손', '시공파손', '현장직출', '센터직출', '납기연기(건)', '납기연기(품목)', '제품분실']} selected={draftFilters.actionResults} onChange={(val) => setDraftFilters({ ...draftFilters, actionResults: val })} width="w-40" />
+
+                            {/* 🚩 라벨명 수정: 조치결과 -> 확인 결과 */}
+                            <MultiSelect label="확인 결과" options={['정상출고', '미출고', '오출고', '과출고', '물류파손', '시공파손', '현장직출', '센터직출', '납기연기(건)', '납기연기(품목)', '제품분실']} selected={draftFilters.actionResults} onChange={(val) => setDraftFilters({ ...draftFilters, actionResults: val })} width="w-40" />
 
                             <div className="flex items-center shrink-0">
                                 <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">지연판별</label>
@@ -1533,6 +1536,24 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                     <option value="정상">정상(지연없음)</option>
                                 </select>
                             </div>
+
+                            {/* 🚩 AI 분석 뷰 토글 스위치 (관리자 전용, 가장 우측 배치) */}
+                            {userProfile?.role === '관리자' && (
+                                <div className="flex items-center ml-auto pl-4 border-l border-gray-200 shrink-0">
+                                    <button
+                                        onClick={() => setIsAiView(!isAiView)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-[4px] text-xs font-black transition-all border ${isAiView
+                                                ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                                                : 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100'
+                                            }`}
+                                    >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                        {isAiView ? 'AI 분석 뷰 ON' : 'AI 분석 뷰 OFF'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -1600,29 +1621,49 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                 <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1420px] text-[13px]">
                         <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
+                            <tr className="bg-slate-50 border-b border-slate-200"></tr>
                             <tr>
                                 <th className="p-4 pl-6 w-10 text-center">
                                     <input type="checkbox" checked={sortedItems.length > 0 && selectedIds.length === sortedItems.length} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer accent-letusBlue" />
                                 </th>
                                 {[
-                                    { label: '서비스예약일', key: 'service_date', w: '110px' }, { label: '브랜드', key: 'brand', w: '90px' }, { label: '서비스센터', key: 'service_center', w: '90px' }, { label: '시공/AS', key: 'service_type', w: '80px' }, { label: '수주번호', key: 'order_no', w: '150px' }, { label: '수주건명', key: 'order_name', w: 'auto' }, { label: '품목코드', key: 'item_code', w: '180px' }, { label: '수량', key: 'issue_qty', w: '70px' }, { label: '처리상태', key: 'status', w: '120px' }, { label: '귀책부서', key: 'responsible_dept', w: '120px' }, { label: '조치결과구분', key: 'action_result', w: '130px' }, { label: '납기지연판별', key: 'is_delayed', w: '110px' }
+                                    { label: '서비스예약일', key: 'service_date', w: '110px' },
+                                    { label: '브랜드', key: 'brand', w: '90px' },
+                                    { label: '서비스센터', key: 'service_center', w: '90px' },
+                                    { label: '시공/AS', key: 'service_type', w: '80px' },
+                                    { label: '수주번호', key: 'order_no', w: '150px' },
+                                    { label: '수주건명', key: 'order_name', w: 'auto' },
+                                    { label: '품목코드', key: 'item_code', w: '180px' },
+                                    { label: '수량', key: 'issue_qty', w: '70px' },
+                                    { label: '처리상태', key: 'status', w: '120px' },
+                                    { label: '귀책부서', key: 'responsible_dept', w: '120px' },
+                                    // 🚩 토글 상태에 따라 배열 내용이 동적으로 바뀝니다! (130px + 110px = 총 240px 유지)
+                                    ...(isAiView
+                                        ? [{ label: '🤖 AI 사고 원인 분석 (상세 내역 기반)', key: 'ai_analyzed_cause', w: '240px' }]
+                                        : [
+                                            { label: '확인 결과', key: 'action_result', w: '130px' },
+                                            { label: '납기지연판별', key: 'is_delayed', w: '110px' }
+                                        ]
+                                    )
                                 ].map((col, idx) => (
-                                    <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
-                                        <div className="flex items-center justify-center">{col.label} {col.key && getSortIcon(col.key)}</div>
+                                    <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''} ${isAiView && col.key === 'ai_analyzed_cause' ? 'text-purple-600 bg-purple-50/50' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
+                                        <div className="flex items-center justify-center gap-1">
+                                            {col.label} {col.key && getSortIcon(col.key)}
+                                        </div>
                                     </th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
                             {isLoading ? (
-                                <tr><td colSpan="13" className="py-32 text-center"><div className="flex flex-col items-center gap-3"><div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div><p className="text-gray-500 font-bold">데이터 로딩 중...</p></div></td></tr>
+                                <tr><td colSpan={isAiView ? "12" : "13"} className="py-32 text-center"><div className="flex flex-col items-center gap-3"><div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div><p className="text-gray-500 font-bold">데이터 로딩 중...</p></div></td></tr>
                             ) : sortedItems.length === 0 ? (
-                                <tr><td colSpan="13" className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
+                                <tr><td colSpan={isAiView ? "12" : "13"} className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
                             ) : (
                                 <>
                                     {sortedItems.length > 300 && (
                                         <tr>
-                                            <td colSpan="13" className="bg-yellow-50 text-yellow-700 text-[11px] font-bold text-center py-2 border-b border-yellow-100">
+                                            <td colSpan={isAiView ? "12" : "13"} className="bg-yellow-50 text-yellow-700 text-[11px] font-bold text-center py-2 border-b border-yellow-100">
                                                 ⚠️ 조회된 데이터가 너무 많아 브라우저 속도 보호를 위해 최신 300건만 화면에 표시됩니다. (선택실행 메뉴의 '엑셀 추출'은 전체 데이터가 다운로드됩니다.)
                                             </td>
                                         </tr>
@@ -1638,13 +1679,29 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                             <td className="p-4 text-center text-gray-600">{row.service_center}</td>
                                             <td className="p-4 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${row.service_type === '시공' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>{row.service_type}</span></td>
                                             <td className="p-4 text-center font-mono text-gray-500">{row.order_no}</td>
-                                            <td className="p-4 font-bold text-gray-800 truncate">{row.order_name}</td>
-                                            <td className="p-4 text-gray-600 truncate">{row.item_code}</td>
+                                            <td className="p-4 font-bold text-gray-800 truncate max-w-[200px]" title={row.order_name}>{row.order_name}</td>
+                                            <td className="p-4 text-gray-600 truncate max-w-[150px]">{row.item_code}</td>
                                             <td className="p-4 text-center font-bold">{row.issue_qty}</td>
                                             <td className="p-4 text-center"><span className={`px-2 py-1 rounded text-[11px] font-bold ${row.status === '등록 완료' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>{row.status}</span></td>
                                             <td className="p-4 text-center font-bold text-letusBlue">{row.responsible_dept || '-'}</td>
-                                            <td className="p-4 text-center text-gray-600">{row.action_result}</td>
-                                            <td className={`p-4 font-black text-center ${row.is_delayed !== '-' ? 'text-red-500' : 'text-gray-400'}`}>{row.is_delayed}</td>
+
+                                            {/* 🚩 토글 상태에 따른 데이터 셀(td) 렌더링 */}
+                                            {!isAiView ? (
+                                                <>
+                                                    <td className="p-4 text-center text-gray-600 font-bold">{row.action_result || '미확인'}</td>
+                                                    <td className={`p-4 font-black text-center ${row.is_delayed !== '-' ? 'text-red-500' : 'text-gray-400'}`}>{row.is_delayed}</td>
+                                                </>
+                                            ) : (
+                                                <td className="p-4 text-center bg-purple-50/20">
+                                                    {row.ai_analyzed_cause ? (
+                                                        <span className="px-3 py-1 rounded-full text-[11px] font-black bg-purple-100 text-purple-700 border border-purple-200 shadow-sm inline-block">
+                                                            {row.ai_analyzed_cause}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[11px] font-bold text-slate-400 italic">대기중</span>
+                                                    )}
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </>
