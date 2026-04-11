@@ -1543,8 +1543,8 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                     <button
                                         onClick={() => setIsAiView(!isAiView)}
                                         className={`flex items-center gap-2 px-3 py-1.5 rounded-[4px] text-xs font-black transition-all border ${isAiView
-                                                ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                                                : 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100'
+                                            ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                                            : 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100'
                                             }`}
                                     >
                                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1637,7 +1637,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                     { label: '수량', key: 'issue_qty', w: '70px' },
                                     { label: '처리상태', key: 'status', w: '120px' },
                                     { label: '귀책부서', key: 'responsible_dept', w: '120px' },
-                                    // 🚩 토글 상태에 따라 배열 내용이 동적으로 바뀝니다! (130px + 110px = 총 240px 유지)
+                                    // 🚩 토글 배열만 유지
                                     ...(isAiView
                                         ? [{ label: '🤖 AI 사고 원인 분석 (상세 내역 기반)', key: 'ai_analyzed_cause', w: '240px' }]
                                         : [
@@ -1646,10 +1646,8 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                         ]
                                     )
                                 ].map((col, idx) => (
-                                    <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''} ${isAiView && col.key === 'ai_analyzed_cause' ? 'text-purple-600 bg-purple-50/50' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
-                                        <div className="flex items-center justify-center gap-1">
-                                            {col.label} {col.key && getSortIcon(col.key)}
-                                        </div>
+                                    <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
+                                        <div className="flex items-center justify-center">{col.label} {col.key && getSortIcon(col.key)}</div>
                                     </th>
                                 ))}
                             </tr>
@@ -1679,16 +1677,19 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                             <td className="p-4 text-center text-gray-600">{row.service_center}</td>
                                             <td className="p-4 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${row.service_type === '시공' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>{row.service_type}</span></td>
                                             <td className="p-4 text-center font-mono text-gray-500">{row.order_no}</td>
-                                            <td className="p-4 font-bold text-gray-800 truncate max-w-[200px]" title={row.order_name}>{row.order_name}</td>
-                                            <td className="p-4 text-gray-600 truncate max-w-[150px]">{row.item_code}</td>
+
+                                            {/* 🚩 제가 임의로 넣었던 max-w-[200px] 등 제거 완료! 원래 코드로 원복 */}
+                                            <td className="p-4 font-bold text-gray-800 truncate">{row.order_name}</td>
+                                            <td className="p-4 text-gray-600 truncate">{row.item_code}</td>
+
                                             <td className="p-4 text-center font-bold">{row.issue_qty}</td>
                                             <td className="p-4 text-center"><span className={`px-2 py-1 rounded text-[11px] font-bold ${row.status === '등록 완료' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>{row.status}</span></td>
                                             <td className="p-4 text-center font-bold text-letusBlue">{row.responsible_dept || '-'}</td>
 
-                                            {/* 🚩 토글 상태에 따른 데이터 셀(td) 렌더링 */}
+                                            {/* 🚩 토글 상태에 따른 교체 (너비 영향 없음) */}
                                             {!isAiView ? (
                                                 <>
-                                                    <td className="p-4 text-center text-gray-600 font-bold">{row.action_result || '미확인'}</td>
+                                                    <td className="p-4 text-center text-gray-600">{row.action_result}</td>
                                                     <td className={`p-4 font-black text-center ${row.is_delayed !== '-' ? 'text-red-500' : 'text-gray-400'}`}>{row.is_delayed}</td>
                                                 </>
                                             ) : (
