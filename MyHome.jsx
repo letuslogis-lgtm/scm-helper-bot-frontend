@@ -405,7 +405,11 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                         priority: t.priority,
                         isDone: t.is_done,
                         repeat: t.repeat_days || [],
-                        createdAt: t.created_at ? t.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
+                        createdAt: (() => {
+    const d = t.created_at ? new Date(t.created_at) : new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+})()
                     }));
                     setTodos(formattedTodos);
                 }
@@ -450,7 +454,12 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                 const { data, error } = await supabase.from('todos').insert([todoPayload]).select();
                 if (error) throw error;
                 // 새롭게 생성된 createdAt 추출
-                if (data && data.length > 0) setTodos([{ ...savedTodo, id: data[0].id, createdAt: data[0].created_at ? data[0].created_at.split('T')[0] : new Date().toISOString().split('T')[0] }, ...todos]);
+                if (data && data.length > 0) {
+    const d = data[0].created_at ? new Date(data[0].created_at) : new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const localDateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    setTodos([{ ...savedTodo, id: data[0].id, createdAt: localDateStr }, ...todos]);
+}
             }
             setIsTodoModalOpen(false);
             setEditingTodo(null);
@@ -971,7 +980,8 @@ const MyDashboard = ({ userProfile, setPage, favorites }) => {
                                 <div className="flex flex-col gap-2 mt-2">
                                     <h4 className="text-sm font-black text-gray-500 border-b pb-1 mb-1">📝 해당 일자 TODO</h4>
                                     {dayEventsModalData.todos.map(todo => {
-                                        const dateStr = selectedTodoDate.toISOString().split('T')[0];
+                                        const pad = n => String(n).padStart(2, '0');
+const dateStr = `${selectedTodoDate.getFullYear()}-${pad(selectedTodoDate.getMonth() + 1)}-${pad(selectedTodoDate.getDate())}`;
                                         const isCompleted = !!todoDoneLogs[`${todo.id}_${dateStr}`];
                                         return (
                                             <div key={todo.id} className={`p-2.5 rounded-lg border flex items-center gap-2 ${isCompleted ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-gray-50 border-gray-200'}`}>
