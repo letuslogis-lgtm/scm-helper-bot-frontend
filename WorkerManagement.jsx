@@ -826,132 +826,134 @@ const WorkerManagement = () => {
     const toggleOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
     return (
-        // 🔥 전체 창 높이 고정 (h-[calc(100vh-64px)]), overflow-hidden으로 이중 스크롤 방지
-        <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)] overflow-hidden">
+        // 🚩 [수정] 전체 창 높이 고정 유지, 배경색 통일
+        <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)] slide-up bg-slate-100">
 
-            {/* 🔍 상단 고정 조회 영역 */}
-            <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col z-30 shrink-0">
-                <div className="px-6 py-3 flex items-center justify-between gap-4">
-
-                    {/* 왼쪽 기본 검색 영역 */}
-                    <div className="flex items-center gap-6 flex-1 flex-wrap">
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[11px] font-bold text-gray-700">소속 구분</span>
-                            <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)} className="border border-gray-200 rounded px-2 h-[30px] text-[11px] outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
-                                <option value="">전체</option><option value="사내협력사">사내협력사</option><option value="외주도급사">외주도급사</option>
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[11px] font-bold text-gray-700">근무지</span>
-                            <select value={filterWorkplace} onChange={e => setFilterWorkplace(e.target.value)} className="border border-gray-200 rounded px-2 h-[30px] text-[11px] outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
-                                <option value="">전체</option>
-                                <option value="양지1센터">양지1센터</option><option value="양지2센터">양지2센터</option><option value="양지3센터">양지3센터</option>
-                                <option value="안성센터">안성센터</option><option value="평택센터">평택센터</option><option value="음성센터">음성센터</option>
-                                <option value="동부센터">동부센터</option><option value="서부센터">서부센터</option>
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[11px] font-bold text-gray-700">검색어</span>
-                            <input type="text" value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="이름 또는 업체명 입력" className="border border-gray-200 rounded px-3 h-[30px] text-[11px] outline-none focus:border-letusOrange w-48 text-gray-700" />
-                        </div>
+            {/* 1. 검색 박스 구역 (사용자 관리 스타일로 통일) */}
+            <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex flex-col gap-3 z-30 shrink-0 transition-all duration-300">
+                <div className="flex items-center gap-5 w-full flex-wrap">
+                    
+                    <div className="flex items-center shrink-0">
+                        <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">소속 구분</label>
+                        <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
+                            <option value="">전체</option><option value="사내협력사">사내협력사</option><option value="외주도급사">외주도급사</option>
+                        </select>
                     </div>
 
-                    {/* 오른쪽 우측 정렬된 버튼 그룹 */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center shrink-0">
+                        <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근무지</label>
+                        <select value={filterWorkplace} onChange={e => setFilterWorkplace(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange min-w-[120px] cursor-pointer text-gray-700">
+                            <option value="">전체</option>
+                            <option value="양지1센터">양지1센터</option><option value="양지2센터">양지2센터</option><option value="양지3센터">양지3센터</option>
+                            <option value="안성센터">안성센터</option><option value="평택센터">평택센터</option><option value="음성센터">음성센터</option>
+                            <option value="동부센터">동부센터</option><option value="서부센터">서부센터</option>
+                        </select>
+                    </div>
+
+                    <div className="flex items-center shrink-0">
+                        <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">검색어</label>
+                        <input type="text" value={filterKeyword} onChange={e => setFilterKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="이름 또는 업체명 입력" className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange w-48 text-gray-700" />
+                    </div>
+
+                    <div className="ml-auto shrink-0 flex items-center gap-2">
                         <button onClick={() => setIsAdvancedSearchOpen(!isAdvancedSearchOpen)} className={`text-[11px] font-bold border px-3 h-[30px] rounded-[3px] transition-colors flex items-center gap-1 shadow-sm ${isAdvancedSearchOpen ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}>
                             <svg className={`w-3.5 h-3.5 transition-transform ${isAdvancedSearchOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
                             상세 조회
                         </button>
                         <div className="w-px h-4 bg-gray-200 mx-1"></div>
-                        <button onClick={handleReset} className="px-4 h-[30px] bg-white border border-gray-300 text-gray-600 text-[11px] font-bold rounded-[3px] hover:bg-gray-50 transition-colors">초기화</button>
-                        <button onClick={handleSearch} className="px-5 h-[30px] bg-orange-500 text-white text-[11px] font-bold rounded-[3px] hover:bg-orange-600 transition-colors flex items-center gap-1.5 shadow-sm">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            조회하기
+                        <button onClick={handleReset} className="border border-gray-300 text-gray-500 hover:bg-gray-50 font-bold px-4 h-[30px] rounded-[3px] transition-colors text-xs">초기화</button>
+                        <button onClick={handleSearch} className="bg-letusOrange text-white hover:bg-orange-600 font-bold px-6 h-[30px] rounded-[3px] transition-colors text-xs flex items-center justify-center shadow-sm gap-1.5">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> 조회하기
                         </button>
                     </div>
                 </div>
 
-                {/* 상세 조회 아코디언 영역 (기존 UI 스타일 적용) */}
+                {/* 상세 조회 아코디언 영역 */}
                 {isAdvancedSearchOpen && (
-                    <div className="px-6 pb-4 slide-down">
-                        <div className="flex flex-col gap-3 pt-3 mt-1 border-t border-gray-100">
-                            <div className="flex items-center gap-6 w-full flex-wrap">
+                    <div className="flex flex-col gap-3 pt-3 mt-1 border-t border-gray-100 slide-up">
+                        <div className="flex items-center gap-6 w-full flex-wrap">
 
-                                <div className="flex items-center shrink-0">
-                                    <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">지원 여부</label>
-                                    <select value={filterSupport} onChange={e => setFilterSupport(e.target.value)} className="border border-gray-200 rounded-[3px] text-[11px] px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
-                                        <option value="">전체</option><option value="미지원">미지원</option>
-                                        {uniqueVendorList.map(v => <option key={v} value={v}>{v}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="flex items-center shrink-0">
-                                    <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 브랜드</label>
-                                    <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className="border border-gray-200 rounded-[3px] text-[11px] px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
-                                        <option value="">전체</option>
-                                        {brandList.map(b => <option key={b} value={b}>{b}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="flex items-center shrink-0">
-                                    <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 업무</label>
-                                    <select value={filterTask} onChange={e => setFilterTask(e.target.value)} className="border border-gray-200 rounded-[3px] text-[11px] px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
-                                        <option value="">전체</option>
-                                        {taskList.map(t => <option key={t} value={t}>{t}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="flex items-center shrink-0">
-                                    <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근로 형태</label>
-                                    <select value={filterEmpType} onChange={e => setFilterEmpType(e.target.value)} className="border border-gray-200 rounded-[3px] text-[11px] px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 w-28 font-medium">
-                                        <option value="">전체</option><option value="현장직">현장직</option><option value="사무직">사무직</option>
-                                    </select>
-                                </div>
-
-                                <div className="flex items-center shrink-0">
-                                    <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근무 상태</label>
-                                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-[3px] text-[11px] px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 w-28 font-medium">
-                                        <option value="">전체</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option>
-                                    </select>
-                                </div>
-
+                            <div className="flex items-center shrink-0">
+                                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">지원 여부</label>
+                                <select value={filterSupport} onChange={e => setFilterSupport(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
+                                    <option value="">전체</option><option value="미지원">미지원</option>
+                                    {uniqueVendorList.map(v => <option key={v} value={v}>{v}</option>)}
+                                </select>
                             </div>
+
+                            <div className="flex items-center shrink-0">
+                                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 브랜드</label>
+                                <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
+                                    <option value="">전체</option>
+                                    {brandList.map(b => <option key={b} value={b}>{b}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="flex items-center shrink-0">
+                                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">담당 업무</label>
+                                <select value={filterTask} onChange={e => setFilterTask(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 min-w-[120px] font-medium">
+                                    <option value="">전체</option>
+                                    {taskList.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="flex items-center shrink-0">
+                                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근로 형태</label>
+                                <select value={filterEmpType} onChange={e => setFilterEmpType(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 w-28 font-medium">
+                                    <option value="">전체</option><option value="현장직">현장직</option><option value="사무직">사무직</option>
+                                </select>
+                            </div>
+
+                            <div className="flex items-center shrink-0">
+                                <label className="text-[11px] font-bold text-gray-600 mr-2 whitespace-nowrap">근무 상태</label>
+                                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-[3px] text-xs px-2.5 h-[30px] focus:outline-none focus:border-letusOrange cursor-pointer bg-white text-gray-700 w-28 font-medium">
+                                    <option value="">전체</option><option value="재직">재직</option><option value="휴직">휴직</option><option value="퇴사">퇴사</option>
+                                </select>
+                            </div>
+
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* ⚙️ 선택 실행 도구 모음 (상단 고정, shrink-0) */}
-            <div className="flex justify-end w-full px-2 z-20 shrink-0 mt-[-4px]">
-                <div className="relative">
-                    <button onClick={() => setIsActionMenuOpen(!isActionMenuOpen)} className="flex items-center justify-between text-[11px] font-bold text-gray-700 bg-white border border-gray-300 rounded shadow-sm px-3 py-[7px] hover:bg-gray-50 transition-all w-[90px]">
-                        선택실행 <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                    </button>
-                    {isActionMenuOpen && (
-                        <>
-                            <div className="fixed inset-0 z-40" onClick={() => setIsActionMenuOpen(false)}></div>
-                            <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 py-1.5 slide-down">
-                                <button onClick={() => { setIsActionMenuOpen(false); setIsAddModalOpen(true); }} className="w-full text-left px-4 py-2 text-[11px] font-medium text-gray-700 hover:bg-gray-50">근무자 추가</button>
-                                <button onClick={() => { setIsActionMenuOpen(false); setIsBulkUploadModalOpen(true); }} className="w-full text-left px-4 py-2 text-[11px] font-medium text-gray-700 hover:bg-gray-50">엑셀 일괄 등록</button>
-                                <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) alert('근무자를 체크해주세요.'); else setIsBulkEditModalOpen(true); }} className={`w-full text-left px-4 py-2 text-[11px] font-medium ${selectedIds.length > 0 ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}>일괄 변경 {selectedIds.length > 0 && `(${selectedIds.length})`}</button>
-                                <div className="h-px bg-gray-100 my-1"></div>
-                                <button onClick={() => { setIsActionMenuOpen(false); handleExportExcel(); }} className="w-full text-left px-4 py-2 text-[11px] font-bold text-green-600 hover:bg-green-50 flex items-center justify-between">엑셀 추출 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg></button>
-                                <div className="h-px bg-gray-100 my-1"></div>
-                                <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) alert('근무자를 체크해주세요.'); else handleDeleteSelected(); }} className={`w-full text-left px-4 py-2 text-[11px] font-medium ${selectedIds.length > 0 ? 'text-red-600 hover:bg-red-50' : 'text-gray-300 cursor-not-allowed'}`}>영구 삭제</button>
-                            </div>
-                        </>
-                    )}
+            {/* 2. 선택실행 (드롭다운) 구역 (사용자 관리 스타일로 통일) */}
+            <div className="flex justify-end w-full px-2 z-30 -mt-1 mb-1 shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="relative z-50">
+                        <button onClick={() => setIsActionMenuOpen(!isActionMenuOpen)} className="flex items-center justify-between text-xs font-bold text-gray-700 bg-white border border-gray-300 rounded shadow-sm px-3 py-[7px] hover:bg-gray-50 transition-all min-w-[90px] h-[32px]">
+                            선택실행 {selectedIds.length > 0 && `(${selectedIds.length})`}
+                            <svg className={`w-3.5 h-3.5 ml-2 text-gray-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                        
+                        {isActionMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsActionMenuOpen(false)}></div>
+                                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 py-1.5 slide-down">
+                                    <button onClick={() => { setIsActionMenuOpen(false); setIsAddModalOpen(true); }} className="w-full text-left px-4 py-2 text-[11px] font-medium text-gray-700 hover:bg-gray-50 transition-colors">근무자 추가</button>
+                                    <button onClick={() => { setIsActionMenuOpen(false); setIsBulkUploadModalOpen(true); }} className="w-full text-left px-4 py-2 text-[11px] font-medium text-gray-700 hover:bg-gray-50 transition-colors">엑셀 일괄 등록</button>
+                                    <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) return alert('근무자를 체크해주세요.'); setIsBulkEditModalOpen(true); }} className={`w-full text-left px-4 py-2 text-[11px] font-medium transition-colors ${selectedIds.length > 0 ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}>일괄 변경</button>
+                                    
+                                    <div className="h-px bg-gray-100 my-1"></div>
+                                    <button onClick={() => { setIsActionMenuOpen(false); handleExportExcel(); }} className="w-full text-left px-4 py-2 text-[11px] font-bold text-green-600 hover:bg-green-50 flex items-center justify-between transition-colors">엑셀 추출 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg></button>
+                                    
+                                    <div className="h-px bg-gray-100 my-1"></div>
+                                    <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) return alert('근무자를 체크해주세요.'); handleDeleteSelected(); }} className={`w-full text-left px-4 py-2 text-[11px] font-medium flex justify-between items-center transition-colors ${selectedIds.length > 0 ? 'text-red-600 hover:bg-red-50' : 'text-gray-300 cursor-not-allowed'}`}>
+                                        영구 삭제
+                                        {selectedIds.length > 0 && <svg className="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>}
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* 🚩 [수정] z-10을 z-20으로 맞춰서 다른 메뉴와 통일 */}
+            {/* 3. 표 구역 */}
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20 min-h-0">
                 <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap min-w-max">
-                        {/* 🚩 [수정] 투명도(/90)와 backdrop-blur-sm을 제거하여 스크롤 시 글자 겹침 완벽 차단 */}
                         <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
                             <tr>
-                                {/* 🚩 [수정] 체크박스 여백을 pl-5 -> pl-6으로 변경하여 완벽한 줄맞춤 */}
                                 <th className="p-4 pl-6 w-10 text-center"><input type="checkbox" checked={isAllSelected} onChange={toggleAll} className="w-4 h-4 accent-letusBlue cursor-pointer" /></th>
                                 <th className="p-4 w-10 text-center">No</th>
                                 <th className="p-4 text-center cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => requestSort('name')}>근무자명<SortIcon columnKey="name" /></th>
@@ -967,11 +969,11 @@ const WorkerManagement = () => {
                             </tr>
                         </thead>
                         {isLoading ? (
-                            <tbody><tr><td colSpan="12" className="text-center py-10 text-gray-400 font-bold">데이터를 조회하는 중입니다...</td></tr></tbody>
+                            <tbody><tr><td colSpan="12" className="text-center py-32 text-gray-400 font-bold"><div className="flex flex-col items-center gap-3"><div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div><p>데이터를 조회하는 중입니다...</p></div></td></tr></tbody>
                         ) : sortedWorkers.length === 0 ? (
                             <tbody>
                                 <tr>
-                                    <td colSpan="12" className="p-10 text-center text-gray-400">
+                                    <td colSpan="12" className="p-20 text-center text-gray-400">
                                         <svg className="w-16 h-16 mx-auto mb-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                                         <p className="font-semibold text-gray-500 mb-1">조건에 맞는 데이터가 없습니다.</p>
                                     </td>
@@ -980,9 +982,8 @@ const WorkerManagement = () => {
                         ) : (
                             <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
                                 {sortedWorkers.map((worker, idx) => (
-                                    <tr key={worker.id} className={`transition-colors cursor-pointer ${selectedIds.includes(worker.id) ? 'bg-blue-50' : 'hover:bg-blue-50/30'}`} onDoubleClick={() => setEditTarget(worker)}>
-                                        {/* 🚩 [수정] 본문 체크박스 여백도 pl-5 -> pl-6으로 동일하게 맞춤! */}
-                                        <td className="p-4 pl-6 text-center"><input type="checkbox" checked={selectedIds.includes(worker.id)} onChange={() => toggleOne(worker.id)} className="w-4 h-4 accent-letusBlue cursor-pointer" onClick={e => e.stopPropagation()} /></td>
+                                    <tr key={worker.id} className={`transition-colors cursor-pointer ${selectedIds.includes(worker.id) ? 'bg-blue-50/50' : 'hover:bg-blue-50/30'}`} onDoubleClick={() => setEditTarget(worker)}>
+                                        <td className="p-4 pl-6 text-center" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(worker.id)} onChange={() => toggleOne(worker.id)} className="w-4 h-4 accent-letusBlue cursor-pointer" /></td>
                                         <td className="p-4 text-center text-gray-400 font-medium">{idx + 1}</td>
                                         <td className="p-4 text-center font-black text-gray-800 text-sm">{worker.name}</td>
                                         <td className="p-4 text-center">
