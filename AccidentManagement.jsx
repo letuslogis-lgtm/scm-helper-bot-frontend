@@ -1698,7 +1698,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                     <th
                                         key={idx}
                                         className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
-                                        style={{ width: col.w }}
+                                        style={{ width: col.w, minWidth: col.w, maxWidth: col.w }}
                                         onClick={() => col.key && requestSort(col.key)}
                                     >
                                         <div className="flex items-center justify-center gap-1">
