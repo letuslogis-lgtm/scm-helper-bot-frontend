@@ -1621,11 +1621,17 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                 <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1420px] text-[13px]">
                         <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
+                            {/* 🚩 사용자 관리 메뉴와 동일한 빈 줄(보더용) 추가 */}
                             <tr className="bg-slate-50 border-b border-slate-200"></tr>
                             <tr>
-                                {/* 🚩 체크 박스 열: 기훈님 원본 그대로 원복! (w-10, pl-6, text-center) */}
+                                {/* 🚩 표준 규격 적용: p-4 pl-6 w-10 text-center */}
                                 <th className="p-4 pl-6 w-10 text-center">
-                                    <input type="checkbox" checked={sortedItems.length > 0 && selectedIds.length === sortedItems.length} onChange={handleSelectAll} className="w-4 h-4 cursor-pointer accent-letusBlue" />
+                                    <input
+                                        type="checkbox"
+                                        checked={sortedItems.length > 0 && selectedIds.length === sortedItems.length}
+                                        onChange={handleSelectAll}
+                                        className="w-4 h-4 cursor-pointer accent-letusBlue"
+                                    />
                                 </th>
                                 {[
                                     { label: '서비스예약일', key: 'service_date', w: '110px' },
@@ -1633,85 +1639,95 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                     { label: '서비스센터', key: 'service_center', w: '90px' },
                                     { label: '시공/AS', key: 'service_type', w: '80px' },
                                     { label: '수주번호', key: 'order_no', w: '150px' },
-                                    { label: '수주건명', key: 'order_name', w: 'auto' }, // auto 비율 유지
+                                    { label: '수주건명', key: 'order_name', w: 'auto' },
                                     { label: '품목코드', key: 'item_code', w: '180px' },
                                     { label: '수량', key: 'issue_qty', w: '70px' },
                                     { label: '처리상태', key: 'status', w: '120px' },
                                     { label: '귀책부서', key: 'responsible_dept', w: '120px' },
-                                    // 🚩 토글 배열만 유지
                                     ...(isAiView
-                                        ? [{ label: '🤖 AI 사고 원인 분석 (상세 내역 기반)', key: 'ai_analyzed_cause', w: '240px' }]
+                                        ? [{ label: '🤖 AI 사고 원인 분석', key: 'ai_analyzed_cause', w: '240px' }]
                                         : [
                                             { label: '확인 결과', key: 'action_result', w: '130px' },
                                             { label: '납기지연판별', key: 'is_delayed', w: '110px' }
                                         ]
                                     )
                                 ].map((col, idx) => (
-                                    /* 🚩 데이터 헤더: 기훈님 원본 그대로 원복! (p-4, text-center, justify-center) */
-                                    <th key={idx} className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`} style={{ width: col.w }} onClick={() => col.key && requestSort(col.key)}>
-                                        <div className="flex items-center justify-centergap-1">{col.label} {col.key && getSortIcon(col.key)}</div>
+                                    /* 🚩 표준 규격 적용: p-4 text-center (정렬 기준 통일) */
+                                    <th
+                                        key={idx}
+                                        className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
+                                        style={{ width: col.w }}
+                                        onClick={() => col.key && requestSort(col.key)}
+                                    >
+                                        {/* 🚩 정렬 아이콘 위치 최적화 (gap-1 띄어쓰기 수정) */}
+                                        <div className="flex items-center justify-center gap-1">
+                                            {col.label} {col.key && getSortIcon(col.key)}
+                                        </div>
                                     </th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
-                            {isLoading ? (
-                                <tr><td colSpan={isAiView ? "12" : "13"} className="py-32 text-center"><div className="flex flex-col items-center gap-3"><div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div><p className="text-gray-500 font-bold">데이터 로딩 중...</p></div></td></tr>
-                            ) : sortedItems.length === 0 ? (
-                                <tr><td colSpan={isAiView ? "12" : "13"} className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
-                            ) : (
-                                <>
-                                    {sortedItems.length > 300 && (
-                                        <tr>
-                                            <td colSpan={isAiView ? "12" : "13"} className="bg-yellow-50 text-yellow-700 text-[11px] font-bold text-center py-2 border-b border-yellow-100">
-                                                ⚠️ 조회된 데이터가 너무 많아 브라우저 속도 보호를 위해 최신 300건만 화면에 표시됩니다. (선택실행 메뉴의 '엑셀 추출'은 전체 데이터가 다운로드됩니다.)
+                            {sortedItems.slice(0, 300).map(row => (
+                                <tr
+                                    key={row.id}
+                                    onDoubleClick={() => { window.getSelection()?.removeAllRanges(); setActiveRow(row); }}
+                                    className={`cursor-pointer transition-colors ${selectedIds.includes(row.id) ? 'bg-blue-50' : 'hover:bg-blue-50/30'}`}
+                                >
+                                    {/* 🚩 표준 규격 적용: p-4 pl-6 text-center */}
+                                    <td className="p-4 pl-6 text-center" onClick={e => e.stopPropagation()}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.includes(row.id)}
+                                            onChange={() => handleSelectOne(row.id)}
+                                            className="w-4 h-4 cursor-pointer accent-letusBlue"
+                                        />
+                                    </td>
+
+                                    {/* 데이터 셀 스타일도 사용자 관리 메뉴의 톤앤매너로 고정 */}
+                                    <td className="p-4 text-center text-gray-700">{row.service_date}</td>
+                                    <td className="p-4 text-center font-semibold">{row.brand}</td>
+                                    <td className="p-4 text-center text-gray-600">{row.service_center}</td>
+                                    <td className="p-4 text-center">
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${row.service_type === '시공' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                                            {row.service_type}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 text-center font-mono text-gray-400">{row.order_no}</td>
+
+                                    {/* 수주건명, 품목코드 (기존의 truncate 방식 유지) */}
+                                    <td className="p-4 font-black text-gray-800 text-sm tracking-tight truncate">{row.order_name}</td>
+                                    <td className="p-4 font-bold text-gray-600 truncate">{row.item_code}</td>
+
+                                    <td className="p-4 text-center font-bold">{row.issue_qty}</td>
+                                    <td className="p-4 text-center">
+                                        <span className={`px-2.5 py-1 rounded-[4px] font-bold text-[11px] ${row.status === '등록 완료' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                                            {row.status}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 text-center font-bold text-letusBlue">{row.responsible_dept || '-'}</td>
+
+                                    {/* AI 토글 영역 */}
+                                    {!isAiView ? (
+                                        <>
+                                            <td className="p-4 text-center text-gray-600">{row.action_result}</td>
+                                            <td className={`p-4 font-black text-center ${row.is_delayed !== '-' ? 'text-red-500' : 'text-gray-400'}`}>
+                                                {row.is_delayed}
                                             </td>
-                                        </tr>
-                                    )}
-
-                                    {sortedItems.slice(0, 300).map(row => (
-                                        <tr key={row.id} onDoubleClick={() => { window.getSelection()?.removeAllRanges(); setActiveRow(row); }} className={`cursor-pointer transition-colors ${selectedIds.includes(row.id) ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-blue-50/30'}`}>
-                                            {/* 🚩 데이터 행 체크 박스: 기훈님 원본 원복 (p-4, pl-6, text-center) */}
-                                            <td className="p-4 pl-6 text-center" onClick={e => e.stopPropagation()}>
-                                                <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => handleSelectOne(row.id)} className="w-4 h-4 cursor-pointer accent-letusBlue" />
-                                            </td>
-
-                                            {/* 🚩 데이터 행 스타일: 기훈님 원본 원복 (text-center,truncate 등) */}
-                                            <td className="p-4 text-center text-gray-700">{row.service_date}</td>
-                                            <td className="p-4 text-center font-semibold">{row.brand}</td>
-                                            <td className="p-4 text-center text-gray-600">{row.service_center}</td>
-                                            <td className="p-4 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${row.service_type === '시공' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>{row.service_type}</span></td>
-                                            <td className="p-4 text-center font-mono text-gray-500">{row.order_no}</td>
-
-                                            {/* 제가 임의로 넣었던 max-w-[200px] 등 제거 완료! 원래 코드로 원복 */}
-                                            <td className="p-4 font-bold text-gray-800 truncate">{row.order_name}</td>
-                                            <td className="p-4 text-gray-600 truncate">{row.item_code}</td>
-
-                                            <td className="p-4 text-center font-bold">{row.issue_qty}</td>
-                                            <td className="p-4 text-center"><span className={`px-2 py-1 rounded text-[11px] font-bold ${row.status === '등록 완료' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>{row.status}</span></td>
-                                            <td className="p-4 text-center font-bold text-letusBlue">{row.responsible_dept || '-'}</td>
-
-                                            {/* 🚩 토글 상태에 따른 교체 (너비 영향 없음) */}
-                                            {!isAiView ? (
-                                                <>
-                                                    <td className="p-4 text-center text-gray-600">{row.action_result}</td>
-                                                    <td className={`p-4 font-black text-center ${row.is_delayed !== '-' ? 'text-red-500' : 'text-gray-400'}`}>{row.is_delayed}</td>
-                                                </>
+                                        </>
+                                    ) : (
+                                        <td className="p-4 text-center">
+                                            {row.ai_analyzed_cause ? (
+                                                <span className="px-3 py-1 rounded-full font-bold text-[11px] bg-purple-100 text-purple-700 border border-purple-200 shadow-sm">
+                                                    {row.ai_analyzed_cause}
+                                                </span>
                                             ) : (
-                                                <td className="p-4 text-center bg-purple-50/20 animate-fade-in">
-                                                    {row.ai_analyzed_cause ? (
-                                                        <span className="px-3 py-1 rounded-full text-[11px] font-black bg-purple-100 text-purple-700 border border-purple-200 shadow-sm inline-block">
-                                                            {row.ai_analyzed_cause}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[11px] font-bold text-slate-400 italic">대기중...</span>
-                                                    )}
-                                                </td>
+                                                <span className="text-[11px] font-bold text-slate-400 italic">대기중...</span>
                                             )}
-                                        </tr>
-                                    ))}
-                                </>
-                            )}
+                                        </td>
+                                    )}
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
