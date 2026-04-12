@@ -1621,11 +1621,10 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                 <div className="p-0 overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left whitespace-nowrap table-fixed min-w-[1420px] text-[13px]">
                         <thead className="bg-slate-50 border-b border-gray-200 text-xs text-slate-500 font-bold sticky top-0 z-10 shadow-sm">
-                            {/* 🚩 사용자 관리 메뉴와 동일한 빈 줄(보더용) 추가 */}
                             <tr className="bg-slate-50 border-b border-slate-200"></tr>
                             <tr>
-                                {/* 🚩 표준 규격 적용: p-4 pl-6 w-10 text-center */}
-                                <th className="p-4 pl-6 w-10 text-center">
+                                {/* 🚩 [핵심 해결] 애매한 w-10을 지우고 style={{ width: '60px' }} 로 강력하게 묶어버림! */}
+                                <th className="p-4 pl-6 text-center" style={{ width: '60px' }}>
                                     <input
                                         type="checkbox"
                                         checked={sortedItems.length > 0 && selectedIds.length === sortedItems.length}
@@ -1639,7 +1638,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                     { label: '서비스센터', key: 'service_center', w: '90px' },
                                     { label: '시공/AS', key: 'service_type', w: '80px' },
                                     { label: '수주번호', key: 'order_no', w: '150px' },
-                                    { label: '수주건명', key: 'order_name', w: '280px' },
+                                    { label: '수주건명', key: 'order_name', w: '280px' }, // 🚩 기훈님의 직관! 280px 고정 완료
                                     { label: '품목코드', key: 'item_code', w: '180px' },
                                     { label: '수량', key: 'issue_qty', w: '70px' },
                                     { label: '처리상태', key: 'status', w: '120px' },
@@ -1652,14 +1651,12 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                         ]
                                     )
                                 ].map((col, idx) => (
-                                    /* 🚩 표준 규격 적용: p-4 text-center (정렬 기준 통일) */
                                     <th
                                         key={idx}
                                         className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
                                         style={{ width: col.w }}
                                         onClick={() => col.key && requestSort(col.key)}
                                     >
-                                        {/* 🚩 정렬 아이콘 위치 최적화 (gap-1 띄어쓰기 수정) */}
                                         <div className="flex items-center justify-center gap-1">
                                             {col.label} {col.key && getSortIcon(col.key)}
                                         </div>
@@ -1668,66 +1665,71 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
-                            {sortedItems.slice(0, 300).map(row => (
-                                <tr
-                                    key={row.id}
-                                    onDoubleClick={() => { window.getSelection()?.removeAllRanges(); setActiveRow(row); }}
-                                    className={`cursor-pointer transition-colors ${selectedIds.includes(row.id) ? 'bg-blue-50' : 'hover:bg-blue-50/30'}`}
-                                >
-                                    {/* 🚩 표준 규격 적용: p-4 pl-6 text-center */}
-                                    <td className="p-4 pl-6 text-center" onClick={e => e.stopPropagation()}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedIds.includes(row.id)}
-                                            onChange={() => handleSelectOne(row.id)}
-                                            className="w-4 h-4 cursor-pointer accent-letusBlue"
-                                        />
-                                    </td>
-
-                                    {/* 데이터 셀 스타일도 사용자 관리 메뉴의 톤앤매너로 고정 */}
-                                    <td className="p-4 text-center text-gray-700">{row.service_date}</td>
-                                    <td className="p-4 text-center font-semibold">{row.brand}</td>
-                                    <td className="p-4 text-center text-gray-600">{row.service_center}</td>
-                                    <td className="p-4 text-center">
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${row.service_type === '시공' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
-                                            {row.service_type}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-center font-mono text-gray-400">{row.order_no}</td>
-
-                                    {/* 수주건명, 품목코드 (기존의 truncate 방식 유지) */}
-                                    <td className="p-4 font-black text-gray-800 text-sm tracking-tight truncate">{row.order_name}</td>
-                                    <td className="p-4 font-bold text-gray-600 truncate">{row.item_code}</td>
-
-                                    <td className="p-4 text-center font-bold">{row.issue_qty}</td>
-                                    <td className="p-4 text-center">
-                                        <span className={`px-2.5 py-1 rounded-[4px] font-bold text-[11px] ${row.status === '등록 완료' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
-                                            {row.status}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-center font-bold text-letusBlue">{row.responsible_dept || '-'}</td>
-
-                                    {/* AI 토글 영역 */}
-                                    {!isAiView ? (
-                                        <>
-                                            <td className="p-4 text-center text-gray-600">{row.action_result}</td>
-                                            <td className={`p-4 font-black text-center ${row.is_delayed !== '-' ? 'text-red-500' : 'text-gray-400'}`}>
-                                                {row.is_delayed}
+                            {isLoading ? (
+                                <tr><td colSpan={isAiView ? "12" : "13"} className="py-32 text-center"><div className="flex flex-col items-center gap-3"><div className="w-8 h-8 border-4 border-blue-100 border-t-letusBlue rounded-full animate-spin"></div><p className="text-gray-500 font-bold">데이터 로딩 중...</p></div></td></tr>
+                            ) : sortedItems.length === 0 ? (
+                                <tr><td colSpan={isAiView ? "12" : "13"} className="p-20 text-center text-gray-400 font-bold">조회 결과가 없습니다.</td></tr>
+                            ) : (
+                                <>
+                                    {sortedItems.slice(0, 300).map(row => (
+                                        <tr
+                                            key={row.id}
+                                            onDoubleClick={() => { window.getSelection()?.removeAllRanges(); setActiveRow(row); }}
+                                            className={`cursor-pointer transition-colors ${selectedIds.includes(row.id) ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-blue-50/30'}`}
+                                        >
+                                            {/* 🚩 바디 셀에서도 w-10 제거 (헤더의 60px을 그대로 따라가며 완벽한 칼각 유지) */}
+                                            <td className="p-4 pl-6 text-center" onClick={e => e.stopPropagation()}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(row.id)}
+                                                    onChange={() => handleSelectOne(row.id)}
+                                                    className="w-4 h-4 cursor-pointer accent-letusBlue"
+                                                />
                                             </td>
-                                        </>
-                                    ) : (
-                                        <td className="p-4 text-center">
-                                            {row.ai_analyzed_cause ? (
-                                                <span className="px-3 py-1 rounded-full font-bold text-[11px] bg-purple-100 text-purple-700 border border-purple-200 shadow-sm">
-                                                    {row.ai_analyzed_cause}
+                                            <td className="p-4 text-center text-gray-700">{row.service_date}</td>
+                                            <td className="p-4 text-center font-semibold">{row.brand}</td>
+                                            <td className="p-4 text-center text-gray-600">{row.service_center}</td>
+                                            <td className="p-4 text-center">
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${row.service_type === '시공' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                                                    {row.service_type}
                                                 </span>
+                                            </td>
+                                            <td className="p-4 text-center font-mono text-gray-500">{row.order_no}</td>
+
+                                            {/* 🚩 280px 안에서 글자가 길면 ... 으로 예쁘게 잘림 (truncate) */}
+                                            <td className="p-4 font-bold text-gray-800 text-sm tracking-tight truncate">{row.order_name}</td>
+                                            <td className="p-4 font-bold text-gray-600 truncate">{row.item_code}</td>
+
+                                            <td className="p-4 text-center font-bold">{row.issue_qty}</td>
+                                            <td className="p-4 text-center">
+                                                <span className={`px-2 py-1 rounded text-[11px] font-bold ${row.status === '등록 완료' ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-600 border border-red-100 animate-pulse'}`}>
+                                                    {row.status}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-center font-bold text-letusBlue">{row.responsible_dept || '-'}</td>
+
+                                            {!isAiView ? (
+                                                <>
+                                                    <td className="p-4 text-center text-gray-600">{row.action_result}</td>
+                                                    <td className={`p-4 font-black text-center ${row.is_delayed !== '-' ? 'text-red-500' : 'text-gray-400'}`}>
+                                                        {row.is_delayed}
+                                                    </td>
+                                                </>
                                             ) : (
-                                                <span className="text-[11px] font-bold text-slate-400 italic">대기중...</span>
+                                                <td className="p-4 text-center bg-purple-50/20">
+                                                    {row.ai_analyzed_cause ? (
+                                                        <span className="px-3 py-1 rounded-full font-black text-[11px] bg-purple-100 text-purple-700 border border-purple-200 shadow-sm inline-block">
+                                                            {row.ai_analyzed_cause}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[11px] font-bold text-slate-400 italic">대기중...</span>
+                                                    )}
+                                                </td>
                                             )}
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
+                                        </tr>
+                                    ))}
+                                </>
+                            )}
                         </tbody>
                     </table>
                 </div>
