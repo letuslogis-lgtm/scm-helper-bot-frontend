@@ -64,6 +64,10 @@ const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
                     responsible_dept: dept,
                     cause_detail: finalCauseStr,
                     action_result: actionResult,
+
+                    handler_team: handlerTeam,
+                    action_content: actionContent,
+
                     status: '등록 완료',
                     handler_name: userProfile?.name || '관리자',
                     updated_at: new Date().toISOString()
