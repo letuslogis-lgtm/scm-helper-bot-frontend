@@ -1157,6 +1157,32 @@ const AccidentList = ({ userProfile, initialFilter }) => {
         }
     };
 
+    const handleAiAnalysis = async () => {
+        if (selectedIds.length === 0) return alert('분석할 항목을 먼저 체크박스로 선택해 주세요.');
+        if (!window.confirm(`선택하신 ${selectedIds.length}건에 대해 AI 사고 원인 분석을 진행하시겠습니까?`)) return;
+
+        setIsLoading(true);
+        setIsActionMenuOpen(false); // 메뉴 닫기
+
+        try {
+            // 🚩 Supabase Edge Function 직접 호출!
+            const { data, error } = await supabase.functions.invoke('analyze-accidents', {
+                body: { ids: selectedIds }
+            });
+
+            if (error) throw error;
+
+            alert(`✨ AI 분석이 완료되었습니다! (총 ${selectedIds.length}건)`);
+            fetchAccidents(); // 목록 새로고침
+            setSelectedIds([]); // 선택 해제
+        } catch (err) {
+            console.error("AI 분석 호출 에러:", err);
+            alert('AI 분석 중 오류가 발생했습니다. (데이터가 너무 많으면 나누어서 진행해 주세요.)');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleExportExcel = () => {
         if (selectedIds.length === 0) return alert('다운로드할 항목을 선택해 주세요.');
         const targetItems = sortedItems.filter(item => selectedIds.includes(item.id));
@@ -1580,7 +1606,20 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                     {isActionMenuOpen && (
                         <>
                             <div className="fixed inset-0" onClick={() => setIsActionMenuOpen(false)}></div>
-                            <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-50 py-1.5 slide-down">
+                            <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded shadow-lg z-50 py-1.5 slide-down">
+
+                                {/* 🚩 🤖 AI 분석 실행 버튼 추가 */}
+                                <button
+                                    onClick={handleAiAnalysis}
+                                    className="w-full text-left px-4 py-2 text-xs font-bold text-purple-600 hover:bg-purple-50 transition-colors flex items-center justify-between"
+                                >
+                                    AI 원인 분석 실행
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                </button>
+
+                                <div className="h-px bg-gray-100 my-1"></div>
 
                                 <button
                                     onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) return alert('항목을 체크해 주세요.'); setIsBulkEditModalOpen(true); }}
