@@ -1639,7 +1639,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                     { label: '서비스센터', key: 'service_center', w: '90px' },
                                     { label: '시공/AS', key: 'service_type', w: '80px' },
                                     { label: '수주번호', key: 'order_no', w: '150px' },
-                                    { label: '수주건명', key: 'order_name', w: 'auto' },
+                                    { label: '수주건명', key: 'order_name', w: '280px' },
                                     { label: '품목코드', key: 'item_code', w: '180px' },
                                     { label: '수량', key: 'issue_qty', w: '70px' },
                                     { label: '처리상태', key: 'status', w: '120px' },
