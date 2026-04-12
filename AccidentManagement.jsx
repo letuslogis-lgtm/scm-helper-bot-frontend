@@ -1688,7 +1688,10 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                     { label: '처리상태', key: 'status', w: '120px' },
                                     { label: '귀책부서', key: 'responsible_dept', w: '120px' },
                                     ...(isAiView
-                                        ? [{ label: '🤖 AI 사고 원인 분석', key: 'ai_analyzed_cause', w: '240px' }]
+                                        ? [
+                                            { label: '🤖 AI 사고 원인 분석', key: 'ai_analyzed_cause', w: '240px' },
+                                            { label: '', key: null, w: '0px' } // 👻 1. 유령 컬럼 투입! (칸 개수 맞추기용)
+                                        ]
                                         : [
                                             { label: '확인 결과', key: 'action_result', w: '130px' },
                                             { label: '납기지연판별', key: 'is_delayed', w: '110px' }
@@ -1698,7 +1701,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                     <th
                                         key={idx}
                                         className={`p-4 text-center select-none ${col.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''}`}
-                                        style={{ width: col.w, minWidth: col.w, maxWidth: col.w }}
+                                        style={{ width: col.w }}
                                         onClick={() => col.key && requestSort(col.key)}
                                     >
                                         <div className="flex items-center justify-center gap-1">
@@ -1758,15 +1761,20 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                                     </td>
                                                 </>
                                             ) : (
-                                                <td className="p-4 text-center bg-purple-50/20">
-                                                    {row.ai_analyzed_cause ? (
-                                                        <span className="px-3 py-1 rounded-full font-black text-[11px] bg-purple-100 text-purple-700 border border-purple-200 shadow-sm inline-block">
-                                                            {row.ai_analyzed_cause}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[11px] font-bold text-slate-400 italic">대기중...</span>
-                                                    )}
-                                                </td>
+                                                // 🚩 React 에러 방지: 두 개의 td를 묶어주는 투명 보따리(<>) 추가!
+                                                <>
+                                                    <td className="p-4 text-center bg-purple-50/20">
+                                                        {row.ai_analyzed_cause ? (
+                                                            <span className="px-3 py-1 rounded-full font-black text-[11px] bg-purple-100 text-purple-700 border border-purple-200 shadow-sm inline-block">
+                                                                {row.ai_analyzed_cause}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[11px] font-bold text-slate-400 italic">대기중...</span>
+                                                        )}
+                                                    </td>
+                                                    {/* 👻 3. 유령 컬럼 투입 (에러 없이 작동!) */}
+                                                    <td className="p-0 border-none w-0"></td>
+                                                </>
                                             )}
                                         </tr>
                                     ))}
