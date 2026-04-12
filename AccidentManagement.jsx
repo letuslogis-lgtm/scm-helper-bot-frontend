@@ -1639,7 +1639,7 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                     { label: '서비스센터', key: 'service_center', w: '90px' },
                                     { label: '시공/AS', key: 'service_type', w: '80px' },
                                     { label: '수주번호', key: 'order_no', w: '150px' },
-                                    { label: '수주건명', key: 'order_name', w: 'auto' }, // 🚩 3. 다시 auto로 변경! (남는 화면 여백을 얘가 스펀지처럼 다 흡수해줌)
+                                    { label: '수주건명', key: 'order_name', w: '300px' },
                                     { label: '품목코드', key: 'item_code', w: '180px' },
                                     { label: '수량', key: 'issue_qty', w: '70px' },
                                     { label: '처리상태', key: 'status', w: '120px' },
@@ -1696,7 +1696,9 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                                                 </span>
                                             </td>
                                             <td className="p-4 text-center font-mono text-gray-500">{row.order_no}</td>
-                                            <td className="p-4 font-bold text-gray-800 text-sm tracking-tight truncate">{row.order_name}</td>
+                                            <td className="p-4 font-bold text-gray-800 text-sm tracking-tight truncate max-w-[300px]" title={row.order_name}>
+                                                {row.order_name}
+                                            </td>
                                             <td className="p-4 font-bold text-gray-600 truncate">{row.item_code}</td>
                                             <td className="p-4 text-center font-bold">{row.issue_qty}</td>
                                             <td className="p-4 text-center">
