@@ -1054,7 +1054,9 @@ const AccidentList = ({ userProfile, initialFilter }) => {
 
     const initialFiltersMap = {
         brands: [], centers: [], serviceTypes: [], statuses: [], depts: [], actionResults: [],
-        startDate: today, endDate: today, searchType: '수주건명', searchValue: '', excludeNormal: false, isDelayed: '전체'
+        startDate: today, endDate: today, searchType: '수주건명', searchValue: '', excludeNormal: false, isDelayed: '전체',
+        // 🚩 여기 추가! (드릴다운용 숨겨진 필터들)
+        workers: [], zones: [], aiCauses: []
     };
 
     const [draftFilters, setDraftFilters] = useState(initialFiltersMap);
@@ -1082,6 +1084,9 @@ const AccidentList = ({ userProfile, initialFilter }) => {
             if (appliedFilters.statuses.length > 0) filtered = filtered.filter(i => appliedFilters.statuses.includes(i.status));
             if (appliedFilters.depts.length > 0) filtered = filtered.filter(i => appliedFilters.depts.includes(i.responsible_dept));
             if (appliedFilters.actionResults.length > 0) filtered = filtered.filter(i => appliedFilters.actionResults.includes(i.action_result));
+            if (appliedFilters.workers?.length > 0) filtered = filtered.filter(i => appliedFilters.workers.includes(i.worker_name));
+            if (appliedFilters.zones?.length > 0) filtered = filtered.filter(i => appliedFilters.zones.includes(i.zone));
+            if (appliedFilters.aiCauses?.length > 0) filtered = filtered.filter(i => appliedFilters.aiCauses.includes(i.ai_analyzed_cause));
 
             if (appliedFilters.searchValue) {
                 const val = appliedFilters.searchValue.toLowerCase();
