@@ -99,7 +99,6 @@
     <script type="text/babel" src="./Sidebar.jsx"></script>
     <script type="text/babel" src="./Header.jsx"></script>
     <script type="text/babel" src="./useAppLogic.jsx"></script>
-
     <script type="text/babel" src="./LoginView.jsx"></script>
     <script type="text/babel" src="./MainLayout.jsx"></script>
     <script type="text/babel" src="./MyHome.jsx"></script>
@@ -132,6 +131,7 @@
                     <div className={logic.currentPage === 'attendance' ? 'block' : 'hidden'}><AttendanceManagement /></div>
                     <div className={logic.currentPage === 'accident_dashboard' ? 'block' : 'hidden'}><AccidentDashboard userProfile={logic.userProfile} onDrillDown={logic.handleAccidentDrillDown} /></div>
                     <div className={logic.currentPage === 'accident_list' ? 'block' : 'hidden'}><AccidentList userProfile={logic.userProfile} initialFilter={logic.accidentDrillDownFilters} /></div>
+                    <div className={logic.currentPage === 'accident_report' ? 'block' : 'hidden'}><window.AccidentAnalyticsReport userProfile={logic.userProfile} /></div>
                     <div className={logic.currentPage === 'product_manager' ? 'block' : 'hidden'}><ProductManager /></div>
                     <div className={logic.currentPage === 'user_management' ? 'block' : 'hidden'}><UserManagement /></div>
                     <div className={logic.currentPage === 'support' ? 'block' : 'hidden'}><SupportCenter userProfile={logic.userProfile} /></div>
