@@ -218,9 +218,13 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                                         </PieChart>
                                     </ResponsiveContainer>
                                     {/* 도넛 중앙 총 발생건 텍스트 (대시보드 통일) */}
-                                    <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none w-full">
-                                        <span className="text-[28px] font-black leading-tight text-gray-900">{zoneData.reduce((a, b) => a + b.value, 0)}</span>
-                                        <span className="text-xs font-semibold text-gray-500 mt-1">총 발생건</span>
+                                    <div className="absolute top-[43%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
+                                        <span className="text-[28px] font-black leading-none text-gray-900 mb-1">
+                                            {zoneData.reduce((a, b) => a + b.value, 0)}
+                                        </span>
+                                        <span className="text-xs font-semibold leading-none text-gray-500">
+                                            총 발생건
+                                        </span>
                                     </div>
                                 </>
                             ) : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">데이터가 없습니다.</div>}
