@@ -1,11 +1,14 @@
 const { useState, useEffect, useMemo } = React;
 const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = window.Recharts || {};
 
-// 🚩 프롭스에 onDrillDown 추가!
 const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
     const [accidents, setAccidents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filterType, setFilterType] = useState('M'); // 기본값 월간
+    const [filterType, setFilterType] = useState('M');
+
+    // 🚩 AI 분석을 위한 상태 추가
+    const [aiReport, setAiReport] = useState(null);
+    const [isAiLoading, setIsAiLoading] = useState(false);
 
     const getTodayStr = () => {
         const d = new Date();
@@ -44,14 +47,16 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
 
     const fetchAnalyticsData = async () => {
         setIsLoading(true);
+        // 🚩 기간이 바뀌면 기존 AI 리포트 리셋!
+        setAiReport(null); 
+        
         try {
             const { data, error } = await window.supabase
                 .from('logistics_accidents')
                 .select('*')
                 .gte('service_date', startDate)
                 .lte('service_date', endDate)
-                // 🚩 [추가] 확인 결과가 '정상출고'인 건은 분석 대상에서 완전히 제외!
-                .neq('action_result', '정상출고');
+                .neq('action_result', '정상출고'); // 🚩 정상출고 제외
 
             if (error) throw error;
             setAccidents(data || []);
@@ -77,27 +82,18 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
     // 🧠 2. 사고 발생 ZONE 핫스팟 (데이터 클렌징 완벽 적용)
     const zoneData = useMemo(() => {
         const stats = accidents.reduce((acc, curr) => {
-            // 🚩 null, undefined, 빈칸(''), 하이픈('-') 모두 잡아내기!
             let rawZone = curr.zone ? String(curr.zone).trim() : '';
             const zone = (!rawZone || rawZone === '-') ? '미분류' : rawZone;
-
             acc[zone] = (acc[zone] || 0) + 1;
             return acc;
         }, {});
-
-        return Object.keys(stats).map(name => ({
-            // 🚩 '미분류'일 때는 '구역' 글자 안 붙이게 디테일 처리
-            name: name === '미분류' ? '미분류' : `${name} 구역`,
-            value: stats[name]
-        })).sort((a, b) => b.value - a.value).slice(0, 8);
+        return Object.keys(stats).map(name => ({ name: name === '미분류' ? '미분류' : `${name} 구역`, value: stats[name] })).sort((a, b) => b.value - a.value).slice(0, 8);
     }, [accidents]);
 
     // 🧠 3. 요주의 작업자 (Quality Index) Top 8
     const workerData = useMemo(() => {
         const stats = accidents.reduce((acc, curr) => {
-            // 🚩 작업자도 마찬가지로 '-'나 빈칸이 들어오면 깔끔하게 무시!
             let rawWorker = curr.worker_name ? String(curr.worker_name).trim() : '';
-
             if (rawWorker !== '' && rawWorker !== '-') {
                 acc[rawWorker] = (acc[rawWorker] || 0) + 1;
             }
@@ -117,11 +113,39 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
     }, [accidents]);
 
 
-    // 🎨 대시보드와 완벽하게 동일한 색상 팔레트 적용
+    // 🤖 AI 리포트 생성 함수 (트리거)
+    const handleGenerateAiReport = () => {
+        if (accidents.length === 0) {
+            alert('분석할 데이터가 없습니다.');
+            return;
+        }
+
+        setIsAiLoading(true);
+
+        // 💡 실제로는 여기서 OpenAI나 Gemini API로 데이터를 쏴서 받아와야 합니다!
+        // 지금은 기훈님이 API를 연결하시기 전까지 테스트하실 수 있도록, 
+        // 현재 화면의 데이터를 바탕으로 "가상의 AI"가 그럴싸하게 분석해주는 로직을 넣었습니다.
+        setTimeout(() => {
+            const topSku = skuData[0] ? `${skuData[0].name}(${skuData[0].value}건)` : '특정 품목';
+            const topZone = zoneData[0] ? `${zoneData[0].name}(${zoneData[0].value}건)` : '특정 구역';
+            const topCause = aiCauseData[0] ? aiCauseData[0].name : '특정 원인';
+
+            const generatedText = `현재 조회하신 기간(${startDate} ~ ${endDate}) 동안 총 **${accidents.length}건**의 물류 사고가 발생했습니다. AI 데이터 패턴 분석 결과, 아래의 핵심 개선점을 제안합니다.
+
+1. **${topZone} 집중 관리 필요**: 전체 에러 발생의 가장 큰 비중을 차지하고 있습니다. 해당 구역의 동선 혼잡도, 바코드 스캐너(PDA) 통신 상태, 또는 조명 및 작업 환경에 대한 물리적 점검을 강력히 권장합니다.
+2. **요주의 품목 [${topSku}] 패키징 재검토**: 해당 품목에서 지속적인 에러가 탐지되었습니다. 제품 외관의 바코드 위치가 인식하기 어렵거나, 합포장 시 파손 위험이 높은 구조인지 포장(패키징) 프로세스를 재검토해야 합니다.
+3. **근본 원인 [${topCause}] 개선 방안**: 가장 빈번한 사고 원인이 '${topCause}'로 지목되었습니다. 이는 개별 작업자의 실수가 아닌 시스템/프로세스의 구조적 문제일 확률이 높습니다. 관련 부서(시공/전산 등)와의 크로스 체크 미팅을 제안합니다.`;
+
+            setAiReport(generatedText);
+            setIsAiLoading(false);
+        }, 1500); // 1.5초 로딩 연출
+    };
+
+
     const PIE_COLORS = ['#3b82f6', '#f97316', '#10b981', '#ef4444', '#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899'];
 
     return (
-        <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-5 max-w-[1600px] mx-auto">
+        <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-5 max-w-[1600px] mx-auto pb-20">
 
             {/* 🎯 상단 헤더 및 필터 구역 */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 shrink-0 z-10 flex flex-col md:flex-row md:justify-between md:items-end gap-4 hover:shadow-md transition-shadow">
@@ -178,9 +202,9 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                 const total = skuData.reduce((a, b) => a + b.value, 0);
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
-                                    <div
-                                        key={item.name}
-                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors"
+                                    <div 
+                                        key={item.name} 
+                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors" 
                                         title={`${item.name} 상세 보기`}
                                         onClick={() => onDrillDown && onDrillDown({ searchType: '품목코드', searchValue: item.name, startDate, endDate, excludeNormal: true })}
                                     >
@@ -206,9 +230,9 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                 const total = workerData.reduce((a, b) => a + b.value, 0);
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
-                                    <div
-                                        key={item.name}
-                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors"
+                                    <div 
+                                        key={item.name} 
+                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors" 
                                         title={`${item.name} 상세 보기`}
                                         onClick={() => onDrillDown && onDrillDown({ workers: [item.name], startDate, endDate, excludeNormal: true })}
                                     >
@@ -234,7 +258,7 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                 <>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
-                                            <Pie
+                                            <Pie 
                                                 data={zoneData} cx="50%" cy="45%" innerRadius={65} outerRadius={90} paddingAngle={4} cornerRadius={8} dataKey="value" stroke="none"
                                                 onClick={(data) => onDrillDown && onDrillDown({ zones: [data.name.replace(' 구역', '')], startDate, endDate, excludeNormal: true })}
                                                 className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -269,9 +293,9 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                 const total = aiCauseData.reduce((a, b) => a + b.value, 0);
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
-                                    <div
-                                        key={item.name}
-                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors"
+                                    <div 
+                                        key={item.name} 
+                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors" 
                                         title={`${item.name} 상세 보기`}
                                         onClick={() => onDrillDown && onDrillDown({ aiCauses: [item.name], startDate, endDate, excludeNormal: true })}
                                     >
@@ -284,6 +308,40 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                 );
                             }) : <div className="text-center text-gray-400 font-bold text-xs">데이터가 없습니다.</div>}
                         </div>
+                    </div>
+
+                    {/* ✨ 5. AI 인사이트 도출 영역 (Full Width) */}
+                    <div className="lg:col-span-2 bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-xl shadow-sm border border-purple-100 flex flex-col relative overflow-hidden transition-all">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                            <div>
+                                <h3 className="font-bold text-purple-900 text-base flex items-center gap-2">
+                                    <span className="text-xl">✨</span> AI 인사이트 솔루션 도출
+                                </h3>
+                                <p className="text-xs text-purple-600/70 mt-1 font-medium">현재 조회된 기간의 사고 데이터를 종합하여 AI가 근본 원인과 개선 방향을 제안합니다.</p>
+                            </div>
+                            
+                            {!aiReport && (
+                                <button 
+                                    onClick={handleGenerateAiReport}
+                                    disabled={isAiLoading}
+                                    className={`shrink-0 px-5 py-2.5 rounded-lg text-sm font-bold text-white shadow-sm transition-all flex items-center gap-2 
+                                        ${isAiLoading ? 'bg-purple-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 hover:shadow-md hover:-translate-y-0.5'}`}
+                                >
+                                    {isAiLoading ? (
+                                        <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> 분석 중...</>
+                                    ) : (
+                                        <>🪄 AI 분석 실행하기</>
+                                    )}
+                                </button>
+                            )}
+                        </div>
+
+                        {/* AI 분석 결과 출력창 */}
+                        {aiReport && (
+                            <div className="bg-white/70 backdrop-blur-sm rounded-lg p-5 border border-purple-100 shadow-inner mt-2 animate-fade-in text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                                {aiReport}
+                            </div>
+                        )}
                     </div>
 
                 </div>
