@@ -58,20 +58,21 @@ const useAppLogic = () => {
         setCurrentPage('list');
     };
 
-    // ⭕ 수정 후 (다양한 필터 조건과 기간까지 모두 받도록 업그레이드!)
+    // ⭕ 수정 후 (useAppLogic.jsx)
     const handleAccidentDrillDown = (filterObj) => {
         setAccidentDrillDownFilters({
             brands: filterObj.brands || [],
             statuses: filterObj.statuses || [],
             isDelayed: filterObj.isDelayed || '전체',
-            // 🚩 신규 추가된 드릴다운 필터들
             workers: filterObj.workers || [],
             zones: filterObj.zones || [],
             aiCauses: filterObj.aiCauses || [],
             searchType: filterObj.searchType || '수주건명',
             searchValue: filterObj.searchValue || '',
             startDate: filterObj.startDate || today,
-            endDate: filterObj.endDate || today
+            endDate: filterObj.endDate || today,
+            // 🚩 이 부분 추가! (안 넘어오면 기본값은 true로 세팅해서 무조건 제외시킴)
+            excludeNormal: filterObj.excludeNormal !== undefined ? filterObj.excludeNormal : true
         });
         setCurrentPage('accident_list');
     };
