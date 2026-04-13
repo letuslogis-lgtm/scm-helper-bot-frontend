@@ -1,7 +1,8 @@
 const { useState, useEffect, useMemo } = React;
 const { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } = window.Recharts || {};
 
-const AccidentAnalyticsReport = ({ userProfile }) => {
+// 🚩 프롭스에 onDrillDown 추가!
+const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
     const [accidents, setAccidents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filterType, setFilterType] = useState('M'); // 기본값 월간
@@ -152,7 +153,7 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 flex-1">
 
-                    {/* 📦 1. 요주의 품목 (Bad Actor SKU) - 대시보드 커스텀 HTML 막대 스타일 적용 */}
+                    {/* 📦 1. 요주의 품목 (Bad Actor SKU) */}
                     <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
                         <div className="mb-4">
                             <h3 className="font-bold text-gray-700 text-sm flex items-center gap-1.5">🚨 요주의 품목 (Bad Actor SKU) Top 8</h3>
@@ -163,9 +164,14 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                                 const total = skuData.reduce((a, b) => a + b.value, 0);
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
-                                    <div key={item.name} className="flex items-center text-sm group" title={`${item.name}: ${item.value}건 (${percent}%)`}>
+                                    <div 
+                                        key={item.name} 
+                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors" 
+                                        title={`${item.name} 상세 보기`}
+                                        onClick={() => onDrillDown && onDrillDown({ searchType: '품목코드', searchValue: item.name, startDate, endDate })}
+                                    >
                                         <span className="w-32 shrink-0 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
-                                        <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative cursor-pointer">
+                                        <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative">
                                             <div className="h-full rounded-r transition-all duration-1000 ease-out" style={{ width: `${percent}%`, backgroundColor: '#ef4444' }}></div>
                                         </div>
                                         <span className="w-14 text-right text-xs font-bold text-gray-500 ml-3">{item.value}건</span>
@@ -175,7 +181,7 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                         </div>
                     </div>
 
-                    {/* 👤 2. 작업자 품질 지수 (Worker Quality Index) - 대시보드 커스텀 HTML 막대 스타일 적용 */}
+                    {/* 👤 2. 작업자 품질 지수 (Worker Quality Index) */}
                     <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
                         <div className="mb-4">
                             <h3 className="font-bold text-gray-700 text-sm flex items-center gap-1.5">👤 요주의 작업자 품질 지수 Top 8</h3>
@@ -186,9 +192,14 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                                 const total = workerData.reduce((a, b) => a + b.value, 0);
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
-                                    <div key={item.name} className="flex items-center text-sm group" title={`${item.name}: ${item.value}건 (${percent}%)`}>
+                                    <div 
+                                        key={item.name} 
+                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors" 
+                                        title={`${item.name} 상세 보기`}
+                                        onClick={() => onDrillDown && onDrillDown({ workers: [item.name], startDate, endDate })}
+                                    >
                                         <span className="w-32 shrink-0 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
-                                        <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative cursor-pointer">
+                                        <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative">
                                             <div className="h-full rounded-r transition-all duration-1000 ease-out" style={{ width: `${percent}%`, backgroundColor: '#f97316' }}></div>
                                         </div>
                                         <span className="w-14 text-right text-xs font-bold text-gray-500 ml-3">{item.value}건</span>
@@ -198,7 +209,7 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                         </div>
                     </div>
 
-                    {/* 🗺️ 3. 사고 발생 ZONE 핫스팟 - 대시보드 도넛 차트 스타일 적용 */}
+                    {/* 🗺️ 3. 사고 발생 ZONE 핫스팟 */}
                     <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
                         <div className="mb-2">
                             <h3 className="font-bold text-gray-700 text-sm flex items-center gap-1.5">🗺️ 에러 핫스팟 (ZONE별 비율)</h3>
@@ -208,16 +219,18 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                             {zoneData.length > 0 ? (
                                 <>
                                     <ResponsiveContainer width="100%" height="100%">
-                                        {/* 대시보드와 동일한 cy="45%" 적용하여 하단 범례 공간 확보 */}
                                         <PieChart>
-                                            <Pie data={zoneData} cx="50%" cy="45%" innerRadius={65} outerRadius={90} paddingAngle={4} cornerRadius={8} dataKey="value" stroke="none">
+                                            <Pie 
+                                                data={zoneData} cx="50%" cy="45%" innerRadius={65} outerRadius={90} paddingAngle={4} cornerRadius={8} dataKey="value" stroke="none"
+                                                onClick={(data) => onDrillDown && onDrillDown({ zones: [data.name.replace(' 구역', '')], startDate, endDate })}
+                                                className="cursor-pointer hover:opacity-80 transition-opacity"
+                                            >
                                                 {zoneData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                                             </Pie>
                                             <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                                             <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }} />
                                         </PieChart>
                                     </ResponsiveContainer>
-                                    {/* 도넛 중앙 총 발생건 텍스트 (대시보드 통일) */}
                                     <div className="absolute top-[43%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
                                         <span className="text-[28px] font-black leading-none text-gray-900 mb-1">
                                             {zoneData.reduce((a, b) => a + b.value, 0)}
@@ -231,7 +244,7 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                         </div>
                     </div>
 
-                    {/* 🤖 4. AI 분석 근본 원인 파악 - 대시보드 커스텀 HTML 막대 스타일 적용 */}
+                    {/* 🤖 4. AI 분석 근본 원인 파악 */}
                     <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
                         <div className="mb-4">
                             <h3 className="font-bold text-gray-700 text-sm flex items-center gap-1.5">🤖 AI 원인 분석 (Root Cause)</h3>
@@ -242,9 +255,14 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                                 const total = aiCauseData.reduce((a, b) => a + b.value, 0);
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
-                                    <div key={item.name} className="flex items-center text-sm group" title={`${item.name}: ${item.value}건 (${percent}%)`}>
+                                    <div 
+                                        key={item.name} 
+                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors" 
+                                        title={`${item.name} 상세 보기`}
+                                        onClick={() => onDrillDown && onDrillDown({ aiCauses: [item.name], startDate, endDate })}
+                                    >
                                         <span className="w-32 shrink-0 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
-                                        <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative cursor-pointer">
+                                        <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative">
                                             <div className="h-full rounded-r transition-all duration-1000 ease-out" style={{ width: `${percent}%`, backgroundColor: '#8b5cf6' }}></div>
                                         </div>
                                         <span className="w-14 text-right text-xs font-bold text-gray-500 ml-3">{percent}%</span>
