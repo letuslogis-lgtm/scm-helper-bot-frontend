@@ -58,9 +58,20 @@ const useAppLogic = () => {
         setCurrentPage('list');
     };
 
+    // ⭕ 수정 후 (다양한 필터 조건과 기간까지 모두 받도록 업그레이드!)
     const handleAccidentDrillDown = (filterObj) => {
         setAccidentDrillDownFilters({
-            brands: filterObj.brands || [], statuses: filterObj.statuses || [], isDelayed: filterObj.isDelayed || '전체'
+            brands: filterObj.brands || [],
+            statuses: filterObj.statuses || [],
+            isDelayed: filterObj.isDelayed || '전체',
+            // 🚩 신규 추가된 드릴다운 필터들
+            workers: filterObj.workers || [],
+            zones: filterObj.zones || [],
+            aiCauses: filterObj.aiCauses || [],
+            searchType: filterObj.searchType || '수주건명',
+            searchValue: filterObj.searchValue || '',
+            startDate: filterObj.startDate || today,
+            endDate: filterObj.endDate || today
         });
         setCurrentPage('accident_list');
     };
