@@ -362,7 +362,10 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                 start_time: startTime === ':' ? '' : startTime,
                                 end_time: endTime === ':' ? '' : endTime,
 
-                                work_hours: w_hours, normal_hours: n_hours, overtime_hours: o_hours, weighted_hours: weight_hours,
+                                work_hours: w_hours,
+                                normal_hours: n_hours,
+                                overtime_hours: o_hours,
+                                weighted_hours: weight_hours, // 수정된 공식 적용
                                 remark: assignedBrand ? `[${assignedBrand}] ${remarkStr}` : remarkStr
                             });
                         }
@@ -618,6 +621,8 @@ const AttendanceManagement = () => {
     const [inputValue, setInputValue] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [includeOffice, setIncludeOffice] = useState(false);
+    const [includeRegional, setIncludeRegional] = useState(false); // 🚩 지방센터 포함 상태 추가
+    const [workerMasterMap, setWorkerMasterMap] = useState({});
     const [workerTypes, setWorkerTypes] = useState({});
     const [selectedVendor, setSelectedVendor] = useState('전체');
 
@@ -628,17 +633,23 @@ const AttendanceManagement = () => {
     const [chartFilterType, setChartFilterType] = useState('M');
 
     React.useEffect(() => {
-        const fetchWorkerTypes = async () => {
+        const fetchWorkerMaster = async () => {
             try {
-                const { data, error } = await supabaseClient.from('workers').select('name, employment_type');
+                // 🚩 근무지(work_location) 컬럼 추가 로드
+                const { data, error } = await supabaseClient.from('workers').select('name, employment_type, work_location');
                 if (data) {
-                    const typeMap = {};
-                    data.forEach(w => { typeMap[w.name.replace(/\s/g, '')] = w.employment_type; });
-                    setWorkerTypes(typeMap);
+                    const masterMap = {};
+                    data.forEach(w => {
+                        masterMap[w.name.replace(/\s/g, '')] = {
+                            type: w.employment_type,
+                            location: w.work_location // 근무지 저장
+                        };
+                    });
+                    setWorkerMasterMap(masterMap);
                 }
-            } catch (err) { console.error("직종 정보를 불러오지 못했습니다.", err); }
+            } catch (err) { console.error("마스터 정보 로드 실패", err); }
         };
-        fetchWorkerTypes();
+        fetchWorkerMaster();
     }, []);
 
     React.useEffect(() => {
@@ -713,13 +724,25 @@ const AttendanceManagement = () => {
                 const matchVendor = row.vendor_name?.includes(searchTerm) || row.worked_vendor?.includes(searchTerm);
                 if (!matchName && !matchVendor) return false;
             }
+
+            // 공통으로 사용할 이름(공백 제거)
+            const cleanName = row.worker_name?.replace(/\s/g, '') || '';
+
+            // 1. 사무직 필터 (미체크 시 '사무직' 제외)
             if (!includeOffice) {
-                const cleanName = row.worker_name?.replace(/\s/g, '') || '';
                 if (workerTypes[cleanName] === '사무직') return false;
             }
+
+            // 🚩 2. 지방센터 필터 (미체크 시 '동부/서부' 숨김 처리!)
+            if (!includeRegional) {
+                const loc = workerLocations[cleanName] || '';
+                if (loc === '동부센터' || loc === '서부센터') return false;
+            }
+
             return true;
         });
-    }, [attendanceData, startDate, endDate, selectedVendor, searchTerm, includeOffice, workerTypes]);
+        // 🚩 의존성 배열에 includeRegional과 workerLocations 추가
+    }, [attendanceData, startDate, endDate, selectedVendor, searchTerm, includeOffice, includeRegional, workerTypes, workerLocations]);
 
     const sortedDetailData = React.useMemo(() => {
         let sortableItems = [...filteredDetailData];
@@ -913,12 +936,17 @@ const AttendanceManagement = () => {
                                     ))}
                                 </div>
                                 <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
-                                <div className="flex items-center gap-2 relative">
-                                    <input type="text" placeholder="사원명 검색..." value={inputValue} onChange={(e) => setInputValue(e.target.value)} className="border border-gray-200 rounded-lg pl-8 pr-3 py-[7px] text-xs font-bold text-gray-700 outline-none focus:border-letusBlue w-40" />
-                                    <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                <div className="flex items-center gap-2">
                                     <div className="flex items-center shrink-0 bg-blue-50/50 px-3 py-[5px] rounded-lg border border-blue-100 transition-colors hover:bg-blue-100/50">
                                         <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-letusBlue">
                                             <input type="checkbox" checked={includeOffice} onChange={e => setIncludeOffice(e.target.checked)} className="w-3.5 h-3.5 accent-letusBlue cursor-pointer" />'사무직' 포함
+                                        </label>
+                                    </div>
+
+                                    {/* 🚩 지방센터 포함 체크박스 신규 추가 */}
+                                    <div className="flex items-center shrink-0 bg-orange-50/50 px-3 py-[5px] rounded-lg border border-orange-100 transition-colors hover:bg-orange-100/50">
+                                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-letusOrange">
+                                            <input type="checkbox" checked={includeRegional} onChange={e => setIncludeRegional(e.target.checked)} className="w-3.5 h-3.5 accent-letusOrange cursor-pointer" />지방센터 포함
                                         </label>
                                     </div>
                                 </div>
