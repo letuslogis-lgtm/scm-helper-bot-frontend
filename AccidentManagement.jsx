@@ -1084,9 +1084,30 @@ const AccidentList = ({ userProfile, initialFilter }) => {
             if (appliedFilters.statuses.length > 0) filtered = filtered.filter(i => appliedFilters.statuses.includes(i.status));
             if (appliedFilters.depts.length > 0) filtered = filtered.filter(i => appliedFilters.depts.includes(i.responsible_dept));
             if (appliedFilters.actionResults.length > 0) filtered = filtered.filter(i => appliedFilters.actionResults.includes(i.action_result));
-            if (appliedFilters.workers?.length > 0) filtered = filtered.filter(i => appliedFilters.workers.includes(i.worker_name));
-            if (appliedFilters.zones?.length > 0) filtered = filtered.filter(i => appliedFilters.zones.includes(i.zone));
-            if (appliedFilters.aiCauses?.length > 0) filtered = filtered.filter(i => appliedFilters.aiCauses.includes(i.ai_analyzed_cause));
+            if (appliedFilters.workers?.length > 0) {
+                filtered = filtered.filter(i => {
+                    const w = i.worker_name ? String(i.worker_name).trim() : '';
+                    return appliedFilters.workers.includes(w);
+                });
+            }
+
+            // 2️⃣ ZONE 구역 필터 ('미분류' 통역 장착!)
+            if (appliedFilters.zones?.length > 0) {
+                filtered = filtered.filter(i => {
+                    let z = i.zone ? String(i.zone).trim() : '';
+                    if (!z || z === '-') z = '미분류'; // DB의 빈칸이나 하이픈을 '미분류'로 번역
+                    return appliedFilters.zones.includes(z);
+                });
+            }
+
+            // 3️⃣ AI 분석 원인 필터 ('분석 대기/미분류' 통역 장착!)
+            if (appliedFilters.aiCauses?.length > 0) {
+                filtered = filtered.filter(i => {
+                    let c = i.ai_analyzed_cause ? String(i.ai_analyzed_cause).trim() : '';
+                    if (!c || c === '-') c = '분석 대기/미분류'; // DB의 빈칸을 번역
+                    return appliedFilters.aiCauses.includes(c);
+                });
+            }
 
             if (appliedFilters.searchValue) {
                 const val = appliedFilters.searchValue.toLowerCase();
