@@ -346,14 +346,22 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                             }
                         }
 
-                        if (startTime || endTime || w_hours > 0) {
+                        const isRealStart = startTime && String(startTime).trim() !== ':';
+                        const isRealEnd = endTime && String(endTime).trim() !== ':';
+
+                        // 🚩 기존 if문을 이걸로 교체!
+                        if (isRealStart || isRealEnd || w_hours > 0) {
                             allStandardData.push({
                                 work_date: dateVal.replace(/\./g, '-'),
                                 company_type: companyType,
                                 vendor_name: exactVendor,
                                 worked_vendor: actualWorkedVendor,
                                 worker_name: nameVal,
-                                start_time: startTime, end_time: endTime,
+
+                                // 💡 (보너스 디테일) 만약 실수로 들어간 콜론이 있다면 아예 빈칸으로 바꿔서 저장해줍니다!
+                                start_time: startTime === ':' ? '' : startTime,
+                                end_time: endTime === ':' ? '' : endTime,
+
                                 work_hours: w_hours, normal_hours: n_hours, overtime_hours: o_hours, weighted_hours: weight_hours,
                                 remark: assignedBrand ? `[${assignedBrand}] ${remarkStr}` : remarkStr
                             });
@@ -685,7 +693,11 @@ const AttendanceManagement = () => {
                 if (error) throw error;
                 if (data && data.length > 0) { allData = [...allData, ...data]; page++; if (data.length < pageSize) hasMore = false; } else { hasMore = false; }
             }
-            const cleanData = allData.filter(row => row.start_time || row.end_time || Number(row.work_hours) > 0);
+            const cleanData = allData.filter(row => {
+                const validStart = row.start_time && String(row.start_time).trim() !== '' && String(row.start_time).trim() !== ':';
+                const validEnd = row.end_time && String(row.end_time).trim() !== '' && String(row.end_time).trim() !== ':';
+                return validStart || validEnd || Number(row.work_hours) > 0;
+            });
             setAttendanceData(cleanData);
         } catch (err) { console.error('근태 조회 실패:', err.message); } finally { setIsLoading(false); }
     };
