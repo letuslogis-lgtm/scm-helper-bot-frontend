@@ -103,18 +103,17 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
         let failedFiles = [];
 
         try {
-            // 🚩 [수정완료: 퀘스트 1] 지원업체(support_vendor)와 지원상태(support_status) 싹 다 불러옵니다!
+            // 🚩 [수정] 없는 컬럼(assigned_brand, support_vendor)은 빼고 필요한 것만 쏙 빼옵니다!
             const { data: workerMaster, error: masterError } = await supabaseClient
                 .from('workers')
-                .select('name, support_status, support_vendor, assigned_brand, managed_brand');
+                .select('name, support_status, managed_brand');
 
             const workerMap = {};
             if (workerMaster) {
                 workerMaster.forEach(w => {
                     workerMap[w.name.replace(/\s/g, '')] = {
                         supportStatus: w.support_status,
-                        supportVendor: w.support_vendor,
-                        brand: w.assigned_brand || w.managed_brand
+                        brand: w.managed_brand || '' // 특이사항(비고)에 넣을 브랜드 정보
                     };
                 });
             }
@@ -270,9 +269,10 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     const cleanName = nameVal.replace(/\s/g, '');
                     const masterInfo = workerMap[cleanName];
 
-                    // 🚩 [수정완료: 퀘스트 1] DB의 support_status가 '지원'일 때만 실투입 업체를 교체합니다!
-                    const actualWorkedVendor = (masterInfo?.supportVendor && String(masterInfo.supportVendor).trim() !== '')
-                        ? masterInfo.supportVendor
+                    // 🚩 [핵심 수정] supportStatus 값이 '미지원'이 아니면 그 값(업체명)을 쓰고, '미지원'이거나 값이 없으면 원소속(exactVendor)을 씁니다!
+                    const statusVal = masterInfo?.supportStatus ? String(masterInfo.supportStatus).trim() : '미지원';
+                    const actualWorkedVendor = (statusVal !== '미지원' && statusVal !== '')
+                        ? statusVal
                         : exactVendor;
 
                     const assignedBrand = masterInfo?.brand || '';
