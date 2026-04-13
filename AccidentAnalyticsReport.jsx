@@ -107,7 +107,7 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
 
     return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-5 max-w-[1600px] mx-auto">
-            
+
             {/* 🎯 상단 헤더 및 필터 구역 */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 shrink-0 z-10 flex flex-col md:flex-row md:justify-between md:items-end gap-4 hover:shadow-md transition-shadow">
                 <div>
@@ -127,7 +127,7 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                         </div>
                     )}
                     <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner">
-                        {[ { id: 'D', name: '당일' }, { id: 'W', name: '주간' }, { id: 'M', name: '월간' }, { id: 'CUSTOM', name: '직접지정' } ].map(btn => (
+                        {[{ id: 'D', name: '당일' }, { id: 'W', name: '주간' }, { id: 'M', name: '월간' }, { id: 'CUSTOM', name: '직접지정' }].map(btn => (
                             <button
                                 key={btn.id}
                                 onClick={() => setFilterType(btn.id)}
@@ -151,7 +151,7 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 flex-1">
-                    
+
                     {/* 📦 1. 요주의 품목 (Bad Actor SKU) - 대시보드 커스텀 HTML 막대 스타일 적용 */}
                     <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col">
                         <div className="mb-4">
@@ -164,7 +164,7 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
                                     <div key={item.name} className="flex items-center text-sm group" title={`${item.name}: ${item.value}건 (${percent}%)`}>
-                                        <span className="w-28 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
+                                        <span className="w-32 shrink-0 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
                                         <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative cursor-pointer">
                                             <div className="h-full rounded-r transition-all duration-1000 ease-out" style={{ width: `${percent}%`, backgroundColor: '#ef4444' }}></div>
                                         </div>
@@ -187,7 +187,7 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
                                     <div key={item.name} className="flex items-center text-sm group" title={`${item.name}: ${item.value}건 (${percent}%)`}>
-                                        <span className="w-24 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
+                                        <span className="w-32 shrink-0 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
                                         <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative cursor-pointer">
                                             <div className="h-full rounded-r transition-all duration-1000 ease-out" style={{ width: `${percent}%`, backgroundColor: '#f97316' }}></div>
                                         </div>
@@ -218,7 +218,7 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                                         </PieChart>
                                     </ResponsiveContainer>
                                     {/* 도넛 중앙 총 발생건 텍스트 (대시보드 통일) */}
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-[10%]">
+                                    <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none w-full">
                                         <span className="text-[28px] font-black leading-tight text-gray-900">{zoneData.reduce((a, b) => a + b.value, 0)}</span>
                                         <span className="text-xs font-semibold text-gray-500 mt-1">총 발생건</span>
                                     </div>
@@ -239,7 +239,7 @@ const AccidentAnalyticsReport = ({ userProfile }) => {
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
                                     <div key={item.name} className="flex items-center text-sm group" title={`${item.name}: ${item.value}건 (${percent}%)`}>
-                                        <span className="w-32 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
+                                        <span className="w-32 shrink-0 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
                                         <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative cursor-pointer">
                                             <div className="h-full rounded-r transition-all duration-1000 ease-out" style={{ width: `${percent}%`, backgroundColor: '#8b5cf6' }}></div>
                                         </div>
