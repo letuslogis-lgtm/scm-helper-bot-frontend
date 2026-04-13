@@ -35,7 +35,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
         if (nameClean.includes('바로')) return '협력사_바로서비스';
         if (nameClean.includes('하나')) return '협력사_하나물류';
         if (nameClean.includes('에프스토리') || nameClean.includes('fstory')) return '협력사_에프스토리';
-        // 🚩 [수정완료] 소문자로 변환된 문자열에서 소문자 'ipc'를 찾도록 변경
         if (nameClean.includes('도급사1') || nameClean.includes('ipc')) return '도급사1';
         if (nameClean.includes('도급사2') || nameClean.includes('한국사람들')) return '도급사2';
         return '';
@@ -89,7 +88,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
         else reader.readAsBinaryString(file);
     });
 
-    // 🚩 [추가됨] 엑셀의 '-' 기호나 빈칸을 안전하게 0으로 바꿔주는 함수
     const safeParse = (val) => {
         if (!val || val === '-' || String(val).trim() === '') return 0;
         const n = parseFloat(String(val).replace(/,/g, ''));
@@ -105,18 +103,18 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
         let failedFiles = [];
 
         try {
-            // 🚩 [추가 1] 마스터 데이터(근무자 관리) 불러오기
+            // 🚩 [수정완료: 퀘스트 1] 지원업체(support_vendor)와 지원상태(support_status) 싹 다 불러옵니다!
             const { data: workerMaster, error: masterError } = await supabaseClient
                 .from('workers')
-                .select('name, support_status, managed_brand');
+                .select('name, support_status, support_vendor, assigned_brand, managed_brand');
 
-            // 이름(name)을 키값으로 하는 빠른 검색용 사전(Map) 만들기
             const workerMap = {};
             if (workerMaster) {
                 workerMaster.forEach(w => {
                     workerMap[w.name.replace(/\s/g, '')] = {
+                        supportStatus: w.support_status,
                         supportVendor: w.support_vendor,
-                        brand: w.assigned_brand
+                        brand: w.assigned_brand || w.managed_brand
                     };
                 });
             }
@@ -134,7 +132,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 const exactVendor = vendorType.replace('협력사_', '');
                 const companyType = vendorType.startsWith('협력사_') ? '사내협력사' : '외주도급사';
 
-                // 🚩 IPC(도급사1) 전용 가로(2D 배열) 파싱 로직
                 if (vendorType === '도급사1' || vendorType === 'IPC') {
                     if (isTextFile) {
                         failedFiles.push(`${file.name} (IPC는 엑셀 양식만 지원)`);
@@ -156,7 +153,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     }
 
                     let parsedCountInFile = 0;
-                    // 👇 변수명을 satData에서 nonWorkingTemp(쉬는 날 묶음)으로 변경했습니다.
                     let nonWorkingTemp = null;
 
                     dateRowArr.forEach((dateStr, colIdx) => {
@@ -177,11 +173,9 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                         const dayOfWeek = dateObj.getDay();
                         const formattedDate = `${currYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-                        // 👇👇 [핵심 로직] 주말(토, 일)이거나 Supabase에 등록된 휴일인지 판별!
                         const isNonWorkingDay = (dayOfWeek === 6 || dayOfWeek === 0 || holidayList.includes(formattedDate));
 
                         if (isNonWorkingDay) {
-                            // 쉬는 날이면 주머니에 계속 합산해 둡니다. (연휴가 3일이든 4일이든 다 더해짐)
                             if (!nonWorkingTemp) {
                                 nonWorkingTemp = { manpower, overtime, deduction, date: formattedDate };
                             } else {
@@ -189,10 +183,9 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                 nonWorkingTemp.overtime += overtime;
                                 nonWorkingTemp.deduction += deduction;
                             }
-                            return; // 평일이 나올 때까지 다음 날짜로 넘어감
+                            return;
                         }
 
-                        // 평일(일하는 날)을 만나면 주머니에 쌓인 데이터를 모두 털어서 합칩니다.
                         let finalManpower = manpower;
                         let finalOvertime = overtime;
                         let finalDeduction = deduction;
@@ -201,7 +194,7 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                             finalManpower += nonWorkingTemp.manpower;
                             finalOvertime += nonWorkingTemp.overtime;
                             finalDeduction += nonWorkingTemp.deduction;
-                            nonWorkingTemp = null; // 주머니 비우기
+                            nonWorkingTemp = null;
                         }
 
                         const n_hours = (finalManpower * 8) - finalDeduction;
@@ -230,7 +223,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     continue;
                 }
 
-                // --- 🚩 여기서부터는 기존 일반 업체 (협력사, 도급사2) 로직 ---
                 let rows = [];
                 if (isTextFile) {
                     const lines = data.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -250,7 +242,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                         const tempRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[j]], { defval: '', raw: false });
                         if (tempRows.length > 0) { rows = tempRows; break; }
                     }
-                    // 가짜 엑셀 (HTML) 파싱
                     if (rows.length === 0 && (data.includes('<table') || data.includes('<TABLE'))) {
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(data, 'text/html');
@@ -267,7 +258,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     continue;
                 }
 
-                // --- 🚩 여기서부터 일반 업체 (협력사, 도급사2) 로직 ---
                 let parsedCount = 0;
                 rows.forEach(rawRow => {
                     const row = {};
@@ -277,16 +267,16 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     const nameVal = row['사원명'] || row['근로자명'] || row['구분'] || '';
                     if (!nameVal || nameVal === '계') return;
 
-                    // 💡 [핵심] 여기서 딱 한 번만 이름을 검색해둡니다!
                     const cleanName = nameVal.replace(/\s/g, '');
                     const masterInfo = workerMap[cleanName];
 
-                    // 마스터에 지원 여부(support_status)가 있으면 1순위, 없으면 엑셀 업체명(exactVendor)
-                    const actualWorkedVendor = masterInfo?.supportVendor ? masterInfo.supportVendor : exactVendor;
+                    // 🚩 [수정완료: 퀘스트 1] DB의 support_status가 '지원'일 때만 실투입 업체를 교체합니다!
+                    const actualWorkedVendor = (masterInfo?.supportStatus === '지원' && masterInfo?.supportVendor) 
+                        ? masterInfo.supportVendor 
+                        : exactVendor;
+                        
                     const assignedBrand = masterInfo?.brand || '';
 
-                    // 1️⃣ 도급사2 로직
-                    // 1️⃣ 도급사2 로직 시작
                     if (vendorType === '도급사2') {
                         const dateColumns = Object.keys(row).filter(key => key.includes('월') && key.includes('일'));
                         dateColumns.forEach(dateCol => {
@@ -296,7 +286,7 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                     work_date: dateCol,
                                     company_type: companyType,
                                     vendor_name: exactVendor,
-                                    worked_vendor: actualWorkedVendor, // 👈 지원업체 정상 적용!
+                                    worked_vendor: actualWorkedVendor,
                                     worker_name: nameVal,
                                     start_time: '', end_time: '',
                                     work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8,
@@ -304,9 +294,8 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                 });
                                 parsedCount++;
                             }
-                        }); // ⭐ 범인 1 해결: dateColumns.forEach는 }); 로 닫혀야 합니다!
+                        });
                     }
-                    // 2️⃣ 그 외 업체(협력사 등) 로직 시작
                     else if (dateVal) {
                         let startTime = row['출근시간'] || row['출근'] || '';
                         let endTime = row['퇴근시간'] || row['퇴근'] || '';
@@ -346,9 +335,11 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                     o_hours = p_over + p_night + h_work + h_over + h_night + early;
                                     w_hours = n_hours + o_hours;
                                 } else {
-                                    const baseTime = calcDiff('08:30', endTime);
-                                    w_hours = baseTime + early + lunch - late - leave - out;
-                                    n_hours = 0;
+                                    // 🚩 [수정완료: 퀘스트 2] 휴일근무 계산식 완벽 적용!
+                                    // 식: (퇴근시간-8:30) + 조기출근 - 1:00(점심/휴게) - (지각 + 조퇴 + 외출)
+                                    const baseTime = calcDiff('08:30', endTime); 
+                                    w_hours = Math.max(0, baseTime + early - 1 - late - leave - out); 
+                                    n_hours = 0; // 휴일/비정상출근은 기본급 0으로 세팅
                                     o_hours = w_hours;
                                 }
                                 weight_hours = w_hours + (o_hours * 1.5);
@@ -360,22 +351,21 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                 work_date: dateVal.replace(/\./g, '-'),
                                 company_type: companyType,
                                 vendor_name: exactVendor,
-                                worked_vendor: actualWorkedVendor, // ⭐ 범인 3 해결: 여기도 지원업체 변수(actualWorkedVendor) 적용!
+                                worked_vendor: actualWorkedVendor,
                                 worker_name: nameVal,
                                 start_time: startTime, end_time: endTime,
                                 work_hours: w_hours, normal_hours: n_hours, overtime_hours: o_hours, weighted_hours: weight_hours,
-                                remark: assignedBrand ? `[${assignedBrand}] ${remarkStr}` : remarkStr // ⭐ 범인 3 해결: 여기도 담당 브랜드 추가 적용!
+                                remark: assignedBrand ? `[${assignedBrand}] ${remarkStr}` : remarkStr
                             });
                         }
                         parsedCount++;
                     }
-                }); // ⭐ 범인 2 해결: rows.forEach 반복문은 여기서 깔끔하게 닫힙니다!
+                });
 
                 if (parsedCount > 0) successFiles.push(file.name);
                 else failedFiles.push(`${file.name} (양식 불일치)`);
-            } // 👈 엑셀 파일(files) 반복문 종료
+            }
 
-            // --- 엑셀 파싱 완료, DB 저장 시작 ---
             if (allStandardData.length === 0) throw new Error('추출된 데이터가 0건입니다. 엑셀 파일 형식을 확인해 주세요.');
 
             const { error } = await supabaseClient.from('worker_attendance').insert(allStandardData);
@@ -605,7 +595,6 @@ const AttendanceManagement = () => {
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
     const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
 
-    // 🔥 정렬 관련 상태값
     const [sortConfig, setSortConfig] = useState(null);
 
     const [tempStartDate, setTempStartDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`);
@@ -633,32 +622,19 @@ const AttendanceManagement = () => {
     React.useEffect(() => {
         const fetchWorkerTypes = async () => {
             try {
-                // workers 테이블에서 이름과 직종 정보만 쏙 빼옵니다.
-                const { data, error } = await supabaseClient
-                    .from('workers')
-                    .select('name, employment_type');
-
+                const { data, error } = await supabaseClient.from('workers').select('name, employment_type');
                 if (data) {
                     const typeMap = {};
-                    data.forEach(w => {
-                        // 띄어쓰기 없이 이름을 키값으로 매핑 (예: { "홍길동": "사무직" })
-                        typeMap[w.name.replace(/\s/g, '')] = w.employment_type;
-                    });
+                    data.forEach(w => { typeMap[w.name.replace(/\s/g, '')] = w.employment_type; });
                     setWorkerTypes(typeMap);
                 }
-            } catch (err) {
-                console.error("직종 정보를 불러오지 못했습니다.", err);
-            }
+            } catch (err) { console.error("직종 정보를 불러오지 못했습니다.", err); }
         };
         fetchWorkerTypes();
     }, []);
 
     React.useEffect(() => {
-        const timer = setTimeout(() => {
-            setSearchTerm(inputValue);
-        }, 300); // 300ms = 0.3초 대기
-
-        // 타자를 계속 치고 있으면 이전 타이머를 취소시켜서 렌더링을 막습니다!
+        const timer = setTimeout(() => setSearchTerm(inputValue), 300);
         return () => clearTimeout(timer);
     }, [inputValue]);
 
@@ -668,15 +644,11 @@ const AttendanceManagement = () => {
         const format = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
         if (type === 'D') {
-            const today = format(now);
-            return { start: today, end: today };
+            const today = format(now); return { start: today, end: today };
         } else if (type === 'W') {
-            const day = now.getDay();
-            const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
-            const monday = new Date(now);
-            monday.setDate(diffToMonday);
-            const sunday = new Date(monday);
-            sunday.setDate(monday.getDate() + 6);
+            const day = now.getDay(); const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(now); monday.setDate(diffToMonday);
+            const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
             return { start: format(monday), end: format(sunday) };
         } else if (type === 'M') {
             const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -689,127 +661,68 @@ const AttendanceManagement = () => {
     React.useEffect(() => {
         if (filterType !== 'CUSTOM') {
             const { start, end } = getFilterDates(filterType);
-            setStartDate(start);
-            setEndDate(end);
-            setTempStartDate(start);
-            setTempEndDate(end);
+            setStartDate(start); setEndDate(end); setTempStartDate(start); setTempEndDate(end);
         } else {
-            setStartDate(tempStartDate);
-            setEndDate(tempEndDate);
+            setStartDate(tempStartDate); setEndDate(tempEndDate);
         }
     }, [filterType]);
 
     React.useEffect(() => {
         if (chartFilterType !== 'CUSTOM') {
             const { start, end } = getFilterDates(chartFilterType);
-            setChartStartDate(start);
-            setChartEndDate(end);
-            setTempChartStartDate(start);
-            setTempChartEndDate(end);
+            setChartStartDate(start); setChartEndDate(end); setTempChartStartDate(start); setTempChartEndDate(end);
         } else {
-            setChartStartDate(tempChartStartDate);
-            setChartEndDate(tempChartEndDate);
+            setChartStartDate(tempChartStartDate); setChartEndDate(tempChartEndDate);
         }
     }, [chartFilterType]);
 
     const fetchAttendance = async () => {
         setIsLoading(true);
         try {
-            let allData = [];
-            let hasMore = true;
-            let page = 0;
-            const pageSize = 1000;
-
+            let allData = []; let hasMore = true; let page = 0; const pageSize = 1000;
             while (hasMore) {
-                const { data, error } = await supabaseClient
-                    .from('worker_attendance')
-                    .select('*')
-                    .order('work_date', { ascending: false })
-                    .range(page * pageSize, (page + 1) * pageSize - 1);
-
+                const { data, error } = await supabaseClient.from('worker_attendance').select('*').order('work_date', { ascending: false }).range(page * pageSize, (page + 1) * pageSize - 1);
                 if (error) throw error;
-
-                if (data && data.length > 0) {
-                    allData = [...allData, ...data];
-                    page++;
-                    if (data.length < pageSize) hasMore = false;
-                } else {
-                    hasMore = false;
-                }
+                if (data && data.length > 0) { allData = [...allData, ...data]; page++; if (data.length < pageSize) hasMore = false; } else { hasMore = false; }
             }
-
-            // 🔥 출근/퇴근 시간이 없으면서 총 근무시간도 0인 "엑셀 공란 찌꺼기 데이터" 원천 차단
             const cleanData = allData.filter(row => row.start_time || row.end_time || Number(row.work_hours) > 0);
             setAttendanceData(cleanData);
-        } catch (err) {
-            console.error('근태 데이터 조회 실패:', err.message);
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) { console.error('근태 조회 실패:', err.message); } finally { setIsLoading(false); }
     };
 
-    React.useEffect(() => {
-        fetchAttendance();
-    }, []);
+    React.useEffect(() => { fetchAttendance(); }, []);
 
-    // 기존의 filteredDetailData = ... 부분을 통째로 지우고 아래 코드로 교체하세요!
     const filteredDetailData = useMemo(() => {
         return attendanceData.filter(row => {
-            // 1. 날짜 필터
             if (row.work_date < startDate || row.work_date > endDate) return false;
-
-            // 2. 업체 탭 필터 (기존 기훈님 로직 유지)
             if (selectedVendor !== '전체' && row.company_type !== selectedVendor) return false;
-
-            // 3. 🚩 검색어 필터 (여기를 searchTerm으로 고쳤습니다!)
             if (searchTerm) {
                 const matchName = row.worker_name?.includes(searchTerm);
                 const matchVendor = row.vendor_name?.includes(searchTerm) || row.worked_vendor?.includes(searchTerm);
                 if (!matchName && !matchVendor) return false;
             }
-
-            // 4. 🚩 [사무직 필터 진짜 로직으로 교체!] 
             if (!includeOffice) {
-                // 현재 줄(row)에 있는 사원 이름에서 띄어쓰기를 뺍니다.
                 const cleanName = row.worker_name?.replace(/\s/g, '') || '';
-
-                // 아까 만들어둔 '사전(workerTypes)'에서 이 사람의 직종을 찾습니다.
-                const empType = workerTypes[cleanName];
-
-                // DB에 저장된 값이 '사무직' 이라면 화면에서 뺍니다! 
-                if (empType === '사무직') {
-                    return false;
-                }
+                if (workerTypes[cleanName] === '사무직') return false;
             }
             return true;
         });
     }, [attendanceData, startDate, endDate, selectedVendor, searchTerm, includeOffice, workerTypes]);
-    // 👆 마지막 줄 의존성 배열에 workerTypes를 꼭 추가해야 합니다!
 
     const sortedDetailData = React.useMemo(() => {
         let sortableItems = [...filteredDetailData];
         if (sortConfig !== null) {
             sortableItems.sort((a, b) => {
-                let aValue = a[sortConfig.key];
-                let bValue = b[sortConfig.key];
-
+                let aValue = a[sortConfig.key]; let bValue = b[sortConfig.key];
                 if (sortConfig.key === 'work_date' || sortConfig.key === 'go_work_time' || sortConfig.key === 'leave_work_time') {
-                    aValue = new Date(aValue || 0).getTime() || 0;
-                    bValue = new Date(bValue || 0).getTime() || 0;
+                    aValue = new Date(aValue || 0).getTime() || 0; bValue = new Date(bValue || 0).getTime() || 0;
                 } else if (sortConfig.key === 'normal_hours' || sortConfig.key === 'overtime_hours' || sortConfig.key === 'work_hours') {
-                    aValue = Number(aValue) || 0;
-                    bValue = Number(bValue) || 0;
+                    aValue = Number(aValue) || 0; bValue = Number(bValue) || 0;
                 } else {
-                    aValue = (aValue || '').toString().toLowerCase();
-                    bValue = (bValue || '').toString().toLowerCase();
+                    aValue = (aValue || '').toString().toLowerCase(); bValue = (bValue || '').toString().toLowerCase();
                 }
-
-                if (aValue < bValue) {
-                    return sortConfig.direction === 'asc' ? -1 : 1;
-                }
-                if (aValue > bValue) {
-                    return sortConfig.direction === 'asc' ? 1 : -1;
-                }
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
                 return 0;
             });
         }
@@ -818,9 +731,7 @@ const AttendanceManagement = () => {
 
     const requestSort = (key) => {
         let direction = 'asc';
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
         setSortConfig({ key, direction });
     };
 
@@ -834,31 +745,17 @@ const AttendanceManagement = () => {
 
     filteredChartData.forEach(row => {
         const monthStr = row.work_date ? row.work_date.substring(0, 7) : '미상';
-
-        // 🚩 [핵심 수정] 실투입업체(worked_vendor)의 진짜 신분(구분)을 판별합니다.
         const isPartner = ['바로서비스', '하나물류', '에프스토리'].includes(row.worked_vendor);
         const actualCompanyType = isPartner ? '사내협력사' : '외주도급사';
 
         if (!vendorSummaryMap[row.worked_vendor]) {
-            vendorSummaryMap[row.worked_vendor] = {
-                type: actualCompanyType, // 원 소속(row.company_type) 버리고 실투입 기준 적용!
-                vendor: row.worked_vendor,
-                normal: 0,
-                overtime: 0,
-                total: 0,
-                weighted: 0,
-                monthsMap: {}
-            };
+            vendorSummaryMap[row.worked_vendor] = { type: actualCompanyType, vendor: row.worked_vendor, normal: 0, overtime: 0, total: 0, weighted: 0, monthsMap: {} };
         }
-
         const vMap = vendorSummaryMap[row.worked_vendor];
-        const normalH = Number(row.normal_hours) || 0;
-        const overH = Number(row.overtime_hours) || 0;
-        const totalH = Number(row.work_hours) || 0;
-        const weightedH = Number(row.weighted_hours) || 0;
+        const normalH = Number(row.normal_hours) || 0; const overH = Number(row.overtime_hours) || 0;
+        const totalH = Number(row.work_hours) || 0; const weightedH = Number(row.weighted_hours) || 0;
 
         vMap.normal += normalH; vMap.overtime += overH; vMap.total += totalH; vMap.weighted += weightedH;
-
         if (!vMap.monthsMap[monthStr]) vMap.monthsMap[monthStr] = { month: monthStr, normal: 0, overtime: 0, total: 0, weighted: 0 };
         vMap.monthsMap[monthStr].normal += normalH; vMap.monthsMap[monthStr].overtime += overH;
         vMap.monthsMap[monthStr].total += totalH; vMap.monthsMap[monthStr].weighted += weightedH;
@@ -867,11 +764,7 @@ const AttendanceManagement = () => {
         chartDataMap[monthStr].normal += normalH; chartDataMap[monthStr].overtime += overH; chartDataMap[monthStr].total += totalH;
     });
 
-    const summaryDataList = Object.values(vendorSummaryMap).map(v => ({
-        ...v,
-        months: Object.values(v.monthsMap).sort((a, b) => a.month.localeCompare(b.month))
-    })).sort((a, b) => a.type === '사내협력사' ? -1 : 1);
-
+    const summaryDataList = Object.values(vendorSummaryMap).map(v => ({ ...v, months: Object.values(v.monthsMap).sort((a, b) => a.month.localeCompare(b.month)) })).sort((a, b) => a.type === '사내협력사' ? -1 : 1);
     const chartDataList = Object.values(chartDataMap).sort((a, b) => a.name.localeCompare(b.name));
 
     const totalSummary = summaryDataList.reduce((acc, curr) => {
@@ -882,118 +775,96 @@ const AttendanceManagement = () => {
     const handleSelectAll = (e) => setSelectedIds(e.target.checked ? filteredDetailData.map(i => i.id) : []);
     const handleSelectOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
-    const currentViewCount = useMemo(() => {
-        return activeTab === 'summary' ? filteredChartData.length : filteredDetailData.length;
-    }, [activeTab, filteredChartData.length, filteredDetailData.length]);
-
-    // 선택된 데이터를 바탕으로 지표를 실시간 계산 (IPC 통합 인원 완벽 대응)
-    // 선택된 데이터를 바탕으로 지표를 실시간 계산 (실투입업체 1순위 기준)
+    // 🚩 [수정완료: 퀘스트 4, 5] 5개의 요약 카드 데이터 계산
     const currentStats = useMemo(() => {
         const targetData = activeTab === 'summary' ? filteredChartData : filteredDetailData;
-
         return targetData.reduce((acc, curr) => {
-            // 1. IPC 통합 인원 추출 로직 (유지)
             let actualHeadcount = 1;
             if (curr.worker_name === 'IPC_통합') {
                 const match = curr.remark?.match(/총 (\d+)명/);
                 if (match) actualHeadcount = parseInt(match[1], 10);
             }
 
-            // 2. 🚩 [핵심 수정] 원 소속이 아닌 '실투입업체(worked_vendor)' 기준으로 구분!
-            // 실투입업체가 아래 3개 중 하나면 무조건 '협력사 투입'으로 잡습니다.
             const isPartner = ['바로서비스', '하나물류', '에프스토리'].includes(curr.worked_vendor);
+            if (isPartner) acc.partnerCount += actualHeadcount;
+            else acc.contractorCount += actualHeadcount;
 
-            if (isPartner) {
-                acc.partnerCount += actualHeadcount;
-            } else {
-                acc.contractorCount += actualHeadcount;
-            }
-
-            // 3. 총 근무시간 합산
+            acc.normalHours += (Number(curr.normal_hours) || 0);
+            acc.overtimeHours += (Number(curr.overtime_hours) || 0);
             acc.totalHours += (Number(curr.work_hours) || 0);
 
             return acc;
-        }, { partnerCount: 0, contractorCount: 0, totalHours: 0 });
+        }, { partnerCount: 0, contractorCount: 0, normalHours: 0, overtimeHours: 0, totalHours: 0 });
     }, [activeTab, filteredChartData, filteredDetailData]);
+
 
     return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-6 max-w-[1600px] mx-auto">
-            <div className="flex justify-between items-center shrink-0">
-                <div>
-                    <h2 className="text-xl font-black text-gray-800 flex items-center gap-2">
-                        <span className="text-letusOrange">👥</span> 근무자 근태 관리
-                    </h2>
-                    <p className="text-sm text-gray-500 font-medium mt-1">협력사 및 도급사의 일일 근태를 통합 관리하고 리포트를 산출합니다.</p>
+            
+            {/* 🚩 [수정완료: 퀘스트 3] 상단 헤더 & 요약카드 영역을 한 덩어리로 묶고 sticky top-0 고정! */}
+            <div className="sticky top-0 z-40 bg-slate-100 pb-4 pt-6 -mt-6 -mx-6 px-6 shadow-[0_4px_6px_-6px_rgba(0,0,0,0.1)]">
+                <div className="flex justify-between items-center shrink-0 mb-6">
+                    <div>
+                        <h2 className="text-xl font-black text-gray-800 flex items-center gap-2">
+                            <span className="text-letusOrange">👥</span> 근무자 근태 관리
+                        </h2>
+                        <p className="text-sm text-gray-500 font-medium mt-1">협력사 및 도급사의 일일 근태를 통합 관리하고 리포트를 산출합니다.</p>
+                    </div>
+                    <button
+                        onClick={() => setIsUploadModalOpen(true)}
+                        className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        근태 엑셀 업로드
+                    </button>
                 </div>
-                <button
-                    onClick={() => setIsUploadModalOpen(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-colors flex items-center gap-2"
-                >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    근태 엑셀 업로드
-                </button>
+
+                {/* 🚩 [수정완료: 퀘스트 4, 5] 5개의 요청하신 이름으로 카드 UI 재구성 */}
+                <div className="grid grid-cols-5 gap-4 shrink-0">
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-center transition-all hover:shadow-md border-b-4 border-b-blue-400">
+                        <span className="text-xs font-bold text-blue-500 mb-1">조회 기간 협력사 투입</span>
+                        <span className="text-2xl font-black text-blue-600">
+                            {currentStats.partnerCount.toLocaleString()} <span className="text-sm font-bold text-blue-300 ml-1">명</span>
+                        </span>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-center transition-all hover:shadow-md border-b-4 border-b-orange-400">
+                        <span className="text-xs font-bold text-orange-500 mb-1">조회 기간 도급사 투입</span>
+                        <span className="text-2xl font-black text-orange-600">
+                            {currentStats.contractorCount.toLocaleString()} <span className="text-sm font-bold text-orange-300 ml-1">명</span>
+                        </span>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-center transition-all hover:shadow-md border-b-4 border-b-emerald-400">
+                        <span className="text-xs font-bold text-emerald-500 mb-1">조회 기간 정상근무</span>
+                        <span className="text-2xl font-black text-emerald-600">
+                            {currentStats.normalHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm font-bold text-emerald-300 ml-1">H</span>
+                        </span>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-center transition-all hover:shadow-md border-b-4 border-b-purple-400">
+                        <span className="text-xs font-bold text-purple-500 mb-1">조회 기간 연장근무</span>
+                        <span className="text-2xl font-black text-purple-600">
+                            {currentStats.overtimeHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm font-bold text-purple-300 ml-1">H</span>
+                        </span>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-center transition-all hover:shadow-md border-b-4 border-b-red-400">
+                        <span className="text-xs font-bold text-red-500 mb-1">조회 기간 총 근무시간</span>
+                        <span className="text-2xl font-black text-red-600">
+                            {currentStats.totalHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm font-bold text-red-300 ml-1">H</span>
+                        </span>
+                    </div>
+                </div>
             </div>
 
-            {/* 상단 통합 지표 영역 */}
-            <div className="grid grid-cols-4 gap-4 shrink-0">
-
-                {/* 1번 카드: 조회 기간 데이터 개수 */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center relative overflow-hidden group transition-all hover:shadow-md">
-                    <span className="text-xs font-bold text-gray-500 mb-1">
-                        {activeTab === 'summary' ? '조회 기간 집계 데이터' : '조회 기간 상세 데이터'}
-                    </span>
-                    <span className="text-3xl font-black text-gray-800">
-                        {currentViewCount.toLocaleString()}
-                        <span className="text-sm font-bold text-gray-400 ml-1">건</span>
-                    </span>
-                    {/* 전체 데이터 대비 비중 표시바 */}
-                    <div
-                        className="absolute bottom-0 left-0 h-1 bg-letusOrange/30 transition-all duration-700 ease-out"
-                        style={{ width: `${(currentViewCount / (attendanceData.length || 1)) * 100}%` }}
-                    ></div>
-                </div>
-
-                {/* 2번 카드: 협력사 투입 인원 */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center transition-all hover:shadow-md">
-                    <span className="text-xs font-bold text-letusBlue mb-1">조회 기간 협력사 투입</span>
-                    <span className="text-3xl font-black text-blue-600">
-                        {currentStats.partnerCount.toLocaleString()}
-                        <span className="text-sm font-bold text-blue-300 ml-1">명</span>
-                    </span>
-                </div>
-
-                {/* 3번 카드: 도급사 투입 인원 */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center transition-all hover:shadow-md">
-                    <span className="text-xs font-bold text-orange-500 mb-1">조회 기간 도급사 투입</span>
-                    <span className="text-3xl font-black text-orange-600">
-                        {currentStats.contractorCount.toLocaleString()}
-                        <span className="text-sm font-bold text-orange-300 ml-1">명</span>
-                    </span>
-                </div>
-
-                {/* 4번 카드: 총 근무 시간 */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-center transition-all hover:shadow-md">
-                    <span className="text-xs font-bold text-red-500 mb-1">조회 기간 총 근무시간</span>
-                    <span className="text-3xl font-black text-red-600">
-                        {currentStats.totalHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                        <span className="text-sm font-bold text-red-300 ml-1">H</span>
-                    </span>
-                </div>
-
-            </div>
-
+            {/* 메인 콘텐츠 영역 */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20">
                 <div className="flex border-b border-gray-200 bg-gray-50/50 px-4 pt-4 shrink-0">
-                    <button
-                        onClick={() => { setActiveTab('summary'); setSelectedIds([]); }}
-                        className={`px-6 py-2.5 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'summary' ? 'border-letusBlue text-letusBlue bg-white' : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100/50 rounded-t-lg'}`}
-                    >
+                    <button onClick={() => { setActiveTab('summary'); setSelectedIds([]); }} className={`px-6 py-2.5 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'summary' ? 'border-letusBlue text-letusBlue bg-white' : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100/50 rounded-t-lg'}`}>
                         📊 기간별 집계 현황
                     </button>
-                    <button
-                        onClick={() => { setActiveTab('detail'); setSelectedIds([]); }}
-                        className={`px-6 py-2.5 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'detail' ? 'border-letusBlue text-letusBlue bg-white' : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100/50 rounded-t-lg'}`}
-                    >
+                    <button onClick={() => { setActiveTab('detail'); setSelectedIds([]); }} className={`px-6 py-2.5 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'detail' ? 'border-letusBlue text-letusBlue bg-white' : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100/50 rounded-t-lg'}`}>
                         📋 일별 상세 내역 (지원/파견 관리)
                     </button>
                 </div>
@@ -1168,7 +1039,6 @@ const AttendanceManagement = () => {
 
                             {activeTab === 'detail' && (
                                 <div className="flex flex-col gap-4 mt-2 p-4">
-                                    {/* 🔥 기존 중복 필터 덩어리 싹 날림! 바로 테이블만 렌더링되게 수정 완료 */}
                                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-left whitespace-nowrap">
@@ -1251,14 +1121,11 @@ const AttendanceManagement = () => {
             </div>
 
             {isUploadModalOpen && <AttendanceUploadModal onClose={() => setIsUploadModalOpen(false)} onReload={fetchAttendance} />}
-
-            {/* 🔥 일괄 수정 모달 연결 (DB 연동 시 onReload 전달) */}
             {isBulkEditModalOpen && <AttendanceBulkEditModal selectedIds={selectedIds} onClose={() => { setIsBulkEditModalOpen(false); setSelectedIds([]); }} onReload={fetchAttendance} />}
         </div>
     );
 };
 
-// 🔥 바깥에서 이 컴포넌트들을 부를 수 있게 내보내기 (가장 중요!)
 window.AttendanceUploadModal = AttendanceUploadModal;
 window.AttendanceBulkEditModal = AttendanceBulkEditModal;
 window.AttendanceManagement = AttendanceManagement;
