@@ -49,7 +49,9 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                 .from('logistics_accidents')
                 .select('*')
                 .gte('service_date', startDate)
-                .lte('service_date', endDate);
+                .lte('service_date', endDate)
+                // 🚩 [추가] 확인 결과가 '정상출고'인 건은 분석 대상에서 완전히 제외!
+                .neq('action_result', '정상출고');
 
             if (error) throw error;
             setAccidents(data || []);
