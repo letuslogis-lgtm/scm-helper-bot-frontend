@@ -271,10 +271,10 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     const masterInfo = workerMap[cleanName];
 
                     // 🚩 [수정완료: 퀘스트 1] DB의 support_status가 '지원'일 때만 실투입 업체를 교체합니다!
-                    const actualWorkedVendor = (masterInfo?.supportStatus === '지원' && masterInfo?.supportVendor) 
-                        ? masterInfo.supportVendor 
+                    const actualWorkedVendor = (masterInfo?.supportVendor && String(masterInfo.supportVendor).trim() !== '')
+                        ? masterInfo.supportVendor
                         : exactVendor;
-                        
+
                     const assignedBrand = masterInfo?.brand || '';
 
                     if (vendorType === '도급사2') {
@@ -337,8 +337,8 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                 } else {
                                     // 🚩 [수정완료: 퀘스트 2] 휴일근무 계산식 완벽 적용!
                                     // 식: (퇴근시간-8:30) + 조기출근 - 1:00(점심/휴게) - (지각 + 조퇴 + 외출)
-                                    const baseTime = calcDiff('08:30', endTime); 
-                                    w_hours = Math.max(0, baseTime + early - 1 - late - leave - out); 
+                                    const baseTime = calcDiff('08:30', endTime);
+                                    w_hours = Math.max(0, baseTime + early - 1 - late - leave - out);
                                     n_hours = 0; // 휴일/비정상출근은 기본급 0으로 세팅
                                     o_hours = w_hours;
                                 }
@@ -800,7 +800,7 @@ const AttendanceManagement = () => {
 
     return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-6 max-w-[1600px] mx-auto">
-            
+
             {/* 🚩 [수정완료: 퀘스트 3] 상단 헤더 & 요약카드 영역을 한 덩어리로 묶고 sticky top-0 고정! */}
             <div className="sticky top-0 z-40 bg-slate-100 pb-4 pt-6 -mt-6 -mx-6 px-6 shadow-[0_4px_6px_-6px_rgba(0,0,0,0.1)]">
                 <div className="flex justify-between items-center shrink-0 mb-6">
