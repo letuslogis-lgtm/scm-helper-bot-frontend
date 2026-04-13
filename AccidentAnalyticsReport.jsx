@@ -182,7 +182,7 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                         key={item.name}
                                         className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors"
                                         title={`${item.name} 상세 보기`}
-                                        onClick={() => onDrillDown && onDrillDown({ searchType: '품목코드', searchValue: item.name, startDate, endDate })}
+                                        onClick={() => onDrillDown && onDrillDown({ searchType: '품목코드', searchValue: item.name, startDate, endDate, excludeNormal: true })}
                                     >
                                         <span className="w-32 shrink-0 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
                                         <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative">
@@ -210,7 +210,7 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                         key={item.name}
                                         className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors"
                                         title={`${item.name} 상세 보기`}
-                                        onClick={() => onDrillDown && onDrillDown({ workers: [item.name], startDate, endDate })}
+                                        onClick={() => onDrillDown && onDrillDown({ workers: [item.name], startDate, endDate, excludeNormal: true })}
                                     >
                                         <span className="w-32 shrink-0 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
                                         <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative">
@@ -236,7 +236,7 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                         <PieChart>
                                             <Pie
                                                 data={zoneData} cx="50%" cy="45%" innerRadius={65} outerRadius={90} paddingAngle={4} cornerRadius={8} dataKey="value" stroke="none"
-                                                onClick={(data) => onDrillDown && onDrillDown({ zones: [data.name.replace(' 구역', '')], startDate, endDate })}
+                                                onClick={(data) => onDrillDown && onDrillDown({ zones: [data.name.replace(' 구역', '')], startDate, endDate, excludeNormal: true })}
                                                 className="cursor-pointer hover:opacity-80 transition-opacity"
                                             >
                                                 {zoneData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
@@ -273,7 +273,7 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                         key={item.name}
                                         className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors"
                                         title={`${item.name} 상세 보기`}
-                                        onClick={() => onDrillDown && onDrillDown({ aiCauses: [item.name], startDate, endDate })}
+                                        onClick={() => onDrillDown && onDrillDown({ aiCauses: [item.name], startDate, endDate, excludeNormal: true })}
                                     >
                                         <span className="w-32 shrink-0 text-gray-600 font-semibold truncate text-right mr-4 text-xs">{item.name}</span>
                                         <div className="flex-1 h-5 rounded overflow-hidden bg-gray-100 relative">
