@@ -622,7 +622,7 @@ const AttendanceManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [includeOffice, setIncludeOffice] = useState(false);
     const [includeRegional, setIncludeRegional] = useState(false); // 🚩 지방센터 포함 상태 추가
-    const [workerMasterMap, setWorkerMasterMap] = useState({});
+    const [workerLocations, setWorkerLocations] = useState({});
     const [workerTypes, setWorkerTypes] = useState({});
     const [selectedVendor, setSelectedVendor] = useState('전체');
 
