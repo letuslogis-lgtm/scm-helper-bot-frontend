@@ -72,21 +72,33 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
         return Object.keys(stats).map(name => ({ name, value: stats[name] })).sort((a, b) => b.value - a.value).slice(0, 8);
     }, [accidents]);
 
-    // 🧠 2. 사고 발생 ZONE 핫스팟
+    // 🧠 2. 사고 발생 ZONE 핫스팟 (데이터 클렌징 완벽 적용)
     const zoneData = useMemo(() => {
         const stats = accidents.reduce((acc, curr) => {
-            const zone = curr.zone || '미분류';
-            if (zone) acc[zone] = (acc[zone] || 0) + 1;
+            // 🚩 null, undefined, 빈칸(''), 하이픈('-') 모두 잡아내기!
+            let rawZone = curr.zone ? String(curr.zone).trim() : '';
+            const zone = (!rawZone || rawZone === '-') ? '미분류' : rawZone;
+
+            acc[zone] = (acc[zone] || 0) + 1;
             return acc;
         }, {});
-        return Object.keys(stats).map(name => ({ name: `${name} 구역`, value: stats[name] })).sort((a, b) => b.value - a.value).slice(0, 8);
+
+        return Object.keys(stats).map(name => ({
+            // 🚩 '미분류'일 때는 '구역' 글자 안 붙이게 디테일 처리
+            name: name === '미분류' ? '미분류' : `${name} 구역`,
+            value: stats[name]
+        })).sort((a, b) => b.value - a.value).slice(0, 8);
     }, [accidents]);
 
     // 🧠 3. 요주의 작업자 (Quality Index) Top 8
     const workerData = useMemo(() => {
         const stats = accidents.reduce((acc, curr) => {
-            const worker = curr.worker_name || '미상';
-            if (worker !== '미상' && worker.trim() !== '') acc[worker] = (acc[worker] || 0) + 1;
+            // 🚩 작업자도 마찬가지로 '-'나 빈칸이 들어오면 깔끔하게 무시!
+            let rawWorker = curr.worker_name ? String(curr.worker_name).trim() : '';
+
+            if (rawWorker !== '' && rawWorker !== '-') {
+                acc[rawWorker] = (acc[rawWorker] || 0) + 1;
+            }
             return acc;
         }, {});
         return Object.keys(stats).map(name => ({ name, value: stats[name] })).sort((a, b) => b.value - a.value).slice(0, 8);
@@ -164,9 +176,9 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                 const total = skuData.reduce((a, b) => a + b.value, 0);
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
-                                    <div 
-                                        key={item.name} 
-                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors" 
+                                    <div
+                                        key={item.name}
+                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors"
                                         title={`${item.name} 상세 보기`}
                                         onClick={() => onDrillDown && onDrillDown({ searchType: '품목코드', searchValue: item.name, startDate, endDate })}
                                     >
@@ -192,9 +204,9 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                 const total = workerData.reduce((a, b) => a + b.value, 0);
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
-                                    <div 
-                                        key={item.name} 
-                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors" 
+                                    <div
+                                        key={item.name}
+                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors"
                                         title={`${item.name} 상세 보기`}
                                         onClick={() => onDrillDown && onDrillDown({ workers: [item.name], startDate, endDate })}
                                     >
@@ -220,7 +232,7 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                 <>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
-                                            <Pie 
+                                            <Pie
                                                 data={zoneData} cx="50%" cy="45%" innerRadius={65} outerRadius={90} paddingAngle={4} cornerRadius={8} dataKey="value" stroke="none"
                                                 onClick={(data) => onDrillDown && onDrillDown({ zones: [data.name.replace(' 구역', '')], startDate, endDate })}
                                                 className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -255,9 +267,9 @@ const AccidentAnalyticsReport = ({ userProfile, onDrillDown }) => {
                                 const total = aiCauseData.reduce((a, b) => a + b.value, 0);
                                 const percent = ((item.value / total) * 100).toFixed(1);
                                 return (
-                                    <div 
-                                        key={item.name} 
-                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors" 
+                                    <div
+                                        key={item.name}
+                                        className="flex items-center text-sm group cursor-pointer hover:bg-slate-50 p-1 -mx-1 rounded transition-colors"
                                         title={`${item.name} 상세 보기`}
                                         onClick={() => onDrillDown && onDrillDown({ aiCauses: [item.name], startDate, endDate })}
                                     >
