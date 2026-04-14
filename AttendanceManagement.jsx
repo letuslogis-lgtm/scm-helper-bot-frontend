@@ -127,7 +127,13 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 }
 
                 const { data, isTextFile } = await readFileAsync(file);
-                const exactVendor = vendorType.replace('협력사_', '');
+
+                // 🚩 [수정] 내부 코드(도급사1, 2)를 실제 화면용 예쁜 이름표로 변환해 줍니다!
+                let exactVendor = vendorType.replace('협력사_', '');
+                if (exactVendor === '도급사1') exactVendor = 'IPC';
+                if (exactVendor === '도급사2') exactVendor = '한국사람들';
+                if (exactVendor === '도급사3') exactVendor = 'JNT'; // (혹시 모를 도급사3 대비용)
+
                 const companyType = vendorType.startsWith('협력사_') ? '사내협력사' : '외주도급사';
 
                 // ---------------------------------------------------------
@@ -706,10 +712,11 @@ const AttendanceBulkEditModal = ({ selectedIds, onClose, onReload }) => {
 };
 
 // --- 👥 3. 근무자 근태 관리 대시보드 (메인 화면) ---
+// --- 👥 3. 근무자 근태 관리 대시보드 (메인 화면) ---
 const AttendanceManagement = () => {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('summary');
-    const [expandedVendors, setExpandedVendors] = useState([]);
+    const [expandedGroups, setExpandedGroups] = useState([]);
 
     const [selectedIds, setSelectedIds] = useState([]);
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
@@ -717,6 +724,7 @@ const AttendanceManagement = () => {
 
     const [sortConfig, setSortConfig] = useState(null);
 
+    // 날짜 상태
     const [tempStartDate, setTempStartDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`);
     const [tempEndDate, setTempEndDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}`);
     const [startDate, setStartDate] = useState(tempStartDate);
@@ -727,15 +735,17 @@ const AttendanceManagement = () => {
     const [chartStartDate, setChartStartDate] = useState(tempChartStartDate);
     const [chartEndDate, setChartEndDate] = useState(tempChartEndDate);
 
+    // 필터 상태
     const [inputValue, setInputValue] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-    const [includeOffice, setIncludeOffice] = useState(false);
-    const [includeRegional, setIncludeRegional] = useState(false);
-
-    // 🚩 마스터 정보 상태 통합 (에러 해결 핵심포인트!)
-    const [workerMasterMap, setWorkerMasterMap] = useState({});
+    const [workerTypeFilter, setWorkerTypeFilter] = useState('현장직');
+    const [locationFilter, setLocationFilter] = useState('메인센터');
     const [selectedVendor, setSelectedVendor] = useState('전체');
 
+    // 🚩 [신규] 집계 화면 뷰 모드 (업체별 vs 브랜드별)
+    const [summaryViewMode, setSummaryViewMode] = useState('vendor');
+
+    const [workerMasterMap, setWorkerMasterMap] = useState({});
     const [attendanceData, setAttendanceData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -745,17 +755,18 @@ const AttendanceManagement = () => {
     React.useEffect(() => {
         const fetchWorkerMaster = async () => {
             try {
-                // 🚩 근무지(work_location), 직종(employment_type) 동시 로드
-                const { data, error } = await supabaseClient.from('workers').select('name, employment_type, work_location');
+                // 🚩 브랜드명(managed_brand) 추가 로드
+                const { data, error } = await supabaseClient.from('workers').select('name, employment_type, work_location, managed_brand');
                 if (data) {
                     const masterMap = {};
                     data.forEach(w => {
                         masterMap[w.name.replace(/\s/g, '')] = {
                             type: w.employment_type,
-                            location: w.work_location
+                            location: w.work_location,
+                            brand: w.managed_brand || '미지정/공통' // 브랜드 정보 저장
                         };
                     });
-                    setWorkerMasterMap(masterMap); // 🚩 단일 바구니에 저장!
+                    setWorkerMasterMap(masterMap);
                 }
             } catch (err) { console.error("마스터 정보 로드 실패", err); }
         };
@@ -791,18 +802,14 @@ const AttendanceManagement = () => {
         if (filterType !== 'CUSTOM') {
             const { start, end } = getFilterDates(filterType);
             setStartDate(start); setEndDate(end); setTempStartDate(start); setTempEndDate(end);
-        } else {
-            setStartDate(tempStartDate); setEndDate(tempEndDate);
-        }
+        } else { setStartDate(tempStartDate); setEndDate(tempEndDate); }
     }, [filterType]);
 
     React.useEffect(() => {
         if (chartFilterType !== 'CUSTOM') {
             const { start, end } = getFilterDates(chartFilterType);
             setChartStartDate(start); setChartEndDate(end); setTempChartStartDate(start); setTempChartEndDate(end);
-        } else {
-            setChartStartDate(tempChartStartDate); setChartEndDate(tempChartEndDate);
-        }
+        } else { setChartStartDate(tempChartStartDate); setChartEndDate(tempChartEndDate); }
     }, [chartFilterType]);
 
     const fetchAttendance = async () => {
@@ -825,33 +832,43 @@ const AttendanceManagement = () => {
 
     React.useEffect(() => { fetchAttendance(); }, []);
 
+    // 상세 내역 및 차트 공통 필터 로직 (날짜 제외)
+    const baseFilterLogic = (row) => {
+        if (selectedVendor !== '전체' && row.company_type !== selectedVendor) return false;
+        if (searchTerm) {
+            const matchName = row.worker_name?.includes(searchTerm);
+            const matchVendor = row.vendor_name?.includes(searchTerm) || row.worked_vendor?.includes(searchTerm);
+            if (!matchName && !matchVendor) return false;
+        }
+
+        const cleanName = row.worker_name?.replace(/\s/g, '') || '';
+        const masterInfo = workerMasterMap[cleanName] || {};
+
+        const wType = masterInfo.type === '사무직' ? '사무직' : '현장직';
+        if (workerTypeFilter === '현장직' && wType === '사무직') return false;
+        if (workerTypeFilter === '사무직' && wType !== '사무직') return false;
+
+        const loc = masterInfo.location || '';
+        const isRegional = (loc === '동부센터' || loc === '서부센터');
+        if (locationFilter === '메인센터' && isRegional) return false;
+        if (locationFilter === '지방센터' && !isRegional) return false;
+
+        return true;
+    };
+
     const filteredDetailData = useMemo(() => {
         return attendanceData.filter(row => {
             if (row.work_date < startDate || row.work_date > endDate) return false;
-            if (selectedVendor !== '전체' && row.company_type !== selectedVendor) return false;
-            if (searchTerm) {
-                const matchName = row.worker_name?.includes(searchTerm);
-                const matchVendor = row.vendor_name?.includes(searchTerm) || row.worked_vendor?.includes(searchTerm);
-                if (!matchName && !matchVendor) return false;
-            }
-
-            const cleanName = row.worker_name?.replace(/\s/g, '') || '';
-            const masterInfo = workerMasterMap[cleanName] || {}; // 🚩 단일 바구니에서 정보 추출
-
-            // 1. 사무직 필터 (미체크 시 '사무직' 제외)
-            if (!includeOffice) {
-                if (masterInfo.type === '사무직') return false;
-            }
-
-            // 2. 지방센터 필터 (미체크 시 '동부/서부' 숨김 처리)
-            if (!includeRegional) {
-                if (masterInfo.location === '동부센터' || masterInfo.location === '서부센터') return false;
-            }
-
-            return true;
+            return baseFilterLogic(row);
         });
-        // 🚩 의존성 배열도 통합된 masterMap 하나만 참조
-    }, [attendanceData, startDate, endDate, selectedVendor, searchTerm, includeOffice, includeRegional, workerMasterMap]);
+    }, [attendanceData, startDate, endDate, selectedVendor, searchTerm, workerTypeFilter, locationFilter, workerMasterMap]);
+
+    const filteredChartData = useMemo(() => {
+        return attendanceData.filter(row => {
+            if (!row.work_date || row.work_date < chartStartDate || row.work_date > chartEndDate) return false;
+            return baseFilterLogic(row);
+        });
+    }, [attendanceData, chartStartDate, chartEndDate, selectedVendor, searchTerm, workerTypeFilter, locationFilter, workerMasterMap]);
 
     const sortedDetailData = React.useMemo(() => {
         let sortableItems = [...filteredDetailData];
@@ -879,43 +896,54 @@ const AttendanceManagement = () => {
         setSortConfig({ key, direction });
     };
 
-    const vendorSummaryMap = {};
-    const chartDataMap = {};
+    // 🚩 [핵심] 집계 로직: 뷰 모드에 따라 그룹핑 기준을 업체명/브랜드명으로 동적 변경
+    const { summaryDataList, chartDataList, totalSummary } = useMemo(() => {
+        const groupSummaryMap = {};
+        const chartDataMap = {};
 
-    const filteredChartData = attendanceData.filter(row => {
-        if (!row.work_date) return false;
-        return row.work_date >= chartStartDate && row.work_date <= chartEndDate;
-    });
+        filteredChartData.forEach(row => {
+            const monthStr = row.work_date ? row.work_date.substring(0, 7) : '미상';
 
-    filteredChartData.forEach(row => {
-        const monthStr = row.work_date ? row.work_date.substring(0, 7) : '미상';
-        const isPartner = ['바로서비스', '하나물류', '에프스토리'].includes(row.worked_vendor);
-        const actualCompanyType = isPartner ? '사내협력사' : '외주도급사';
+            let groupKey = '';
+            let groupType = '';
 
-        if (!vendorSummaryMap[row.worked_vendor]) {
-            vendorSummaryMap[row.worked_vendor] = { type: actualCompanyType, vendor: row.worked_vendor, normal: 0, overtime: 0, total: 0, weighted: 0, monthsMap: {} };
-        }
-        const vMap = vendorSummaryMap[row.worked_vendor];
-        const normalH = Number(row.normal_hours) || 0; const overH = Number(row.overtime_hours) || 0;
-        const totalH = Number(row.work_hours) || 0; const weightedH = Number(row.weighted_hours) || 0;
+            if (summaryViewMode === 'vendor') {
+                groupKey = row.worked_vendor || '미분류';
+                const isPartner = ['바로서비스', '하나물류', '에프스토리'].includes(groupKey);
+                groupType = isPartner ? '사내협력사' : '외주도급사';
+            } else {
+                const cleanName = row.worker_name?.replace(/\s/g, '') || '';
+                const masterInfo = workerMasterMap[cleanName] || {};
+                groupKey = masterInfo.brand || '미지정/공통';
+                groupType = '운영 브랜드';
+            }
 
-        vMap.normal += normalH; vMap.overtime += overH; vMap.total += totalH; vMap.weighted += weightedH;
-        if (!vMap.monthsMap[monthStr]) vMap.monthsMap[monthStr] = { month: monthStr, normal: 0, overtime: 0, total: 0, weighted: 0 };
-        vMap.monthsMap[monthStr].normal += normalH; vMap.monthsMap[monthStr].overtime += overH;
-        vMap.monthsMap[monthStr].total += totalH; vMap.monthsMap[monthStr].weighted += weightedH;
+            if (!groupSummaryMap[groupKey]) {
+                groupSummaryMap[groupKey] = { type: groupType, name: groupKey, normal: 0, overtime: 0, total: 0, weighted: 0, monthsMap: {} };
+            }
+            const gMap = groupSummaryMap[groupKey];
+            const normalH = Number(row.normal_hours) || 0; const overH = Number(row.overtime_hours) || 0;
+            const totalH = Number(row.work_hours) || 0; const weightedH = Number(row.weighted_hours) || 0;
 
-        if (!chartDataMap[monthStr]) chartDataMap[monthStr] = { name: monthStr, normal: 0, overtime: 0, total: 0 };
-        chartDataMap[monthStr].normal += normalH; chartDataMap[monthStr].overtime += overH; chartDataMap[monthStr].total += totalH;
-    });
+            gMap.normal += normalH; gMap.overtime += overH; gMap.total += totalH; gMap.weighted += weightedH;
+            if (!gMap.monthsMap[monthStr]) gMap.monthsMap[monthStr] = { month: monthStr, normal: 0, overtime: 0, total: 0, weighted: 0 };
+            gMap.monthsMap[monthStr].normal += normalH; gMap.monthsMap[monthStr].overtime += overH;
+            gMap.monthsMap[monthStr].total += totalH; gMap.monthsMap[monthStr].weighted += weightedH;
 
-    const summaryDataList = Object.values(vendorSummaryMap).map(v => ({ ...v, months: Object.values(v.monthsMap).sort((a, b) => a.month.localeCompare(b.month)) })).sort((a, b) => a.type === '사내협력사' ? -1 : 1);
-    const chartDataList = Object.values(chartDataMap).sort((a, b) => a.name.localeCompare(b.name));
+            if (!chartDataMap[monthStr]) chartDataMap[monthStr] = { name: monthStr, normal: 0, overtime: 0, total: 0 };
+            chartDataMap[monthStr].normal += normalH; chartDataMap[monthStr].overtime += overH; chartDataMap[monthStr].total += totalH;
+        });
 
-    const totalSummary = summaryDataList.reduce((acc, curr) => {
-        acc.normal += curr.normal; acc.overtime += curr.overtime; acc.total += curr.total; acc.weighted += curr.weighted; return acc;
-    }, { normal: 0, overtime: 0, total: 0, weighted: 0 });
+        const sortedSummary = Object.values(groupSummaryMap).map(v => ({ ...v, months: Object.values(v.monthsMap).sort((a, b) => a.month.localeCompare(b.month)) })).sort((a, b) => a.type.localeCompare(b.type));
+        const sortedChart = Object.values(chartDataMap).sort((a, b) => a.name.localeCompare(b.name));
+        const totals = sortedSummary.reduce((acc, curr) => {
+            acc.normal += curr.normal; acc.overtime += curr.overtime; acc.total += curr.total; acc.weighted += curr.weighted; return acc;
+        }, { normal: 0, overtime: 0, total: 0, weighted: 0 });
 
-    const toggleVendor = (vendor) => setExpandedVendors(prev => prev.includes(vendor) ? prev.filter(v => v !== vendor) : [...prev, vendor]);
+        return { summaryDataList: sortedSummary, chartDataList: sortedChart, totalSummary: totals };
+    }, [filteredChartData, summaryViewMode, workerMasterMap]);
+
+    const toggleGroup = (name) => setExpandedGroups(prev => prev.includes(name) ? prev.filter(v => v !== name) : [...prev, name]);
     const handleSelectAll = (e) => setSelectedIds(e.target.checked ? filteredDetailData.map(i => i.id) : []);
     const handleSelectOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
@@ -940,7 +968,6 @@ const AttendanceManagement = () => {
         }, { partnerCount: 0, contractorCount: 0, normalHours: 0, overtimeHours: 0, totalHours: 0 });
     }, [activeTab, filteredChartData, filteredDetailData]);
 
-
     return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-6 max-w-[1600px] mx-auto">
 
@@ -964,37 +991,23 @@ const AttendanceManagement = () => {
                 <div className="grid grid-cols-5 gap-4 shrink-0">
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-center transition-all hover:shadow-md border-b-4 border-b-blue-400">
                         <span className="text-xs font-bold text-blue-500 mb-1">조회 기간 협력사 투입</span>
-                        <span className="text-2xl font-black text-blue-600">
-                            {currentStats.partnerCount.toLocaleString()} <span className="text-sm font-bold text-blue-300 ml-1">명</span>
-                        </span>
+                        <span className="text-2xl font-black text-blue-600">{currentStats.partnerCount.toLocaleString()} <span className="text-sm font-bold text-blue-300 ml-1">명</span></span>
                     </div>
-
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-center transition-all hover:shadow-md border-b-4 border-b-orange-400">
                         <span className="text-xs font-bold text-orange-500 mb-1">조회 기간 도급사 투입</span>
-                        <span className="text-2xl font-black text-orange-600">
-                            {currentStats.contractorCount.toLocaleString()} <span className="text-sm font-bold text-orange-300 ml-1">명</span>
-                        </span>
+                        <span className="text-2xl font-black text-orange-600">{currentStats.contractorCount.toLocaleString()} <span className="text-sm font-bold text-orange-300 ml-1">명</span></span>
                     </div>
-
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-center transition-all hover:shadow-md border-b-4 border-b-emerald-400">
                         <span className="text-xs font-bold text-emerald-500 mb-1">조회 기간 정상근무</span>
-                        <span className="text-2xl font-black text-emerald-600">
-                            {currentStats.normalHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm font-bold text-emerald-300 ml-1">H</span>
-                        </span>
+                        <span className="text-2xl font-black text-emerald-600">{currentStats.normalHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm font-bold text-emerald-300 ml-1">H</span></span>
                     </div>
-
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-center transition-all hover:shadow-md border-b-4 border-b-purple-400">
                         <span className="text-xs font-bold text-purple-500 mb-1">조회 기간 연장근무</span>
-                        <span className="text-2xl font-black text-purple-600">
-                            {currentStats.overtimeHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm font-bold text-purple-300 ml-1">H</span>
-                        </span>
+                        <span className="text-2xl font-black text-purple-600">{currentStats.overtimeHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm font-bold text-purple-300 ml-1">H</span></span>
                     </div>
-
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-center transition-all hover:shadow-md border-b-4 border-b-red-400">
                         <span className="text-xs font-bold text-red-500 mb-1">조회 기간 총 근무시간</span>
-                        <span className="text-2xl font-black text-red-600">
-                            {currentStats.totalHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm font-bold text-red-300 ml-1">H</span>
-                        </span>
+                        <span className="text-2xl font-black text-red-600">{currentStats.totalHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm font-bold text-red-300 ml-1">H</span></span>
                     </div>
                 </div>
             </div>
@@ -1010,96 +1023,96 @@ const AttendanceManagement = () => {
                 </div>
 
                 <div className="p-4 border-b border-gray-100 flex flex-wrap items-center justify-between bg-white shrink-0 gap-y-3 min-h-[70px]">
-                    <div className="flex flex-wrap items-center w-full min-w-0 md:w-auto md:flex-1">
+                    <div className="flex flex-wrap items-center w-full min-w-0 md:w-auto md:flex-1 gap-4">
+
+                        {/* 공통 필터 영역 (사무직/현장직, 메인/지방센터) */}
+                        <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <select value={workerTypeFilter} onChange={(e) => setWorkerTypeFilter(e.target.value)} className={`appearance-none pl-3 pr-7 py-[7px] text-xs font-bold rounded-lg border outline-none transition-colors cursor-pointer ${workerTypeFilter === '현장직' ? 'bg-white border-gray-200 text-gray-600' : 'bg-blue-50 border-blue-200 text-letusBlue'}`}>
+                                    <option value="현장직">현장직 전용</option>
+                                    <option value="사무직">사무직 전용</option>
+                                    <option value="전체">근로형태 전체</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"><svg className="fill-current h-3 w-3" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg></div>
+                            </div>
+                            <div className="relative">
+                                <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className={`appearance-none pl-3 pr-7 py-[7px] text-xs font-bold rounded-lg border outline-none transition-colors cursor-pointer ${locationFilter === '메인센터' ? 'bg-white border-gray-200 text-gray-600' : 'bg-orange-50 border-orange-200 text-letusOrange'}`}>
+                                    <option value="메인센터">메인센터 전용</option>
+                                    <option value="지방센터">지방(동/서부) 전용</option>
+                                    <option value="전체">근무지 전체</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"><svg className="fill-current h-3 w-3" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg></div>
+                            </div>
+                        </div>
+                        <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
+
                         {activeTab === 'summary' ? (
-                            <div className="flex items-center justify-end w-full gap-2">
-                                {chartFilterType === 'CUSTOM' && (
-                                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
-                                        <input type="date" value={tempChartStartDate} onChange={(e) => setTempChartStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
-                                        <span className="text-gray-400 text-xs mx-1">~</span>
-                                        <input type="date" value={tempChartEndDate} onChange={(e) => setTempChartEndDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
-                                        <button onClick={() => { setChartStartDate(tempChartStartDate); setChartEndDate(tempChartEndDate); }} className="bg-orange-500 text-white font-bold px-3 h-full rounded text-[11px] shadow hover:bg-orange-600 transition-colors ml-1 tracking-tight">조회</button>
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-3">
+                            <>
+                                {/* 🚩 집계 현황 탭 전용: 뷰 모드 스위치 */}
+                                <div className="flex bg-slate-100 p-1 rounded-lg shadow-inner">
+                                    <button onClick={() => setSummaryViewMode('vendor')} className={`px-4 py-1.5 text-xs font-bold rounded transition-all flex items-center gap-1.5 ${summaryViewMode === 'vendor' ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'}`}>🏢 업체별 보기</button>
+                                    <button onClick={() => setSummaryViewMode('brand')} className={`px-4 py-1.5 text-xs font-bold rounded transition-all flex items-center gap-1.5 ${summaryViewMode === 'brand' ? 'bg-white text-letusOrange shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'}`}>🏷️ 브랜드별 보기</button>
+                                </div>
+                                <div className="flex items-center justify-end flex-1 gap-2">
+                                    {chartFilterType === 'CUSTOM' && (
+                                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
+                                            <input type="date" value={tempChartStartDate} onChange={(e) => setTempChartStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                                            <span className="text-gray-400 text-xs mx-1">~</span>
+                                            <input type="date" value={tempChartEndDate} onChange={(e) => setTempChartEndDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                                            <button onClick={() => { setChartStartDate(tempChartStartDate); setChartEndDate(tempChartEndDate); }} className="bg-orange-500 text-white font-bold px-3 h-full rounded text-[11px] shadow hover:bg-orange-600 transition-colors ml-1 tracking-tight">조회</button>
+                                        </div>
+                                    )}
                                     <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
                                         {[{ id: 'D', name: '당일' }, { id: 'W', name: '주간' }, { id: 'M', name: '월간' }, { id: 'CUSTOM', name: '직접지정' }].map(btn => (
-                                            <button key={btn.id} onClick={() => setChartFilterType(btn.id)} className={`px-3 h-full text-xs font-bold rounded-md transition-all ${chartFilterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}>
-                                                {btn.name}
-                                            </button>
+                                            <button key={btn.id} onClick={() => setChartFilterType(btn.id)} className={`px-3 h-full text-xs font-bold rounded-md transition-all ${chartFilterType === btn.id ? 'bg-white text-gray-800 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}>{btn.name}</button>
                                         ))}
                                     </div>
                                 </div>
-                            </div>
+                            </>
                         ) : (
-                            <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+                            <>
+                                {/* 상세 내역 탭 전용: 검색 및 데이터 필터 */}
                                 <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-1">
                                     {['전체', '사내협력사', '외주도급사'].map(type => (
-                                        <button key={type} onClick={() => setSelectedVendor(type)} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${selectedVendor === type ? 'bg-white text-letusBlue shadow-sm ring-1 ring-letusBlue/20' : 'text-gray-500 hover:bg-gray-100'}`}>
-                                            {type}
-                                        </button>
+                                        <button key={type} onClick={() => setSelectedVendor(type)} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${selectedVendor === type ? 'bg-white text-letusBlue shadow-sm ring-1 ring-letusBlue/20' : 'text-gray-500 hover:bg-gray-100'}`}>{type}</button>
                                     ))}
                                 </div>
-                                <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
-                                <div className="flex items-center gap-2 relative">
-                                    <input type="text" placeholder="사원명 검색..." value={inputValue} onChange={(e) => setInputValue(e.target.value)} className="border border-gray-200 rounded-lg pl-8 pr-3 py-[7px] text-xs font-bold text-gray-700 outline-none focus:border-letusBlue w-40" />
+                                <div className="relative">
+                                    <input type="text" placeholder="사원/업체 검색..." value={inputValue} onChange={(e) => setInputValue(e.target.value)} className="border border-gray-200 rounded-lg pl-8 pr-3 py-[7px] text-xs font-bold text-gray-700 outline-none focus:border-letusBlue w-40" />
                                     <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex items-center shrink-0 bg-blue-50/50 px-3 py-[5px] rounded-lg border border-blue-100 transition-colors hover:bg-blue-100/50">
-                                            <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-letusBlue">
-                                                <input type="checkbox" checked={includeOffice} onChange={e => setIncludeOffice(e.target.checked)} className="w-3.5 h-3.5 accent-letusBlue cursor-pointer" />'사무직' 포함
-                                            </label>
-                                        </div>
-                                        <div className="flex items-center shrink-0 bg-orange-50/50 px-3 py-[5px] rounded-lg border border-orange-100 transition-colors hover:bg-orange-100/50">
-                                            <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-letusOrange">
-                                                <input type="checkbox" checked={includeRegional} onChange={e => setIncludeRegional(e.target.checked)} className="w-3.5 h-3.5 accent-letusOrange cursor-pointer" />지방센터 포함
-                                            </label>
-                                        </div>
-                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-2 ml-auto shrink-0">
-                        {activeTab === 'detail' && (
-                            <div className="flex items-center gap-3">
-                                {filterType === 'CUSTOM' && (
-                                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
-                                        <input type="date" value={tempStartDate} onChange={(e) => setTempStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
-                                        <span className="text-gray-400 text-xs mx-0.5">~</span>
-                                        <input type="date" value={tempEndDate} onChange={(e) => setTempEndDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
-                                        <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-orange-500 text-white font-bold px-3 py-1.5 h-full rounded text-[11px] shadow-sm hover:bg-blue-600 transition-colors ml-1">조회</button>
-                                    </div>
-                                )}
-
-                                <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
-                                    {[{ id: 'D', name: '당일' }, { id: 'W', name: '주간' }, { id: 'M', name: '월간' }, { id: 'CUSTOM', name: '직접지정' }].map(btn => (
-                                        <button key={btn.id} onClick={() => setFilterType(btn.id)} className={`px-3 h-full text-xs font-bold rounded-md transition-all ${filterType === btn.id ? 'bg-white text-letusBlue shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}>
-                                            {btn.name}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <div className="h-6 w-px bg-gray-200 hidden md:block mx-1"></div>
-
-                                <div className="relative z-50">
-                                    <button onClick={() => setIsActionMenuOpen(!isActionMenuOpen)} className="flex items-center text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded px-3 py-1.5 h-[38px] hover:bg-slate-50 min-w-[100px] justify-between shadow-sm transition-all">
-                                        <span>선택실행 {selectedIds.length > 0 && `(${selectedIds.length})`}</span>
-                                        <svg className={`w-3.5 h-3.5 ml-2 text-slate-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                    </button>
-                                    {isActionMenuOpen && (
-                                        <>
-                                            <div className="fixed inset-0" onClick={() => setIsActionMenuOpen(false)}></div>
-                                            <div className="absolute right-0 top-[110%] w-[140px] bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5 slide-down z-50">
-                                                <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) return alert('항목을 체크해 주세요.'); setIsBulkEditModalOpen(true); }} className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] transition-colors ${selectedIds.length > 0 ? 'text-letusBlue hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}>
-                                                    일괄 수정 (지원/파견)
-                                                </button>
-                                            </div>
-                                        </>
+                                <div className="flex items-center justify-end flex-1 gap-2">
+                                    {filterType === 'CUSTOM' && (
+                                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-1 animate-fade-in shadow-sm h-[38px]">
+                                            <input type="date" value={tempStartDate} onChange={(e) => setTempStartDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                                            <span className="text-gray-400 text-xs mx-0.5">~</span>
+                                            <input type="date" value={tempEndDate} onChange={(e) => setTempEndDate(e.target.value)} className="bg-transparent text-xs text-gray-700 font-bold focus:outline-none cursor-pointer px-1 w-[110px]" />
+                                            <button onClick={() => { setStartDate(tempStartDate); setEndDate(tempEndDate); }} className="bg-orange-500 text-white font-bold px-3 py-1.5 h-full rounded text-[11px] shadow-sm hover:bg-blue-600 transition-colors ml-1">조회</button>
+                                        </div>
                                     )}
+                                    <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner h-[38px] items-center">
+                                        {[{ id: 'D', name: '당일' }, { id: 'W', name: '주간' }, { id: 'M', name: '월간' }, { id: 'CUSTOM', name: '직접지정' }].map(btn => (
+                                            <button key={btn.id} onClick={() => setFilterType(btn.id)} className={`px-3 h-full text-xs font-bold rounded-md transition-all ${filterType === btn.id ? 'bg-white text-gray-800 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}>{btn.name}</button>
+                                        ))}
+                                    </div>
+                                    <div className="relative z-50 ml-1">
+                                        <button onClick={() => setIsActionMenuOpen(!isActionMenuOpen)} className="flex items-center text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded px-3 py-1.5 h-[38px] hover:bg-slate-50 min-w-[100px] justify-between shadow-sm transition-all">
+                                            <span>선택실행 {selectedIds.length > 0 && `(${selectedIds.length})`}</span>
+                                            <svg className={`w-3.5 h-3.5 ml-2 text-slate-400 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                        </button>
+                                        {isActionMenuOpen && (
+                                            <>
+                                                <div className="fixed inset-0" onClick={() => setIsActionMenuOpen(false)}></div>
+                                                <div className="absolute right-0 top-[110%] w-[140px] bg-white border border-slate-200 rounded-md shadow-xl p-1.5 flex flex-col gap-0.5 slide-down z-50">
+                                                    <button onClick={() => { setIsActionMenuOpen(false); if (selectedIds.length === 0) return alert('항목을 체크해 주세요.'); setIsBulkEditModalOpen(true); }} className={`w-full text-left px-2.5 py-2 font-bold rounded text-[11px] transition-colors ${selectedIds.length > 0 ? 'text-letusBlue hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}>
+                                                        일괄 수정 (지원/파견)
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            </>
                         )}
                     </div>
                 </div>
@@ -1116,13 +1129,13 @@ const AttendanceManagement = () => {
                                 <div className="p-6 flex flex-col gap-6">
                                     {window.Recharts && chartDataList.length > 0 && (
                                         <div className="bg-white p-5 border border-gray-200 rounded-lg shadow-sm h-72">
-                                            <h4 className="text-xs font-bold text-gray-500 mb-4">월별 총 근무시간 추이 (전체 누적)</h4>
+                                            <h4 className="text-xs font-bold text-gray-500 mb-4">월별 총 근무시간 추이 ({summaryViewMode === 'vendor' ? '업체별' : '브랜드별'} 누적)</h4>
                                             <window.Recharts.ResponsiveContainer width="100%" height="100%">
                                                 <window.Recharts.BarChart data={chartDataList} margin={{ top: 0, right: 0, left: -20, bottom: 25 }}>
                                                     <window.Recharts.CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                                                     <window.Recharts.XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} dy={10} />
                                                     <window.Recharts.YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6b7280' }} />
-                                                    <window.Recharts.Tooltip cursor={{ fill: '#f3f4f6' }} contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontSize: '12px', padding: '8px 12px' }} itemStyle={{ fontSize: '12px', fontWeight: 'bold', padding: '2px 0' }} labelStyle={{ fontSize: '12px', fontWeight: '900', color: '#374151', marginBottom: '4px' }} />
+                                                    <window.Recharts.Tooltip cursor={{ fill: '#f3f4f6' }} contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontSize: '12px', padding: '8px 12px' }} />
                                                     <window.Recharts.Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#4b5563', paddingTop: '15px' }} />
                                                     <window.Recharts.Bar dataKey="normal" name="정상근무" stackId="a" fill="#4b89ff" radius={[0, 0, 4, 4]} barSize={30} />
                                                     <window.Recharts.Bar dataKey="overtime" name="연장근무" stackId="a" fill="#f58220" radius={[4, 4, 0, 0]} />
@@ -1132,34 +1145,34 @@ const AttendanceManagement = () => {
                                     )}
 
                                     {summaryDataList.length === 0 ? (
-                                        <div className="text-center py-10 text-gray-400 font-bold">집계할 데이터가 없습니다. 엑셀을 업로드해 주세요.</div>
+                                        <div className="text-center py-10 text-gray-400 font-bold">집계할 데이터가 없습니다.</div>
                                     ) : (
                                         <table className="w-full text-center whitespace-nowrap bg-white border border-gray-200 shadow-sm">
                                             <thead className="bg-gray-100 border-b-2 border-gray-300 text-xs font-black text-gray-700">
                                                 <tr>
                                                     <th className="p-3 border-r border-gray-200 w-32">구분</th>
-                                                    <th className="p-3 border-r border-gray-200 w-48 text-left pl-6">업체명 (클릭하여 월별 상세 보기)</th>
+                                                    <th className="p-3 border-r border-gray-200 w-48 text-left pl-6">{summaryViewMode === 'vendor' ? '업체명' : '운영 브랜드'} (클릭 시 월별 상세)</th>
                                                     <th className="p-3 border-r border-gray-200">정상근무</th>
                                                     <th className="p-3 border-r border-gray-200">연장근무</th>
-                                                    <th className="p-3 border-r border-gray-200 bg-blue-50/50">합계</th>
-                                                    <th className="p-3 bg-orange-50/50">가중시간</th>
+                                                    <th className="p-3 border-r border-gray-200 bg-blue-50/50">총 시간 합계</th>
+                                                    <th className="p-3 bg-orange-50/50">정산 가중시간</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="text-[13px] text-gray-800">
                                                 {summaryDataList.map((row) => {
-                                                    const isExpanded = expandedVendors.includes(row.vendor);
+                                                    const isExpanded = expandedGroups.includes(row.name);
                                                     return (
-                                                        <React.Fragment key={row.vendor}>
-                                                            <tr onClick={() => toggleVendor(row.vendor)} className={`border-b border-gray-200 cursor-pointer transition-colors ${isExpanded ? 'bg-blue-50/40' : 'hover:bg-blue-50/20'}`}>
+                                                        <React.Fragment key={row.name}>
+                                                            <tr onClick={() => toggleGroup(row.name)} className={`border-b border-gray-200 cursor-pointer transition-colors ${isExpanded ? 'bg-blue-50/40' : 'hover:bg-blue-50/20'}`}>
                                                                 <td className="p-3 border-r border-gray-200 font-black text-gray-600 bg-gray-50/30">{row.type}</td>
-                                                                <td className="p-3 border-r border-gray-200 font-bold text-left pl-6 flex items-center gap-2"><span className="text-[10px] text-letusBlue w-3">{isExpanded ? '▼' : '▶'}</span>{row.vendor}</td>
+                                                                <td className="p-3 border-r border-gray-200 font-bold text-left pl-6 flex items-center gap-2"><span className="text-[10px] text-letusBlue w-3">{isExpanded ? '▼' : '▶'}</span>{row.name}</td>
                                                                 <td className="p-3 border-r border-gray-200 text-right pr-6 font-mono text-gray-700 font-medium">{row.normal === 0 ? '-' : row.normal.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
                                                                 <td className="p-3 border-r border-gray-200 text-right pr-6 font-mono text-gray-700 font-medium">{row.overtime === 0 ? '-' : row.overtime.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
                                                                 <td className="p-3 border-r border-gray-200 text-right pr-6 font-mono font-bold text-letusBlue bg-blue-50/10">{row.total === 0 ? '-' : row.total.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
                                                                 <td className="p-3 text-right pr-6 font-mono font-bold text-red-500 bg-orange-50/10">{row.weighted === 0 ? '-' : row.weighted.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
                                                             </tr>
                                                             {isExpanded && row.months.map((m, idx) => (
-                                                                <tr key={`${row.vendor}-${m.month}`} className="bg-slate-50 border-b border-gray-100 text-gray-500 animate-fade-in">
+                                                                <tr key={`${row.name}-${m.month}`} className="bg-slate-50 border-b border-gray-100 text-gray-500 animate-fade-in">
                                                                     <td className="p-2 border-r border-gray-100 bg-slate-100/50"></td>
                                                                     <td className="p-2 border-r border-gray-100 text-left pl-10 font-bold text-[11px] flex items-center gap-2"><span className="text-gray-400">└</span> {m.month}</td>
                                                                     <td className="p-2 border-r border-gray-100 text-right pr-6 font-mono text-[12px]">{m.normal === 0 ? '-' : m.normal.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
@@ -1266,7 +1279,6 @@ const AttendanceManagement = () => {
                     )}
                 </div>
             </div>
-
             {isUploadModalOpen && <AttendanceUploadModal onClose={() => setIsUploadModalOpen(false)} onReload={fetchAttendance} />}
             {isBulkEditModalOpen && <AttendanceBulkEditModal selectedIds={selectedIds} onClose={() => { setIsBulkEditModalOpen(false); setSelectedIds([]); }} onReload={fetchAttendance} />}
         </div>
