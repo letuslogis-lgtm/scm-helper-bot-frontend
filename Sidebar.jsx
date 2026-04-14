@@ -19,6 +19,8 @@ const Sidebar = ({ page, setPage, userProfile, isSidebarOpen, setIsSidebarOpen, 
             children: [
                 { id: 'user_management', label: '사용자 관리' },
                 { id: 'worker_management', label: '근무자 관리' },
+                // 🚩 밑에 있던 시스템 데이터 맵을 여기로 쏙 올렸습니다!
+                { id: 'db_map', label: '시스템 데이터 맵' },
                 { id: 'product_manager', label: 'ITEM DB 수동 업데이트' }
             ]
         },
@@ -165,29 +167,6 @@ const Sidebar = ({ page, setPage, userProfile, isSidebarOpen, setIsSidebarOpen, 
                 })}
             </nav>
 
-            {/* 🔥 [신규 추가] 시스템 데이터 맵 (관리자 전용 영역) */}
-            <div className={`border-t border-gray-700/50 transition-all ${isSidebarOpen ? 'p-4 bg-gray-900/30' : 'py-4 flex justify-center bg-gray-900/30'}`}>
-                {isSidebarOpen && (
-                    <div className="text-[10px] font-black text-gray-500 mb-2.5 px-2 uppercase tracking-widest">
-                        System Admin
-                    </div>
-                )}
-                <button
-                    onClick={() => {
-                        if (!isSidebarOpen) setIsSidebarOpen(true);
-                        setPage('db_map');
-                    }}
-                    title="시스템 데이터 맵"
-                    className={`flex items-center transition-all w-full ${isSidebarOpen
-                            ? `gap-3 px-3 py-2.5 rounded-lg text-sm font-bold ${page === 'db_map' ? 'bg-gray-700 text-white shadow-md' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`
-                            : `justify-center p-2.5 rounded-lg ${page === 'db_map' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`
-                        }`}
-                >
-                    <span className={`text-[16px] ${page === 'db_map' ? 'opacity-100' : 'opacity-70 grayscale'}`}>📖</span>
-                    {isSidebarOpen && <span>시스템 데이터 맵</span>}
-                </button>
-            </div>
-
             {isSidebarOpen && (
                 <div className="p-4 text-xs text-gray-600 font-medium border-t border-gray-800 mt-auto truncate text-center">
                     <p>© 2026 LETUS LOGIS.</p>
@@ -197,5 +176,4 @@ const Sidebar = ({ page, setPage, userProfile, isSidebarOpen, setIsSidebarOpen, 
     );
 };
 
-// 🌟 전역 등록
 window.Sidebar = Sidebar;
