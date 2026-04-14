@@ -130,6 +130,9 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 const exactVendor = vendorType.replace('협력사_', '');
                 const companyType = vendorType.startsWith('협력사_') ? '사내협력사' : '외주도급사';
 
+                // ---------------------------------------------------------
+                // 1️⃣ 도급사1 (IPC) 전용 로직
+                // ---------------------------------------------------------
                 if (vendorType === '도급사1' || vendorType === 'IPC') {
                     if (isTextFile) {
                         failedFiles.push(`${file.name} (IPC는 엑셀 양식만 지원)`);
@@ -201,8 +204,8 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                         allStandardData.push({
                             work_date: formattedDate,
                             company_type: companyType,
-                            vendor_name: 'IPC',
-                            worked_vendor: 'IPC',
+                            vendor_name: exactVendor,
+                            worked_vendor: exactVendor,
                             worker_name: 'IPC_통합',
                             start_time: '08:30',
                             end_time: o_hours > 0 ? 'OT발생' : '17:30',
@@ -221,6 +224,131 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     continue;
                 }
 
+                // ---------------------------------------------------------
+                // 2️⃣ 🚩[신규 반영] 도급사2 (한국사람들) 전용 로직
+                // ---------------------------------------------------------
+                if (vendorType === '도급사2' || vendorType === '한국사람들') {
+                    if (isTextFile) {
+                        failedFiles.push(`${file.name} (한국사람들은 엑셀 양식만 지원합니다)`);
+                        continue;
+                    }
+
+                    let wb = XLSX.read(data, { type: 'binary' });
+                    // 💡 주간, 야간 시트만 필터링하여 순회 (다른 시트는 자동 무시)
+                    const targetSheets = wb.SheetNames.filter(n => n.includes('주간') || n.includes('야간'));
+
+                    if (targetSheets.length === 0) {
+                        failedFiles.push(`${file.name} ('주간' 또는 '야간' 시트를 찾을 수 없습니다)`);
+                        continue;
+                    }
+
+                    let parsedCountInFile = 0;
+
+                    targetSheets.forEach(sheetName => {
+                        const isNight = sheetName.includes('야간');
+                        const raw2D = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: false, defval: '' });
+
+                        // 셀 병합에 구애받지 않도록 15번째 줄 안에서 핵심 컬럼의 위치(인덱스)를 동적으로 스캔
+                        let colIdx = { date: -1, day: -1, name: -1, normal: -1, extra: -1, remark: -1 };
+                        let startRow = -1;
+
+                        for (let r = 0; r < Math.min(raw2D.length, 15); r++) {
+                            const row = raw2D[r];
+                            if (!row) continue;
+                            for (let c = 0; c < row.length; c++) {
+                                const cell = String(row[c] || '').replace(/\s/g, '');
+                                if (cell.includes('일자')) colIdx.date = c;
+                                if (cell.includes('요일')) colIdx.day = c;
+                                if (cell.includes('성명')) colIdx.name = c;
+                                if (cell.includes('정상근무')) colIdx.normal = c;
+                                if (cell.includes('잔업')) colIdx.extra = c;
+                                if (cell.includes('비고')) colIdx.remark = c;
+                            }
+                            if (colIdx.date !== -1 && colIdx.name !== -1 && colIdx.normal !== -1) {
+                                startRow = r + 1; // 헤더 발견 시, 다음 줄부터 데이터 파싱 시작
+                                break;
+                            }
+                        }
+
+                        if (startRow === -1) return;
+
+                        for (let r = startRow; r < raw2D.length; r++) {
+                            const row = raw2D[r];
+                            if (!row || !row[colIdx.name]) continue;
+
+                            const nameVal = String(row[colIdx.name]).trim();
+                            const dateStr = String(row[colIdx.date]).trim();
+                            const dayStr = colIdx.day !== -1 ? String(row[colIdx.day]).trim() : '';
+                            const remarkStr = colIdx.remark !== -1 ? String(row[colIdx.remark]).trim() : '';
+
+                            if (!dateStr || nameVal === '' || nameVal.includes('계') || nameVal === '성명') continue;
+
+                            const match = dateStr.replace(/\s+/g, '').match(/(\d+)월(\d+)일/);
+                            if (!match) continue;
+
+                            const currYear = new Date().getFullYear();
+                            const m = parseInt(match[1], 10);
+                            const d = parseInt(match[2], 10);
+                            const formattedDate = `${currYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+                            let rawNormal = safeParse(row[colIdx.normal]);
+                            let rawExtra = safeParse(row[colIdx.extra]);
+
+                            if (rawNormal === 0 && rawExtra === 0) continue; // 데이터가 0인 날짜는 무시
+
+                            // 💡 핵심 룰 1, 2, 3: 요일이 토/일 이거나 비고에 '휴일'이 있으면 무조건 연장근무로!
+                            const isHoliday = dayStr === '토' || dayStr === '일' || remarkStr.includes('휴일');
+
+                            let n_hours = 0;
+                            let o_hours = 0;
+
+                            if (isHoliday) {
+                                n_hours = 0;
+                                o_hours = rawNormal + rawExtra;
+                            } else {
+                                n_hours = rawNormal;
+                                o_hours = rawExtra;
+                            }
+
+                            const cleanName = nameVal.replace(/\s/g, '');
+                            const masterInfo = workerMap[cleanName] || {};
+                            const statusVal = masterInfo.supportStatus ? String(masterInfo.supportStatus).trim() : '미지원';
+                            const actualWorkedVendor = (statusVal !== '미지원' && statusVal !== '') ? statusVal : exactVendor;
+                            const assignedBrand = masterInfo.brand || '';
+
+                            const finalRemark = [];
+                            if (isNight) finalRemark.push('[야간]');
+                            if (assignedBrand) finalRemark.push(`[${assignedBrand}]`);
+                            if (remarkStr) finalRemark.push(remarkStr);
+
+                            allStandardData.push({
+                                work_date: formattedDate,
+                                company_type: companyType,
+                                vendor_name: exactVendor,
+                                worked_vendor: actualWorkedVendor,
+                                worker_name: nameVal,
+                                start_time: '',
+                                end_time: '',
+                                work_hours: n_hours + o_hours,
+                                normal_hours: n_hours,
+                                overtime_hours: o_hours,
+                                weighted_hours: n_hours + (o_hours * 1.5),
+                                remark: finalRemark.join(' ').trim()
+                            });
+
+                            parsedCountInFile++;
+                        }
+                    });
+
+                    if (parsedCountInFile > 0) successFiles.push(file.name);
+                    else failedFiles.push(`${file.name} (유효한 근무 데이터가 없습니다)`);
+
+                    continue;
+                }
+
+                // ---------------------------------------------------------
+                // 3️⃣ 기본 사내 협력사 (바로서비스, 하나물류, 에프스토리)
+                // ---------------------------------------------------------
                 let rows = [];
                 if (isTextFile) {
                     const lines = data.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -266,35 +394,16 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     if (!nameVal || nameVal === '계') return;
 
                     const cleanName = nameVal.replace(/\s/g, '');
-                    const masterInfo = workerMap[cleanName];
+                    const masterInfo = workerMap[cleanName] || {};
 
-                    const statusVal = masterInfo?.supportStatus ? String(masterInfo.supportStatus).trim() : '미지원';
+                    const statusVal = masterInfo.supportStatus ? String(masterInfo.supportStatus).trim() : '미지원';
                     const actualWorkedVendor = (statusVal !== '미지원' && statusVal !== '')
                         ? statusVal
                         : exactVendor;
 
-                    const assignedBrand = masterInfo?.brand || '';
+                    const assignedBrand = masterInfo.brand || '';
 
-                    if (vendorType === '도급사2') {
-                        const dateColumns = Object.keys(row).filter(key => key.includes('월') && key.includes('일'));
-                        dateColumns.forEach(dateCol => {
-                            const workValue = row[dateCol];
-                            if (workValue) {
-                                allStandardData.push({
-                                    work_date: dateCol,
-                                    company_type: companyType,
-                                    vendor_name: exactVendor,
-                                    worked_vendor: actualWorkedVendor,
-                                    worker_name: nameVal,
-                                    start_time: '', end_time: '',
-                                    work_hours: 8, normal_hours: 8, overtime_hours: 0, weighted_hours: 8,
-                                    remark: assignedBrand ? `[${assignedBrand}] 기록: ${workValue}` : `기록: ${workValue}`
-                                });
-                                parsedCount++;
-                            }
-                        });
-                    }
-                    else if (dateVal) {
+                    if (dateVal) {
                         let startTime = row['출근시간'] || row['출근'] || '';
                         let endTime = row['퇴근시간'] || row['퇴근'] || '';
                         let remarkStr = row['이상유무'] || row['비고'] || '';
@@ -333,7 +442,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                     o_hours = p_over + p_night + h_work + h_over + h_night + early;
                                     w_hours = n_hours + o_hours;
                                 } else {
-                                    // 💡 스마트 휴일 점심시간 차감 로직 탑재 완료
                                     const baseTime = calcDiff('08:30', endTime);
                                     let lunchDeduction = 1;
 
