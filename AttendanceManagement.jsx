@@ -896,45 +896,76 @@ const AttendanceManagement = () => {
         setSortConfig({ key, direction });
     };
 
-    // 🚩 [핵심] 집계 로직: 뷰 모드에 따라 그룹핑 기준을 업체명/브랜드명으로 동적 변경
+    // 🚩 [핵심] 집계 로직: 뷰 모드에 따라 그룹핑 기준을 완벽하게 스위칭!
     const { summaryDataList, chartDataList, totalSummary } = useMemo(() => {
         const groupSummaryMap = {};
         const chartDataMap = {};
 
         filteredChartData.forEach(row => {
             const monthStr = row.work_date ? row.work_date.substring(0, 7) : '미상';
+            const actualVendor = row.worked_vendor || '미분류';
 
             let groupKey = '';
             let groupType = '';
+            let subGroupKey = '';
 
             if (summaryViewMode === 'vendor') {
-                groupKey = row.worked_vendor || '미분류';
+                // 🏢 [업체별 보기]
+                groupKey = actualVendor; // 대분류: 실투입 업체명
                 const isPartner = ['바로서비스', '하나물류', '에프스토리'].includes(groupKey);
                 groupType = isPartner ? '사내협력사' : '외주도급사';
+                subGroupKey = monthStr;  // 중분류: 월별 추이
             } else {
+                // 🏷️ [브랜드별 보기]
                 const cleanName = row.worker_name?.replace(/\s/g, '') || '';
                 const masterInfo = workerMasterMap[cleanName] || {};
-                groupKey = masterInfo.brand || '미지정/공통';
-                groupType = '운영 브랜드';
+
+                // 1순위: 마스터 DB의 브랜드, 2순위: 비고란의 [브랜드] 태그 파싱
+                let brandName = (masterInfo.brand && masterInfo.brand !== '미지정/공통') ? masterInfo.brand : null;
+                if (!brandName && row.remark) {
+                    const match = row.remark.match(/\[(.*?)\]/);
+                    // [야간] 같은 예외 태그 방어
+                    if (match && match[1] !== '야간' && match[1] !== '전체') {
+                        brandName = match[1];
+                    } else if (row.remark.includes('[전체]')) {
+                        brandName = '전체(공통)';
+                    }
+                }
+
+                groupKey = brandName || '미지정/공통'; // 대분류: 브랜드명
+                groupType = '브랜드';                 // 구분명
+                subGroupKey = actualVendor;          // 🚩 중분류: 실투입 업체명!!
             }
 
             if (!groupSummaryMap[groupKey]) {
-                groupSummaryMap[groupKey] = { type: groupType, name: groupKey, normal: 0, overtime: 0, total: 0, weighted: 0, monthsMap: {} };
+                groupSummaryMap[groupKey] = { type: groupType, name: groupKey, normal: 0, overtime: 0, total: 0, weighted: 0, subMap: {} };
             }
             const gMap = groupSummaryMap[groupKey];
             const normalH = Number(row.normal_hours) || 0; const overH = Number(row.overtime_hours) || 0;
             const totalH = Number(row.work_hours) || 0; const weightedH = Number(row.weighted_hours) || 0;
 
             gMap.normal += normalH; gMap.overtime += overH; gMap.total += totalH; gMap.weighted += weightedH;
-            if (!gMap.monthsMap[monthStr]) gMap.monthsMap[monthStr] = { month: monthStr, normal: 0, overtime: 0, total: 0, weighted: 0 };
-            gMap.monthsMap[monthStr].normal += normalH; gMap.monthsMap[monthStr].overtime += overH;
-            gMap.monthsMap[monthStr].total += totalH; gMap.monthsMap[monthStr].weighted += weightedH;
 
+            // 🚩 중분류 데이터 합산 (서브맵에 저장)
+            if (!gMap.subMap[subGroupKey]) gMap.subMap[subGroupKey] = { subName: subGroupKey, normal: 0, overtime: 0, total: 0, weighted: 0 };
+            gMap.subMap[subGroupKey].normal += normalH; gMap.subMap[subGroupKey].overtime += overH;
+            gMap.subMap[subGroupKey].total += totalH; gMap.subMap[subGroupKey].weighted += weightedH;
+
+            // 차트는 뷰 모드 상관없이 항상 '월별' 누적으로 표시
             if (!chartDataMap[monthStr]) chartDataMap[monthStr] = { name: monthStr, normal: 0, overtime: 0, total: 0 };
             chartDataMap[monthStr].normal += normalH; chartDataMap[monthStr].overtime += overH; chartDataMap[monthStr].total += totalH;
         });
 
-        const sortedSummary = Object.values(groupSummaryMap).map(v => ({ ...v, months: Object.values(v.monthsMap).sort((a, b) => a.month.localeCompare(b.month)) })).sort((a, b) => a.type.localeCompare(b.type));
+        // 객체를 배열로 변환하고 정렬
+        const sortedSummary = Object.values(groupSummaryMap).map(v => ({
+            ...v,
+            subItems: Object.values(v.subMap).sort((a, b) => a.subName.localeCompare(b.subName)) // 서브 항목 배열화
+        })).sort((a, b) => {
+            if (a.type === '사내협력사' && b.type !== '사내협력사') return -1;
+            if (a.type !== '사내협력사' && b.type === '사내협력사') return 1;
+            return a.name.localeCompare(b.name);
+        });
+
         const sortedChart = Object.values(chartDataMap).sort((a, b) => a.name.localeCompare(b.name));
         const totals = sortedSummary.reduce((acc, curr) => {
             acc.normal += curr.normal; acc.overtime += curr.overtime; acc.total += curr.total; acc.weighted += curr.weighted; return acc;
@@ -1151,7 +1182,10 @@ const AttendanceManagement = () => {
                                             <thead className="bg-gray-100 border-b-2 border-gray-300 text-xs font-black text-gray-700">
                                                 <tr>
                                                     <th className="p-3 border-r border-gray-200 w-32">구분</th>
-                                                    <th className="p-3 border-r border-gray-200 w-48 text-left pl-6">{summaryViewMode === 'vendor' ? '업체명' : '운영 브랜드'} (클릭 시 월별 상세)</th>
+                                                    <th className="p-3 border-r border-gray-200 w-56 text-left pl-6">
+                                                        {/* 🚩 헤더 텍스트 동적 변경 */}
+                                                        {summaryViewMode === 'vendor' ? '업체명 (클릭 시 월별 상세)' : '운영 브랜드 (클릭 시 실투입 업체별 상세)'}
+                                                    </th>
                                                     <th className="p-3 border-r border-gray-200">정상근무</th>
                                                     <th className="p-3 border-r border-gray-200">연장근무</th>
                                                     <th className="p-3 border-r border-gray-200 bg-blue-50/50">총 시간 합계</th>
@@ -1171,14 +1205,16 @@ const AttendanceManagement = () => {
                                                                 <td className="p-3 border-r border-gray-200 text-right pr-6 font-mono font-bold text-letusBlue bg-blue-50/10">{row.total === 0 ? '-' : row.total.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
                                                                 <td className="p-3 text-right pr-6 font-mono font-bold text-red-500 bg-orange-50/10">{row.weighted === 0 ? '-' : row.weighted.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
                                                             </tr>
-                                                            {isExpanded && row.months.map((m, idx) => (
-                                                                <tr key={`${row.name}-${m.month}`} className="bg-slate-50 border-b border-gray-100 text-gray-500 animate-fade-in">
+
+                                                            {/* 🚩 서브 메뉴 렌더링 (월 또는 실투입 업체) */}
+                                                            {isExpanded && row.subItems.map((sub, idx) => (
+                                                                <tr key={`${row.name}-${sub.subName}`} className="bg-slate-50 border-b border-gray-100 text-gray-500 animate-fade-in">
                                                                     <td className="p-2 border-r border-gray-100 bg-slate-100/50"></td>
-                                                                    <td className="p-2 border-r border-gray-100 text-left pl-10 font-bold text-[11px] flex items-center gap-2"><span className="text-gray-400">└</span> {m.month}</td>
-                                                                    <td className="p-2 border-r border-gray-100 text-right pr-6 font-mono text-[12px]">{m.normal === 0 ? '-' : m.normal.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
-                                                                    <td className="p-2 border-r border-gray-100 text-right pr-6 font-mono text-[12px]">{m.overtime === 0 ? '-' : m.overtime.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
-                                                                    <td className="p-2 border-r border-gray-100 text-right pr-6 font-mono font-bold text-[12px] text-blue-400">{m.total === 0 ? '-' : m.total.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
-                                                                    <td className="p-2 text-right pr-6 font-mono font-bold text-[12px] text-red-400">{m.weighted === 0 ? '-' : m.weighted.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                                                    <td className="p-2 border-r border-gray-100 text-left pl-10 font-bold text-[11px] flex items-center gap-2"><span className="text-gray-400">└</span> {sub.subName}</td>
+                                                                    <td className="p-2 border-r border-gray-100 text-right pr-6 font-mono text-[12px]">{sub.normal === 0 ? '-' : sub.normal.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                                                    <td className="p-2 border-r border-gray-100 text-right pr-6 font-mono text-[12px]">{sub.overtime === 0 ? '-' : sub.overtime.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                                                    <td className="p-2 border-r border-gray-100 text-right pr-6 font-mono font-bold text-[12px] text-blue-400">{sub.total === 0 ? '-' : sub.total.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+                                                                    <td className="p-2 text-right pr-6 font-mono font-bold text-[12px] text-red-400">{sub.weighted === 0 ? '-' : sub.weighted.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
                                                                 </tr>
                                                             ))}
                                                         </React.Fragment>
