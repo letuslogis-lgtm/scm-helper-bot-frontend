@@ -1029,17 +1029,17 @@ const AttendanceManagement = () => {
                         <div className="flex items-center gap-2">
                             <div className="relative">
                                 <select value={workerTypeFilter} onChange={(e) => setWorkerTypeFilter(e.target.value)} className={`appearance-none pl-3 pr-7 py-[7px] text-xs font-bold rounded-lg border outline-none transition-colors cursor-pointer ${workerTypeFilter === '현장직' ? 'bg-white border-gray-200 text-gray-600' : 'bg-blue-50 border-blue-200 text-letusBlue'}`}>
-                                    <option value="현장직">현장직 전용</option>
-                                    <option value="사무직">사무직 전용</option>
-                                    <option value="전체">근로형태 전체</option>
+                                    <option value="현장직">현장직</option>
+                                    <option value="사무직">사무직</option>
+                                    <option value="전체">전체</option>
                                 </select>
                                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"><svg className="fill-current h-3 w-3" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg></div>
                             </div>
                             <div className="relative">
                                 <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className={`appearance-none pl-3 pr-7 py-[7px] text-xs font-bold rounded-lg border outline-none transition-colors cursor-pointer ${locationFilter === '메인센터' ? 'bg-white border-gray-200 text-gray-600' : 'bg-orange-50 border-orange-200 text-letusOrange'}`}>
-                                    <option value="메인센터">메인센터 전용</option>
-                                    <option value="지방센터">지방(동/서부) 전용</option>
-                                    <option value="전체">근무지 전체</option>
+                                    <option value="메인센터">메인센터</option>
+                                    <option value="지방센터">지방(동/서부)</option>
+                                    <option value="전체">근무지</option>
                                 </select>
                                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"><svg className="fill-current h-3 w-3" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg></div>
                             </div>
