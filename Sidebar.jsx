@@ -1,3 +1,5 @@
+const { useState, useEffect } = React;
+
 const Sidebar = ({ page, setPage, userProfile, isSidebarOpen, setIsSidebarOpen, favorites }) => {
     const [openMenu, setOpenMenu] = useState('home_menu'); // (초기값)
     const [activeTab, setActiveTab] = useState('all');
@@ -55,7 +57,7 @@ const Sidebar = ({ page, setPage, userProfile, isSidebarOpen, setIsSidebarOpen, 
 
     useEffect(() => {
         if (searchTerm) setOpenMenu('all_open');
-        else setOpenMenu('home_menu'); // 🔥 여기도 수정됨! (검색어 지웠을 때 돌아가는 기본값)
+        else setOpenMenu('home_menu');
     }, [searchTerm]);
 
     const toggleMenu = (menuId) => {
@@ -91,7 +93,6 @@ const Sidebar = ({ page, setPage, userProfile, isSidebarOpen, setIsSidebarOpen, 
                 </div>
             )}
 
-            {/* 🔥 빈 공간에 텍스트 커서가 생기지 않도록 cursor-default 추가 */}
             <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto custom-scrollbar cursor-default">
                 {activeTab === 'favorites' && isSidebarOpen && (
                     <div className="animate-fade-in">
@@ -128,14 +129,12 @@ const Sidebar = ({ page, setPage, userProfile, isSidebarOpen, setIsSidebarOpen, 
 
                     return (
                         <div key={menu.id} className="mb-1">
-                            {/* 🔥 부모 메뉴: 전체 영역이 아닌 텍스트/아이콘만 클릭되도록 수정 */}
                             <div className={`py-2 flex items-center text-gray-400 transition-colors ${isSidebarOpen ? 'px-3 justify-between' : 'justify-center'} cursor-default`}>
                                 <div onClick={() => toggleMenu(menu.id)} className="flex items-center cursor-pointer hover:text-white" title={!isSidebarOpen ? menu.label : ''}>
                                     <span className={`${isSidebarOpen ? 'mr-3' : ''} flex justify-center w-5`}>{menu.icon}</span>
                                     {isSidebarOpen && <span className="text-sm font-semibold">{menu.label}</span>}
                                 </div>
 
-                                {/* 우측 화살표도 따로 클릭되도록 분리 */}
                                 {isSidebarOpen && (
                                     <div onClick={() => toggleMenu(menu.id)} className="cursor-pointer hover:text-white p-1">
                                         <svg className={`w-3.5 h-3.5 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
@@ -143,7 +142,6 @@ const Sidebar = ({ page, setPage, userProfile, isSidebarOpen, setIsSidebarOpen, 
                                 )}
                             </div>
 
-                            {/* 🔥 자식 서브메뉴: 텍스트 영역만 둥근 배경이 생기며 클릭되도록 수정 */}
                             {isSidebarOpen && isMenuOpen && (
                                 <div className="mt-0.5 space-y-0.5 slide-up">
                                     {(searchTerm ? filteredChildren : allowedChildren).map(child => (
@@ -166,6 +164,29 @@ const Sidebar = ({ page, setPage, userProfile, isSidebarOpen, setIsSidebarOpen, 
                     );
                 })}
             </nav>
+
+            {/* 🔥 [신규 추가] 시스템 데이터 맵 (관리자 전용 영역) */}
+            <div className={`border-t border-gray-700/50 transition-all ${isSidebarOpen ? 'p-4 bg-gray-900/30' : 'py-4 flex justify-center bg-gray-900/30'}`}>
+                {isSidebarOpen && (
+                    <div className="text-[10px] font-black text-gray-500 mb-2.5 px-2 uppercase tracking-widest">
+                        System Admin
+                    </div>
+                )}
+                <button
+                    onClick={() => {
+                        if (!isSidebarOpen) setIsSidebarOpen(true);
+                        setPage('db_map');
+                    }}
+                    title="시스템 데이터 맵"
+                    className={`flex items-center transition-all w-full ${isSidebarOpen
+                            ? `gap-3 px-3 py-2.5 rounded-lg text-sm font-bold ${page === 'db_map' ? 'bg-gray-700 text-white shadow-md' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`
+                            : `justify-center p-2.5 rounded-lg ${page === 'db_map' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`
+                        }`}
+                >
+                    <span className={`text-[16px] ${page === 'db_map' ? 'opacity-100' : 'opacity-70 grayscale'}`}>📖</span>
+                    {isSidebarOpen && <span>시스템 데이터 맵</span>}
+                </button>
+            </div>
 
             {isSidebarOpen && (
                 <div className="p-4 text-xs text-gray-600 font-medium border-t border-gray-800 mt-auto truncate text-center">
