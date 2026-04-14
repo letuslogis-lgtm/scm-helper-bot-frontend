@@ -111,9 +111,10 @@
     <script type="text/babel" src="./LogisticsDashboard.jsx"></script>
     <script type="text/babel" src="./IssueList.jsx"></script>
     <script type="text/babel" src="./ProductManager.jsx"></script>
+    <script type="text/babel" src="./DatabaseDictionary.jsx"></script>
 
     <script type="text/babel" data-type="module">
-        const { MainLayout, LoginView, MyDashboard, Dashboard, IssueList, WorkerManagement, AttendanceManagement, AccidentDashboard, AccidentList, ProductManager, UserManagement, SupportCenter, UserEditModal, useAppLogic } = window;
+        const { MainLayout, LoginView, MyDashboard, Dashboard, IssueList, WorkerManagement, AttendanceManagement, AccidentDashboard, AccidentList, ProductManager, UserManagement, SupportCenter, UserEditModal, useAppLogic, DatabaseDictionary } = window;
 
         const App = () => {
             // 마법의 훅으로 수백 줄의 로직을 단 한 줄로 소환!
@@ -135,6 +136,7 @@
                     <div className={logic.currentPage === 'product_manager' ? 'block' : 'hidden'}><ProductManager /></div>
                     <div className={logic.currentPage === 'user_management' ? 'block' : 'hidden'}><UserManagement /></div>
                     <div className={logic.currentPage === 'support' ? 'block' : 'hidden'}><SupportCenter userProfile={logic.userProfile} /></div>
+                    <div className={logic.currentPage === 'db_map' ? 'block' : 'hidden'}><DatabaseDictionary /></div>
 
                     {logic.selfEditTarget && (
                         <UserEditModal user={logic.selfEditTarget} onClose={() => logic.setSelfEditTarget(null)} onReload={logic.fetchProfile} isProfileMode={true} />
