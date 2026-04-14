@@ -103,7 +103,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
         let failedFiles = [];
 
         try {
-            // 🚩 [수정] 없는 컬럼(assigned_brand, support_vendor)은 빼고 필요한 것만 쏙 빼옵니다!
             const { data: workerMaster, error: masterError } = await supabaseClient
                 .from('workers')
                 .select('name, support_status, managed_brand');
@@ -113,7 +112,7 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                 workerMaster.forEach(w => {
                     workerMap[w.name.replace(/\s/g, '')] = {
                         supportStatus: w.support_status,
-                        brand: w.managed_brand || '' // 특이사항(비고)에 넣을 브랜드 정보
+                        brand: w.managed_brand || ''
                     };
                 });
             }
@@ -269,7 +268,6 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                     const cleanName = nameVal.replace(/\s/g, '');
                     const masterInfo = workerMap[cleanName];
 
-                    // 🚩 [핵심 수정] supportStatus 값이 '미지원'이 아니면 그 값(업체명)을 쓰고, '미지원'이거나 값이 없으면 원소속(exactVendor)을 씁니다!
                     const statusVal = masterInfo?.supportStatus ? String(masterInfo.supportStatus).trim() : '미지원';
                     const actualWorkedVendor = (statusVal !== '미지원' && statusVal !== '')
                         ? statusVal
@@ -335,21 +333,27 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                     o_hours = p_over + p_night + h_work + h_over + h_night + early;
                                     w_hours = n_hours + o_hours;
                                 } else {
-                                    // 🚩 [수정완료: 퀘스트 2] 휴일근무 계산식 완벽 적용!
-                                    // 식: (퇴근시간-8:30) + 조기출근 - 1:00(점심/휴게) - (지각 + 조퇴 + 외출)
+                                    // 💡 스마트 휴일 점심시간 차감 로직 탑재 완료
                                     const baseTime = calcDiff('08:30', endTime);
-                                    w_hours = Math.max(0, baseTime + early - 1 - late - leave - out);
-                                    n_hours = 0; // 휴일/비정상출근은 기본급 0으로 세팅
+                                    let lunchDeduction = 1;
+
+                                    if (lunch > 0) {
+                                        lunchDeduction = Math.max(0, 1 - lunch);
+                                    } else if (endTime < '13:00' || remarkStr.includes('점심미휴게') || remarkStr.includes('식사안함') || remarkStr.includes('휴게없음')) {
+                                        lunchDeduction = 0;
+                                    }
+
+                                    w_hours = Math.max(0, baseTime + early - lunchDeduction - late - leave - out);
+                                    n_hours = 0;
                                     o_hours = w_hours;
                                 }
-                                weight_hours = w_hours + (o_hours * 1.5);
+                                weight_hours = n_hours + (o_hours * 1.5);
                             }
                         }
 
                         const isRealStart = startTime && String(startTime).trim() !== ':';
                         const isRealEnd = endTime && String(endTime).trim() !== ':';
 
-                        // 🚩 기존 if문을 이걸로 교체!
                         if (isRealStart || isRealEnd || w_hours > 0) {
                             allStandardData.push({
                                 work_date: dateVal.replace(/\./g, '-'),
@@ -357,15 +361,12 @@ const AttendanceUploadModal = ({ onClose, onReload }) => {
                                 vendor_name: exactVendor,
                                 worked_vendor: actualWorkedVendor,
                                 worker_name: nameVal,
-
-                                // 💡 (보너스 디테일) 만약 실수로 들어간 콜론이 있다면 아예 빈칸으로 바꿔서 저장해줍니다!
                                 start_time: startTime === ':' ? '' : startTime,
                                 end_time: endTime === ':' ? '' : endTime,
-
                                 work_hours: w_hours,
                                 normal_hours: n_hours,
                                 overtime_hours: o_hours,
-                                weighted_hours: weight_hours, // 수정된 공식 적용
+                                weighted_hours: weight_hours,
                                 remark: assignedBrand ? `[${assignedBrand}] ${remarkStr}` : remarkStr
                             });
                         }
@@ -621,9 +622,10 @@ const AttendanceManagement = () => {
     const [inputValue, setInputValue] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [includeOffice, setIncludeOffice] = useState(false);
-    const [includeRegional, setIncludeRegional] = useState(false); // 🚩 지방센터 포함 상태 추가
-    const [workerLocations, setWorkerLocations] = useState({});
-    const [workerTypes, setWorkerTypes] = useState({});
+    const [includeRegional, setIncludeRegional] = useState(false);
+
+    // 🚩 마스터 정보 상태 통합 (에러 해결 핵심포인트!)
+    const [workerMasterMap, setWorkerMasterMap] = useState({});
     const [selectedVendor, setSelectedVendor] = useState('전체');
 
     const [attendanceData, setAttendanceData] = useState([]);
@@ -635,17 +637,17 @@ const AttendanceManagement = () => {
     React.useEffect(() => {
         const fetchWorkerMaster = async () => {
             try {
-                // 🚩 근무지(work_location) 컬럼 추가 로드
+                // 🚩 근무지(work_location), 직종(employment_type) 동시 로드
                 const { data, error } = await supabaseClient.from('workers').select('name, employment_type, work_location');
                 if (data) {
                     const masterMap = {};
                     data.forEach(w => {
                         masterMap[w.name.replace(/\s/g, '')] = {
                             type: w.employment_type,
-                            location: w.work_location // 근무지 저장
+                            location: w.work_location
                         };
                     });
-                    setWorkerMasterMap(masterMap);
+                    setWorkerMasterMap(masterMap); // 🚩 단일 바구니에 저장!
                 }
             } catch (err) { console.error("마스터 정보 로드 실패", err); }
         };
@@ -725,24 +727,23 @@ const AttendanceManagement = () => {
                 if (!matchName && !matchVendor) return false;
             }
 
-            // 공통으로 사용할 이름(공백 제거)
             const cleanName = row.worker_name?.replace(/\s/g, '') || '';
+            const masterInfo = workerMasterMap[cleanName] || {}; // 🚩 단일 바구니에서 정보 추출
 
             // 1. 사무직 필터 (미체크 시 '사무직' 제외)
             if (!includeOffice) {
-                if (workerTypes[cleanName] === '사무직') return false;
+                if (masterInfo.type === '사무직') return false;
             }
 
-            // 🚩 2. 지방센터 필터 (미체크 시 '동부/서부' 숨김 처리!)
+            // 2. 지방센터 필터 (미체크 시 '동부/서부' 숨김 처리)
             if (!includeRegional) {
-                const loc = workerLocations[cleanName] || '';
-                if (loc === '동부센터' || loc === '서부센터') return false;
+                if (masterInfo.location === '동부센터' || masterInfo.location === '서부센터') return false;
             }
 
             return true;
         });
-        // 🚩 의존성 배열에 includeRegional과 workerLocations 추가
-    }, [attendanceData, startDate, endDate, selectedVendor, searchTerm, includeOffice, includeRegional, workerTypes, workerLocations]);
+        // 🚩 의존성 배열도 통합된 masterMap 하나만 참조
+    }, [attendanceData, startDate, endDate, selectedVendor, searchTerm, includeOffice, includeRegional, workerMasterMap]);
 
     const sortedDetailData = React.useMemo(() => {
         let sortableItems = [...filteredDetailData];
@@ -810,7 +811,6 @@ const AttendanceManagement = () => {
     const handleSelectAll = (e) => setSelectedIds(e.target.checked ? filteredDetailData.map(i => i.id) : []);
     const handleSelectOne = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
-    // 🚩 [수정완료: 퀘스트 4, 5] 5개의 요약 카드 데이터 계산
     const currentStats = useMemo(() => {
         const targetData = activeTab === 'summary' ? filteredChartData : filteredDetailData;
         return targetData.reduce((acc, curr) => {
@@ -836,7 +836,6 @@ const AttendanceManagement = () => {
     return (
         <div className="p-6 bg-slate-100 min-h-[calc(100vh-64px)] slide-up flex flex-col gap-6 max-w-[1600px] mx-auto">
 
-            {/* 🚩 [수정완료: 퀘스트 3] 상단 헤더 & 요약카드 영역을 한 덩어리로 묶고 sticky top-0 고정! */}
             <div className="sticky top-0 z-40 bg-slate-100 pb-4 pt-6 -mt-6 -mx-6 px-6 shadow-[0_4px_6px_-6px_rgba(0,0,0,0.1)]">
                 <div className="flex justify-between items-center shrink-0 mb-6">
                     <div>
@@ -854,7 +853,6 @@ const AttendanceManagement = () => {
                     </button>
                 </div>
 
-                {/* 🚩 [수정완료: 퀘스트 4, 5] 5개의 요청하신 이름으로 카드 UI 재구성 */}
                 <div className="grid grid-cols-5 gap-4 shrink-0">
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-center transition-all hover:shadow-md border-b-4 border-b-blue-400">
                         <span className="text-xs font-bold text-blue-500 mb-1">조회 기간 협력사 투입</span>
@@ -893,7 +891,6 @@ const AttendanceManagement = () => {
                 </div>
             </div>
 
-            {/* 메인 콘텐츠 영역 */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col flex-1 overflow-hidden z-20">
                 <div className="flex border-b border-gray-200 bg-gray-50/50 px-4 pt-4 shrink-0">
                     <button onClick={() => { setActiveTab('summary'); setSelectedIds([]); }} className={`px-6 py-2.5 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'summary' ? 'border-letusBlue text-letusBlue bg-white' : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100/50 rounded-t-lg'}`}>
@@ -936,18 +933,20 @@ const AttendanceManagement = () => {
                                     ))}
                                 </div>
                                 <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex items-center shrink-0 bg-blue-50/50 px-3 py-[5px] rounded-lg border border-blue-100 transition-colors hover:bg-blue-100/50">
-                                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-letusBlue">
-                                            <input type="checkbox" checked={includeOffice} onChange={e => setIncludeOffice(e.target.checked)} className="w-3.5 h-3.5 accent-letusBlue cursor-pointer" />'사무직' 포함
-                                        </label>
-                                    </div>
-
-                                    {/* 🚩 지방센터 포함 체크박스 신규 추가 */}
-                                    <div className="flex items-center shrink-0 bg-orange-50/50 px-3 py-[5px] rounded-lg border border-orange-100 transition-colors hover:bg-orange-100/50">
-                                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-letusOrange">
-                                            <input type="checkbox" checked={includeRegional} onChange={e => setIncludeRegional(e.target.checked)} className="w-3.5 h-3.5 accent-letusOrange cursor-pointer" />지방센터 포함
-                                        </label>
+                                <div className="flex items-center gap-2 relative">
+                                    <input type="text" placeholder="사원명 검색..." value={inputValue} onChange={(e) => setInputValue(e.target.value)} className="border border-gray-200 rounded-lg pl-8 pr-3 py-[7px] text-xs font-bold text-gray-700 outline-none focus:border-letusBlue w-40" />
+                                    <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center shrink-0 bg-blue-50/50 px-3 py-[5px] rounded-lg border border-blue-100 transition-colors hover:bg-blue-100/50">
+                                            <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-letusBlue">
+                                                <input type="checkbox" checked={includeOffice} onChange={e => setIncludeOffice(e.target.checked)} className="w-3.5 h-3.5 accent-letusBlue cursor-pointer" />'사무직' 포함
+                                            </label>
+                                        </div>
+                                        <div className="flex items-center shrink-0 bg-orange-50/50 px-3 py-[5px] rounded-lg border border-orange-100 transition-colors hover:bg-orange-100/50">
+                                            <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-letusOrange">
+                                                <input type="checkbox" checked={includeRegional} onChange={e => setIncludeRegional(e.target.checked)} className="w-3.5 h-3.5 accent-letusOrange cursor-pointer" />지방센터 포함
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
