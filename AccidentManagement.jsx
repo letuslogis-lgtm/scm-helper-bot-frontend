@@ -1,6 +1,15 @@
-const { useState, useEffect, useMemo } = React;
-const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } = window.Recharts || {};
-const { CATEGORY_COLORS, BRAND_COLORS, StatusBadge, CategoryBadge } = window;
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import * as XLSX from 'xlsx';
+import { supabase, adminSupabase } from './supabaseClient.js';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line, ComposedChart, Area, AreaChart } from 'recharts';
+import { MainLayout } from './MainLayout.jsx';
+import { CloseIcon } from './SharedUI.jsx';
+
+
+
+
+
+
 
 // 1. 사고 내역 상세/수정 모달
 const AccidentModal = ({ row, onClose, onReload, userProfile }) => {
@@ -1520,12 +1529,22 @@ const AccidentList = ({ userProfile, initialFilter }) => {
                 } else { alert('✅ 새롭게 지연된 건이 없습니다.'); }
             }
             fetchAccidents();
-        } catch (error) { alert('오류: ' + error.message); console.error(error); setIsLoading(false); }
+        } catch (error) {
+            console.error('❌ 업로드 에러 전문:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+                full: error
+            });
+            alert(`오류: ${error.message}\n상세: ${error.details || '-'}\n힌트: ${error.hint || '-'}\n코드: ${error.code || '-'}`);
+            setIsLoading(false);
+        }
     };
 
     return (
         // 🚩 [수정 완료] 맨 위에 두 겹으로 겹쳐있던 div를 완벽한 템플릿 하나로 합쳤습니다!
-        <div className="p-6 flex flex-col gap-4 max-w-[1600px] mx-auto animate-fade-in w-full h-[calc(100vh-64px)] slide-up bg-slate-100">
+        <div className="p-6 flex flex-col gap-4 animate-fade-in w-full h-[calc(100vh-64px)] slide-up bg-slate-100">
 
             {/* 1. 검색 박스 구역 (사용자 관리 스타일로 통일) */}
             <div className="w-full bg-white rounded-lg shadow-sm border border-slate-200 px-6 py-3 flex flex-col gap-3 z-30 shrink-0 transition-all duration-300">
@@ -1821,8 +1840,8 @@ const AccidentList = ({ userProfile, initialFilter }) => {
 };
 
 // 🌟 전역 등록 (MainLayout과 App에서 찾아쓸 수 있게)
-window.AccidentModal = AccidentModal;
-window.AccidentBulkEditModal = AccidentBulkEditModal;
-window.AccidentUploadModal = AccidentUploadModal;
-window.AccidentDashboard = AccidentDashboard;
-window.AccidentList = AccidentList;
+export { AccidentModal };
+export { AccidentBulkEditModal };
+export { AccidentUploadModal };
+export { AccidentDashboard };
+export { AccidentList };
